@@ -9,11 +9,15 @@ import type { ExpoConfig } from "expo/config";
 const VARIANT = process.env.APP_VARIANT === "rider" ? "rider" : "customer";
 const isRider = VARIANT === "rider";
 const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000";
-const EAS_PROJECT_ID = isRider ? process.env.EAS_PROJECT_ID_RIDER : process.env.EAS_PROJECT_ID;
+// Expo (EAS) project of the customer app: expo.dev/@fahadesams-team/napa
+const EXPO_OWNER = "fahadesams-team";
+const CUSTOMER_PROJECT_ID = "7709ceb9-f1f7-49a6-a9c5-4a1292b634d6";
+const EAS_PROJECT_ID = isRider ? process.env.EAS_PROJECT_ID_RIDER : process.env.EAS_PROJECT_ID || CUSTOMER_PROJECT_ID;
 
 const config: ExpoConfig = {
   name: isRider ? "Nuqa Rider" : "Nuqa",
-  slug: isRider ? "nuqa-rider" : "nuqa",
+  slug: isRider ? "nuqa-rider" : "napa",
+  owner: EXPO_OWNER,
   scheme: isRider ? "nuqarider" : "nuqa",
   version: "1.0.0",
   orientation: "portrait",
