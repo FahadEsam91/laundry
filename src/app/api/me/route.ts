@@ -1,6 +1,7 @@
 import { all, get, run } from "@/lib/db";
 import { handler, ok, body } from "@/lib/api";
 import { currentUser, requireUser } from "@/lib/auth";
+import { activeSubscription } from "@/lib/subscriptions";
 
 export const GET = handler(async () => {
   const u = await currentUser();
@@ -9,7 +10,9 @@ export const GET = handler(async () => {
   const unread = get<any>("SELECT COUNT(*) c FROM notifications WHERE user_id=? AND read=0", u.id)!.c;
   const favorites = all<any>("SELECT partner_id FROM favorites WHERE user_id=?", u.id).map((f) => f.partner_id);
   const stats = get<any>("SELECT COUNT(*) orders, COALESCE(SUM(total),0) spent FROM orders WHERE customer_id=? AND status='delivered'", u.id);
-  return ok({ user: u, addresses, unread, favorites, stats });
+  const m = u.role === "customer" ? activeSubscription(u.id) : null;
+  const member = m ? { plan: m.plan, benefits: m.benefits, sub: { id: m.sub.id, auto_renew: m.sub.auto_renew, current_period_end: m.sub.current_period_end, deliveries_used: m.sub.deliveries_used } } : null;
+  return ok({ user: u, addresses, unread, favorites, stats, member });
 });
 
 export const PATCH = handler(async (req: Request) => {

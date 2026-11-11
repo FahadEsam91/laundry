@@ -2,7 +2,7 @@ import "server-only";
 import path from "node:path";
 import fs from "node:fs";
 import type { DatabaseSync } from "node:sqlite";
-import { seed } from "./seed";
+import { seed, seedSubscriptions } from "./seed";
 
 /**
  * Data layer.
@@ -189,6 +189,75 @@ CREATE TABLE IF NOT EXISTS favorites(
   partner_id INTEGER NOT NULL REFERENCES partners(id) ON DELETE CASCADE,
   PRIMARY KEY(user_id, partner_id)
 );
+
+CREATE TABLE IF NOT EXISTS plans(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  slug TEXT NOT NULL UNIQUE,
+  name_ar TEXT NOT NULL, name_en TEXT NOT NULL,
+  desc_ar TEXT, desc_en TEXT,
+  price REAL NOT NULL,
+  interval_days INTEGER NOT NULL DEFAULT 30,
+  free_deliveries INTEGER NOT NULL DEFAULT 0,      -- -1 = unlimited
+  discount_pct REAL NOT NULL DEFAULT 0,
+  no_service_fee INTEGER NOT NULL DEFAULT 0,
+  express_discount_pct REAL NOT NULL DEFAULT 0,
+  priority_support INTEGER NOT NULL DEFAULT 0,
+  color TEXT NOT NULL DEFAULT '#1A62EC',
+  popular INTEGER NOT NULL DEFAULT 0,
+  active INTEGER NOT NULL DEFAULT 1,
+  sort INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS subscriptions(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  plan_id INTEGER NOT NULL REFERENCES plans(id),
+  status TEXT NOT NULL,                             -- active | cancelled | expired
+  auto_renew INTEGER NOT NULL DEFAULT 1,
+  payment_method TEXT NOT NULL DEFAULT 'wallet',
+  current_period_start TEXT NOT NULL,
+  current_period_end TEXT NOT NULL,
+  deliveries_used INTEGER NOT NULL DEFAULT 0,
+  started_at TEXT NOT NULL,
+  cancelled_at TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_subs_user ON subscriptions(user_id);
+CREATE INDEX IF NOT EXISTS idx_subs_status ON subscriptions(status);
+
+CREATE TABLE IF NOT EXISTS subscription_payments(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  subscription_id INTEGER NOT NULL REFERENCES subscriptions(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL,
+  plan_id INTEGER NOT NULL,
+  amount REAL NOT NULL,
+  kind TEXT NOT NULL DEFAULT 'new',                 -- new | renewal
+  period_start TEXT NOT NULL, period_end TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS push_subscriptions(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  endpoint TEXT NOT NULL UNIQUE,
+  p256dh TEXT NOT NULL, auth TEXT NOT NULL,
+  lang TEXT NOT NULL DEFAULT 'ar',
+  user_agent TEXT,
+  created_at TEXT NOT NULL,
+  last_success_at TEXT, fail_count INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_push_user ON push_subscriptions(user_id);
+
+CREATE TABLE IF NOT EXISTS broadcasts(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title_ar TEXT NOT NULL, title_en TEXT NOT NULL,
+  body_ar TEXT, body_en TEXT, url TEXT,
+  audience TEXT NOT NULL,
+  recipients INTEGER NOT NULL DEFAULT 0,
+  push_sent INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL
+);
 `;
 
 export function db(): DatabaseSync {
@@ -199,19 +268,35 @@ export function db(): DatabaseSync {
   const file = process.env.DATABASE_FILE || path.join(dir, "nuqa.db");
   const conn = new DatabaseSync(file);
   conn.exec(SCHEMA);
-  const has = conn.prepare("SELECT COUNT(*) AS c FROM services").get() as Row;
-  if (!has.c) {
+  migrate(conn);
+  const once = (fn: () => void) => {
     conn.exec("BEGIN");
     try {
-      seed(conn);
+      fn();
       conn.exec("COMMIT");
     } catch (e) {
       conn.exec("ROLLBACK");
       throw e;
     }
-  }
+  };
+  const has = conn.prepare("SELECT COUNT(*) AS c FROM services").get() as Row;
+  if (!has.c) once(() => seed(conn));
+  const hasPlans = conn.prepare("SELECT COUNT(*) AS c FROM plans").get() as Row;
+  if (!hasPlans.c) once(() => seedSubscriptions(conn));
   g.__nuqaDb = conn;
   return conn;
+}
+
+/** Additive, idempotent column migrations for databases created by older versions. */
+function migrate(conn: DatabaseSync) {
+  const cols = (t: string) => (conn.prepare(`PRAGMA table_info(${t})`).all() as Row[]).map((c) => c.name);
+  const add = (t: string, col: string, def: string) => {
+    if (!cols(t).includes(col)) conn.exec(`ALTER TABLE ${t} ADD COLUMN ${col} ${def}`);
+  };
+  add("orders", "subscription_id", "INTEGER");
+  add("orders", "member_discount", "REAL NOT NULL DEFAULT 0");
+  add("orders", "sub_savings", "REAL NOT NULL DEFAULT 0");
+  add("orders", "sub_free_delivery", "INTEGER NOT NULL DEFAULT 0");
 }
 
 const plain = <T,>(r: any): T => (r ? ({ ...r } as T) : (undefined as T));

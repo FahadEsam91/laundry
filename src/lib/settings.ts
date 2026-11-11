@@ -26,6 +26,7 @@ export function getSettings(): Settings {
   const rows = all<{ key: string; value: string }>("SELECT key,value FROM settings");
   const o: any = {};
   for (const r of rows) {
+    if (r.key.startsWith("vapid_")) continue; // server-only secrets
     if (NUM.includes(r.key)) o[r.key] = Number(r.value);
     else if (r.key === "autopilot") o[r.key] = r.value === "1";
     else o[r.key] = r.value;

@@ -7,6 +7,7 @@ import { Bell, ChevronDown, MapPin, Search, Languages, ShieldCheck, Shirt, Truck
 import { useApp, useToast } from "@/components/providers";
 import { AddressSheet, BottomNav, PartnerCard, SectionTitle, useActiveOrders } from "@/components/customer";
 import { ServiceIcon, Skeleton, StatusBadge, cx, LogoMark, PartnerLogo } from "@/components/ui";
+import { PlusBanner } from "@/components/plus";
 
 const PROMO_STYLES = [
   "from-brand-600 via-brand-500 to-sky-400",
@@ -147,6 +148,11 @@ export default function HomePage() {
           ))}
           {!promoData && <Skeleton className="h-36 w-[300px] shrink-0 rounded-3xl" />}
         </div>
+      </section>
+
+      {/* membership */}
+      <section className="px-4 pt-6">
+        <PlusBanner />
       </section>
 
       {/* featured */}

@@ -4,6 +4,8 @@ import { getSettings } from "./settings";
 import { computeTotals, type Promo } from "./pricing";
 import { HttpError, type SessionUser } from "./auth";
 import { CANCELLABLE, NEXT_STATUS, ORDER_FLOW, STATUS_META, type OrderStatus } from "./constants";
+import { driverUser, onlineDriverUsers, partnerStaff, queuePush } from "./push";
+import { activeSubscription, refundFreeDelivery, renewSweep } from "./subscriptions";
 
 // ---------------------------------------------------------------- helpers
 
@@ -15,8 +17,10 @@ export function haversineKm(aLat: number, aLng: number, bLat: number, bLng: numb
   return 2 * R * Math.asin(Math.sqrt(s));
 }
 
-export function notify(userId: number, titleAr: string, titleEn: string, bodyAr: string, bodyEn: string, orderId?: number) {
+/** In-app notification + mobile push to all of the user's devices. */
+export function notify(userId: number, titleAr: string, titleEn: string, bodyAr: string, bodyEn: string, orderId?: number, url?: string) {
   run("INSERT INTO notifications(user_id,title_ar,title_en,body_ar,body_en,order_id,read,created_at) VALUES(?,?,?,?,?,?,0,?)", userId, titleAr, titleEn, bodyAr, bodyEn, orderId ?? null, now());
+  queuePush([userId], { title_ar: titleAr, title_en: titleEn, body_ar: bodyAr, body_en: bodyEn, url: url || (orderId ? `/orders/${orderId}` : "/notifications"), tag: orderId ? `order-${orderId}` : undefined });
 }
 
 // ---------------------------------------------------------------- promos
@@ -142,6 +146,7 @@ export function transition(orderId: number, to: OrderStatus, actor: string, opts
       run("UPDATE users SET wallet=wallet+? WHERE id=?", o.total, o.customer_id);
       run("INSERT INTO wallet_tx(user_id,amount,kind,note,created_at) VALUES(?,?,?,?,?)", o.customer_id, o.total, "refund", o.code, ts);
     }
+    if (to === "cancelled" && o.sub_free_delivery && o.subscription_id) refundFreeDelivery(o.subscription_id);
     run("UPDATE orders SET status=?,driver_id=?,pickup_driver_id=?,payment_status=?,updated_at=?,status_at=? WHERE id=?", to, driverId ?? null, pickupDriverId, payStatus, ts, ts, orderId);
     run("INSERT INTO order_events(order_id,status,note,actor,created_at) VALUES(?,?,?,?,?)", orderId, to, opts.note ?? null, actor, ts);
 
@@ -154,6 +159,14 @@ export function transition(orderId: number, to: OrderStatus, actor: string, opts
     if (to === "delivered") {
       const pts = Math.floor(o.total / 1000);
       run("UPDATE users SET points=points+? WHERE id=?", pts, o.customer_id);
+    }
+    if ((to === "accepted" || to === "ready") && !o.auto && !driverId) {
+      const area = get<any>("SELECT name_ar,name_en FROM partners WHERE id=?", o.partner_id);
+      queuePush(onlineDriverUsers(), {
+        title_ar: to === "accepted" ? "🛵 مهمة استلام جديدة" : "📦 مهمة توصيل جديدة",
+        title_en: to === "accepted" ? "🛵 New pickup job" : "📦 New delivery job",
+        body_ar: `${o.code} • ${area.name_ar}`, body_en: `${o.code} • ${area.name_en}`, url: "/driver", tag: `job-${orderId}`,
+      });
     }
     const m = STATUS_META[to];
     notify(o.customer_id, `${m.ar} • ${o.code}`, `${m.en} • ${o.code}`, m.descAr, m.descEn, orderId);
@@ -170,6 +183,7 @@ export function autopilotTick() {
   const t = Date.now();
   if (g.__nuqaTick && t - g.__nuqaTick < 1500) return;
   g.__nuqaTick = t;
+  renewSweep();
   const s = getSettings();
   if (!s.autopilot) return;
   const secs = Math.max(5, s.autopilot_seconds);
@@ -222,7 +236,8 @@ export function createOrder(user: SessionUser, input: CreateOrderInput) {
   const subtotal = lines.reduce((sum, l) => sum + l.p.price * l.qty, 0);
   if (subtotal < partner.min_order) throw new HttpError(400, `min_order:${partner.min_order}`);
   const promo = input.promo_code ? validatePromo(input.promo_code, user.id, subtotal) : null;
-  const totals = computeTotals(subtotal, partner.delivery_fee, !!input.express, s, promo);
+  const member = activeSubscription(user.id);
+  const totals = computeTotals(subtotal, partner.delivery_fee, !!input.express, s, promo, member?.benefits);
 
   return tx(() => {
     const ts = now();
@@ -241,12 +256,14 @@ export function createOrder(user: SessionUser, input: CreateOrderInput) {
     const code = `NQ-${seq}`;
     const addrText = [addr.area, addr.street, addr.building].filter(Boolean).join("، ");
     const { id } = run(
-      `INSERT INTO orders(code,customer_id,partner_id,driver_id,status,express,address_text,address_lat,address_lng,pickup_slot,delivery_slot,subtotal,delivery_fee,express_fee,service_fee,discount,vat,total,payment_method,payment_status,promo_code,notes,items_count,auto,created_at,updated_at,status_at)
-       VALUES(?,?,?,NULL,'pending',?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      `INSERT INTO orders(code,customer_id,partner_id,driver_id,status,express,address_text,address_lat,address_lng,pickup_slot,delivery_slot,subtotal,delivery_fee,express_fee,service_fee,discount,vat,total,payment_method,payment_status,promo_code,notes,items_count,auto,subscription_id,member_discount,sub_savings,sub_free_delivery,created_at,updated_at,status_at)
+       VALUES(?,?,?,NULL,'pending',?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       code, user.id, partner.id, input.express ? 1 : 0, addrText, addr.lat, addr.lng, pickup.toISOString(), delivery.toISOString(),
       totals.subtotal, totals.deliveryFee, totals.expressFee, totals.serviceFee, totals.discount, totals.vat, totals.total,
       input.payment_method, payStatus, promo?.code ?? null, input.notes?.slice(0, 500) || null,
-      lines.reduce((a, l) => a + l.qty, 0), s.autopilot ? 1 : 0, ts, ts, ts,
+      lines.reduce((a, l) => a + l.qty, 0), s.autopilot ? 1 : 0,
+      member && totals.subSavings > 0 ? member.sub.id : null, totals.memberDiscount, totals.subSavings, totals.subFreeDelivery && member!.plan.free_deliveries > 0 ? 1 : 0,
+      ts, ts, ts,
     );
     for (const { p, qty } of lines) {
       run("INSERT INTO order_items(order_id,product_id,service_id,name_ar,name_en,service_ar,service_en,icon,qty,unit_price) VALUES(?,?,?,?,?,?,?,?,?,?)", id, p.id, p.service_id, p.name_ar, p.name_en, p.s_ar, p.s_en, p.icon, qty, p.price);
@@ -254,6 +271,12 @@ export function createOrder(user: SessionUser, input: CreateOrderInput) {
     run("INSERT INTO order_events(order_id,status,note,actor,created_at) VALUES(?,?,?,?,?)", id, "pending", null, "customer", ts);
     if (input.payment_method === "wallet") run("INSERT INTO wallet_tx(user_id,amount,kind,note,created_at) VALUES(?,?,?,?,?)", user.id, -totals.total, "payment", code, ts);
     if (promo) run("UPDATE promos SET used=used+1 WHERE code=?", promo.code);
+    if (member && totals.subFreeDelivery && member.plan.free_deliveries > 0) run("UPDATE subscriptions SET deliveries_used=deliveries_used+1 WHERE id=?", member.sub.id);
+    queuePush(partnerStaff(partner.id), {
+      title_ar: `🔔 طلب جديد ${code}`, title_en: `🔔 New order ${code}`,
+      body_ar: `${lines.reduce((a, l) => a + l.qty, 0)} قطعة${input.express ? " • مستعجل ⚡" : ""}`, body_en: `${lines.reduce((a, l) => a + l.qty, 0)} items${input.express ? " • Express ⚡" : ""}`,
+      url: "/partner", tag: `new-${code}`,
+    });
     notify(user.id, `تم استلام طلبك • ${code}`, `Order received • ${code}`, `أرسلنا طلبك إلى ${partner.name_ar}`, `We sent your order to ${partner.name_en}`, id);
     return { id, code };
   });

@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   title: { default: "Nuqa نقاء — Laundry delivered", template: "%s · Nuqa" },
   description: "On-demand laundry, ironing & dry cleaning with pickup and delivery to your door.",
   manifest: "/manifest.webmanifest",
-  icons: { icon: "/icon.svg", apple: "/icon.svg" },
+  icons: { icon: [{ url: "/icon.svg", type: "image/svg+xml" }, { url: "/icon-192.png", sizes: "192x192" }], apple: "/apple-touch-icon.png" },
   appleWebApp: { capable: true, title: "Nuqa", statusBarStyle: "default" },
 };
 

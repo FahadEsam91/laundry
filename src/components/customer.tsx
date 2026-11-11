@@ -152,8 +152,8 @@ export function PartnerTags({ tags, max = 2 }: { tags: string; max?: number }) {
 }
 
 export function PartnerCard({ p, variant = "row" }: { p: any; variant?: "row" | "wide" }) {
-  const { L, t, money, num } = useApp();
-  const fee = p.delivery_fee === 0 ? t("free") : money(p.delivery_fee);
+  const { L, t, money, num, me } = useApp();
+  const fee = p.delivery_fee === 0 ? t("free") : me?.member?.benefits?.free_delivery ? `👑 ${t("free_with_plus")}` : money(p.delivery_fee);
   if (variant === "wide")
     return (
       <Link href={`/laundry/${p.id}`} className="block w-[270px] shrink-0 overflow-hidden rounded-2xl border border-ink-100 bg-white shadow-soft transition active:scale-[.99]">
@@ -202,7 +202,7 @@ export function PartnerCard({ p, variant = "row" }: { p: any; variant?: "row" | 
         </p>
         <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-600">
           <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5 text-ink-400" />{t("ready_in")} {p.eta_hours} {t("hour_short")}</span>
-          <span className={cx("flex items-center gap-1", p.delivery_fee === 0 && "font-semibold text-emerald-600")}><Bike className="h-3.5 w-3.5 text-ink-400" />{fee}</span>
+          <span className={cx("flex items-center gap-1", (p.delivery_fee === 0 || me?.member?.benefits?.free_delivery) && "font-semibold text-emerald-600")}><Bike className="h-3.5 w-3.5 text-ink-400" />{fee}</span>
         </div>
         <div className="mt-1.5 flex flex-wrap gap-1">
           <PartnerTags tags={p.tags} max={3} />

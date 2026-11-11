@@ -10,6 +10,7 @@ import { Button, PartnerLogo, Sheet, Skeleton, StatusBadge, Textarea, cx } from 
 import { MapView, type MapMarker } from "@/components/map-view";
 import { STATUS_META, ORDER_FLOW } from "@/lib/constants";
 import { api, errText } from "@/lib/client";
+import { PushPrompt } from "@/components/push";
 
 const MACRO = [
   { key: "placed", icon: ReceiptText, ar: "تم الطلب", en: "Placed", upto: "accepted" },
@@ -185,6 +186,8 @@ function Inner({ id }: { id: string }) {
           </div>
         </div>
 
+        {!closed && <PushPrompt />}
+
         {/* rider */}
         {o.driver && !closed && (
           <div className="flex items-center gap-3 rounded-3xl bg-white p-4 shadow-soft">
@@ -242,10 +245,12 @@ function Inner({ id }: { id: string }) {
             <div className="flex justify-between"><dt className="text-ink-500">{t("delivery_fee")}</dt><dd>{o.delivery_fee ? money(o.delivery_fee) : t("free")}</dd></div>
             {o.express_fee > 0 && <div className="flex justify-between"><dt className="text-ink-500">{t("express_fee")}</dt><dd>{money(o.express_fee)}</dd></div>}
             <div className="flex justify-between"><dt className="text-ink-500">{t("service_fee")}</dt><dd>{money(o.service_fee)}</dd></div>
+            {o.member_discount > 0 && <div className="flex justify-between text-emerald-600"><dt>👑 {t("member_discount")}</dt><dd>- {money(o.member_discount)}</dd></div>}
             {o.discount > 0 && <div className="flex justify-between text-emerald-600"><dt>{t("discount")} {o.promo_code && <span dir="ltr">({o.promo_code})</span>}</dt><dd>- {money(o.discount)}</dd></div>}
             {o.vat > 0 && <div className="flex justify-between"><dt className="text-ink-500">{t("vat")}</dt><dd>{money(o.vat)}</dd></div>}
             <div className="flex justify-between pt-1 text-base font-extrabold"><dt>{t("total")}</dt><dd>{money(o.total)}</dd></div>
           </dl>
+          {o.sub_savings > 0 && <div className="mt-3 rounded-xl bg-amber-50 p-3 text-center text-xs font-bold text-amber-800">👑 {t("member_savings_line", { x: money(o.sub_savings), p: t("plus_title") })}</div>}
           <div className="mt-3 flex items-center justify-between rounded-xl bg-ink-50 p-3 text-xs">
             <span className="font-semibold">{t(`pay_${o.payment_method}` as any)}</span>
             <span className={cx("rounded-full px-2 py-0.5 font-bold", o.payment_status === "paid" ? "bg-emerald-100 text-emerald-700" : o.payment_status === "refunded" ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700")}>{t(o.payment_status as any)}</span>

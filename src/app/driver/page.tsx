@@ -8,6 +8,7 @@ import { useApp, useToast } from "@/components/providers";
 import { Button, Empty, PartnerLogo, Skeleton, StatusBadge, cx } from "@/components/ui";
 import { MapView, type MapMarker } from "@/components/map-view";
 import { api, errText } from "@/lib/client";
+import { PushHeaderButton } from "@/components/push";
 
 const STEP: Record<string, { action: string; key: any }> = {
   driver_assigned: { action: "picked_up", key: "confirm_pickup" },
@@ -75,7 +76,8 @@ export default function DriverApp() {
               <div className="text-xs text-white/70">{t("driver_panel")} • ★ {d.rating}</div>
             </div>
           </div>
-          <div className="flex gap-1">
+          <div className="flex items-center gap-1">
+            <PushHeaderButton dark label={t("push_driver")} />
             <button onClick={() => setLang(lang === "ar" ? "en" : "ar")} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15" aria-label="lang"><Languages className="h-4 w-4" /></button>
             <button onClick={logout} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15" aria-label="logout"><LogOut className="h-4 w-4" /></button>
           </div>

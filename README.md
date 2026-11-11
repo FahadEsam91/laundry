@@ -31,6 +31,27 @@ and deliver; the platform earns commission + fees. Fully bilingual **Arabic (RTL
 - Laundries: onboard/approve/suspend, commission & fees, open/closed, map location, per‑item price editor
 - Riders, customers (wallet credit, suspend), services catalog, promo codes, platform settings
 
+### Nuqa Plus — monthly memberships
+- 3 plans out of the box (Basic / Plus / Family), fully editable from Admin → Subscriptions (price, period,
+  free deliveries — limited or unlimited, member % discount, no service fee, express discount, priority support)
+- Subscribe with card or wallet, switch plans, cancel renewal (benefits stay until period end), billing history,
+  "saved this month / total saved" tracker
+- Benefits are applied server‑side at checkout and stack with promo codes; checkout shows a personalised
+  "save X with Plus" upsell to non‑members
+- Automatic renewal (wallet/card) with failure handling → membership expires and the customer is notified
+- Admin analytics: members, **MRR / ARR**, subscription revenue, churn, member penetration, member vs non‑member AOV,
+  savings given, member growth chart, subscriber list with "+7 free days" and terminate actions
+
+### Mobile push notifications
+- Real **Web Push** (VAPID) via a service worker: Android (Chrome, Samsung, Firefox), desktop browsers and
+  **iPhone/iPad (iOS 16.4+) once the app is added to the Home Screen** — the app shows iPhone users how
+- Customers: every order status change, membership renewals, wallet credits, campaigns; contextual
+  "enable notifications" prompt on the tracking screen; on/off + test in Account
+- Laundries: instant "new order" alerts; riders: "new pickup/delivery job" and "you were assigned" alerts
+- Admin → Notifications & campaigns: target all customers, members, non‑members, inactive (30d), riders or
+  laundries; bilingual message with live phone preview, reach counts, campaign history
+- Dead devices are cleaned up automatically (HTTP 404/410 from the push service)
+
 ### Partner panel
 Kanban board (new → inbound → cleaning → ready) with accept/reject, start cleaning, mark ready,
 new‑order alerts, today's sales, 30‑day net earnings after commission, price list editor, history.
@@ -66,8 +87,9 @@ Reset it with `npm run reset-db`.
 | Payments | `createOrder` in `src/lib/orders.ts`, `api/wallet` | Integrate a gateway (Stripe, Checkout.com, or local e.g. ZainCash/FIB) |
 | Database | `src/lib/db.ts` | Swap to PostgreSQL for multi‑instance scale (all SQL is isolated there) |
 | Secrets | env | Set `SESSION_SECRET` |
-| Push notifications | `notify()` in `src/lib/orders.ts` | Fan out to FCM/APNs |
-| Native apps | — | Wrap the PWA with Capacitor, or reuse the API from React Native |
+| Push notifications | `src/lib/push.ts` | Set `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` (generate once with `npx web-push generate-vapid-keys`). Without them keys are auto‑generated and stored in the DB. HTTPS is required in production |
+| Subscription renewals | `renewDue()` in `src/lib/subscriptions.ts` | Runs lazily + every minute of traffic; also call it from a daily cron. Plug saved‑card charging into `charge()` |
+| Native apps | — | Wrap the PWA with Capacitor (add FCM/APNs native push alongside Web Push), or reuse the API from React Native |
 | Rider GPS | `api/driver/status` | Send real coordinates from the rider device instead of simulated legs |
 
 Currency, fees, VAT, express surcharge, free‑delivery threshold, city & timezone are all editable in Admin → Settings,

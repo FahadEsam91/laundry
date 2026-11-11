@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import {
-  LayoutDashboard, ReceiptText, Store, Bike, Users, Tags, TicketPercent, Settings, Menu, X, Languages, LogOut, ExternalLink, TrendingUp, TrendingDown,
+  LayoutDashboard, ReceiptText, Store, Bike, Users, Tags, TicketPercent, Settings, Crown, Megaphone, Menu, X, Languages, LogOut, ExternalLink, TrendingUp, TrendingDown,
 } from "lucide-react";
 import { useApp } from "./providers";
 import { Logo, cx } from "./ui";
@@ -97,7 +97,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         { href: "/admin/drivers", label: t("drivers"), icon: Bike },
         { href: "/admin/customers", label: t("customers"), icon: Users },
         { href: "/admin/catalog", label: t("catalog"), icon: Tags },
+        { href: "/admin/subscriptions", label: t("subscriptions"), icon: Crown },
         { href: "/admin/promos", label: t("promos"), icon: TicketPercent },
+        { href: "/admin/campaigns", label: t("campaigns"), icon: Megaphone },
         { href: "/admin/settings", label: t("settings"), icon: Settings },
       ]}
     >
@@ -192,11 +194,11 @@ export function Pager({ page, size, total, onPage }: { page: number; size: numbe
   const pages = Math.max(1, Math.ceil(total / size));
   return (
     <div className="flex items-center justify-between border-t border-ink-100 px-4 py-3 text-sm text-ink-500">
-      <span className="tabular">{Math.min(total, (page - 1) * size + 1)}–{Math.min(total, page * size)} / {total}</span>
+      <span className="tabular" dir="ltr">{Math.min(total, (page - 1) * size + 1)}–{Math.min(total, page * size)} / {total}</span>
       <div className="flex gap-1">
-        <button disabled={page <= 1} onClick={() => onPage(page - 1)} className="rounded-lg border border-ink-200 px-3 py-1.5 font-semibold disabled:opacity-40">‹</button>
-        <span className="px-2 py-1.5 font-bold text-ink-800">{page} / {pages}</span>
-        <button disabled={page >= pages} onClick={() => onPage(page + 1)} className="rounded-lg border border-ink-200 px-3 py-1.5 font-semibold disabled:opacity-40">›</button>
+        <button disabled={page <= 1} onClick={() => onPage(page - 1)} className="rounded-lg border border-ink-200 px-3 py-1.5 font-semibold disabled:opacity-40 rtl:rotate-180">‹</button>
+        <span className="px-2 py-1.5 font-bold text-ink-800" dir="ltr">{page} / {pages}</span>
+        <button disabled={page >= pages} onClick={() => onPage(page + 1)} className="rounded-lg border border-ink-200 px-3 py-1.5 font-semibold disabled:opacity-40 rtl:rotate-180">›</button>
       </div>
     </div>
   );

@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Wallet, MapPin, Bell, Languages, Headphones, LogOut, ChevronLeft, ChevronRight, Award, LayoutDashboard, Store, Truck, Heart, ReceiptText, Info, UserRound } from "lucide-react";
+import { Wallet, MapPin, Bell, Languages, Headphones, LogOut, ChevronLeft, ChevronRight, Award, Crown, LayoutDashboard, Store, Truck, Heart, ReceiptText, Info, UserRound } from "lucide-react";
 import { useApp, useCart } from "@/components/providers";
 import { BottomNav } from "@/components/customer";
 import { Button, Empty, LogoMark } from "@/components/ui";
 import { api } from "@/lib/client";
+import { PushCard } from "@/components/push";
+import { PlusBadge } from "@/components/plus";
 
 export default function AccountPage() {
   const { t, me, money, num, lang, setLang, fmtDate, settings, refreshMe, dir } = useApp();
@@ -66,6 +68,7 @@ export default function AccountPage() {
             </div>
           </header>
           <div className="mt-2 divide-y divide-ink-100 bg-white">
+            <Row icon={Crown} label={t("plus_title")} href="/plus" right={me.member ? <PlusBadge /> : <span className="rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-extrabold text-amber-950">{t("plus_cta")}</span>} />
             <Row icon={MapPin} label={t("addresses")} href="/account/addresses" right={<span className="text-xs text-ink-400">{me.addresses.length}</span>} />
             <Row icon={Wallet} label={t("wallet")} href="/account/wallet" />
             <Row icon={Bell} label={t("notifications")} href="/notifications" right={me.unread ? <span className="rounded-full bg-red-500 px-2 text-[11px] font-bold text-white">{me.unread}</span> : null} />
@@ -75,6 +78,12 @@ export default function AccountPage() {
       ) : (
         <div className="bg-white">
           <Empty icon={<UserRound className="h-9 w-9" />} title={t("login_title")} sub={t("login_sub")} action={<Link href="/login?next=/account"><Button>{t("verify")}</Button></Link>} />
+        </div>
+      )}
+
+      {u && (
+        <div className="mt-2 bg-white">
+          <PushCard />
         </div>
       )}
 

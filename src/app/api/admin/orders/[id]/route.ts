@@ -2,6 +2,7 @@ import { all, get, run, now } from "@/lib/db";
 import { handler, ok, fail, body } from "@/lib/api";
 import { requireUser } from "@/lib/auth";
 import { orderDTO, transition } from "@/lib/orders";
+import { driverUser, queuePush } from "@/lib/push";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -20,7 +21,12 @@ export const POST = handler(async (req: Request, { params }: Ctx) => {
   const b = await body(req);
   if (b.action === "status") transition(id, b.to, "admin", { force: true, note: b.note });
   else if (b.action === "cancel") transition(id, "cancelled", "admin", { force: true, note: b.note || "Cancelled by support" });
-  else if (b.action === "assign") run("UPDATE orders SET driver_id=?,updated_at=? WHERE id=?", b.driver_id || null, now(), id);
+  else if (b.action === "assign") {
+    run("UPDATE orders SET driver_id=?,updated_at=? WHERE id=?", b.driver_id || null, now(), id);
+    const uid = b.driver_id ? driverUser(Number(b.driver_id)) : undefined;
+    const code = get<any>("SELECT code FROM orders WHERE id=?", id)?.code;
+    if (uid) queuePush([uid], { title_ar: `📍 تم تعيينك على ${code}`, title_en: `📍 You were assigned ${code}`, body_ar: "افتح التطبيق لعرض التفاصيل", body_en: "Open the app for details", url: "/driver", tag: `assign-${id}` });
+  }
   else return fail(400, "invalid_action");
   return ok({ ok: true });
 });

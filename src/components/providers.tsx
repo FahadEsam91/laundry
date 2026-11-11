@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import useSWR, { SWRConfig } from "swr";
 import { useRouter } from "next/navigation";
 import { fetcher } from "@/lib/client";
+import { registerSW, syncPushLang } from "@/lib/push-client";
 import { translate, pickLang, type Lang, type TKey } from "@/lib/i18n";
 import { STATUS_META, type OrderStatus } from "@/lib/constants";
 
@@ -45,10 +46,15 @@ export function Providers({ children, lang: initialLang, settings, services }: {
       document.documentElement.lang = l;
       document.documentElement.dir = l === "ar" ? "rtl" : "ltr";
       setLangState(l);
+      syncPushLang(l);
       router.refresh();
     },
     [router],
   );
+
+  useEffect(() => {
+    registerSW(); // enables push + "Add to Home Screen" install
+  }, []);
 
   const value = useMemo<Ctx>(() => {
     const nf = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });

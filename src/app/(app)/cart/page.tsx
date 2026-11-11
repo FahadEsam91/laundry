@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ShoppingBasket, Zap, Clock, MapPin, Banknote, CreditCard, Wallet, TicketPercent, Check, Plus, Trash2, Truck, ChevronDown, Lock } from "lucide-react";
+import useSWR from "swr";
+import { ShoppingBasket, Zap, Clock, MapPin, Banknote, CreditCard, Wallet, TicketPercent, Check, Plus, Trash2, Truck, ChevronDown, Lock, Crown } from "lucide-react";
 import { useApp, useCart, useToast } from "@/components/providers";
 import { AddressIcon, AddressSheet, TopBar } from "@/components/customer";
 import { Button, Empty, Input, PartnerLogo, QtyStepper, Textarea, cx } from "@/components/ui";
@@ -48,7 +49,14 @@ export default function CartPage() {
   const p = cart.partner;
   const lines = Object.values(cart.lines);
   const addr = me?.addresses?.find((a: any) => a.is_default) || me?.addresses?.[0];
-  const totals = computeTotals(cart.subtotal, p?.delivery_fee || 0, express, settings as any, promo);
+  const member = me?.member;
+  const totals = computeTotals(cart.subtotal, p?.delivery_fee || 0, express, settings as any, promo, member?.benefits);
+  // membership upsell: what the most popular plan would save on this exact basket
+  const { data: plansData } = useSWR(member ? null : "/api/plans");
+  const upPlan = (plansData?.plans || []).find((x: any) => x.popular) || plansData?.plans?.[0];
+  const upSave = upPlan
+    ? totals.total - computeTotals(cart.subtotal, p?.delivery_fee || 0, express, settings as any, promo, { free_delivery: upPlan.free_deliveries !== 0, discount_pct: upPlan.discount_pct, no_service_fee: !!upPlan.no_service_fee, express_discount_pct: upPlan.express_discount_pct }).total
+    : 0;
   const wallet = me?.user?.wallet || 0;
   const belowMin = p ? cart.subtotal < p.min_order : false;
 
@@ -149,6 +157,22 @@ export default function CartPage() {
         )}
         {belowMin && <div className="mt-2 rounded-xl bg-amber-50 p-3 text-xs font-semibold text-amber-800">{t("min_order_gap", { x: money(p.min_order) })}</div>}
       </section>
+
+      {member ? (
+        totals.subSavings > 0 && (
+          <div className="mx-4 mt-2 flex items-center gap-3 rounded-2xl bg-gradient-to-r from-amber-100 to-amber-50 p-3 text-sm font-bold text-amber-900">
+            <Crown className="h-5 w-5 text-amber-600" /> {t("member_savings_line", { x: money(totals.subSavings), p: L(member.plan, "name") })}
+          </div>
+        )
+      ) : (
+        upSave > 0 && (
+          <Link href="/plus" className="mx-4 mt-2 flex items-center gap-3 rounded-2xl bg-ink-900 p-3 text-sm font-semibold text-white">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-400 text-amber-950"><Crown className="h-5 w-5" /></span>
+            <span className="flex-1">{t("upsell_plus", { x: money(upSave) })}</span>
+            <span className="text-xs font-bold text-amber-300">{t("plus_cta")}</span>
+          </Link>
+        )
+      )}
 
       {/* speed */}
       <section className="mt-2 bg-white p-4">
@@ -284,9 +308,10 @@ export default function CartPage() {
         <h3 className="mb-3 font-bold">{t("summary")}</h3>
         <dl className="space-y-2 text-sm">
           <Row k={t("subtotal")} v={money(totals.subtotal)} />
-          <Row k={t("delivery_fee")} v={totals.deliveryFee ? money(totals.deliveryFee) : t("free")} green={!totals.deliveryFee} />
+          <Row k={t("delivery_fee")} v={totals.deliveryFee ? money(totals.deliveryFee) : totals.subFreeDelivery ? `👑 ${t("free")}` : t("free")} green={!totals.deliveryFee} />
           {totals.expressFee > 0 && <Row k={t("express_fee")} v={money(totals.expressFee)} />}
-          <Row k={t("service_fee")} v={money(totals.serviceFee)} />
+          <Row k={t("service_fee")} v={totals.serviceFee ? money(totals.serviceFee) : t("free")} green={!totals.serviceFee} />
+          {totals.memberDiscount > 0 && <Row k={`👑 ${t("member_discount")} (${member.benefits.discount_pct}%)`} v={`- ${money(totals.memberDiscount)}`} green />}
           {totals.discount > 0 && <Row k={t("discount")} v={`- ${money(totals.discount)}`} green />}
           {totals.vat > 0 && <Row k={`${t("vat")} (${settings.vat_pct}%)`} v={money(totals.vat)} />}
           <div className="flex justify-between border-t border-ink-100 pt-3 text-base font-extrabold">

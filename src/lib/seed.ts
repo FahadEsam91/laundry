@@ -334,3 +334,61 @@ export function seed(db: DatabaseSync) {
   insN.run(demoCustomer, "عرض نهاية الأسبوع", "Weekend deal", "خصم 20% على كل الخدمات بكود NUQA20", "20% off everything with NUQA20", null, 0, iso(new Date(nowD.getTime() - 2 * 3600000)));
   q("INSERT INTO wallet_tx(user_id,amount,kind,note,created_at) VALUES(?,?,?,?,?)").run(demoCustomer, 25000, "topup", "Card top-up", iso(new Date(nowD.getTime() - 10 * 86400000)));
 }
+
+// ---------------------------------------------------------------- subscriptions (Nuqa Plus)
+
+export const PLANS = [
+  { slug: "basic", ar: "نقاء أساسي", en: "Nuqa Basic", dAr: "مثالي للأفراد: 4 توصيلات مجانية شهرياً وبدون رسوم خدمة", dEn: "For individuals: 4 free deliveries a month and no service fees", price: 4900, free: 4, disc: 0, nosf: 1, exp: 0, prio: 0, color: "#0EA5E9", popular: 0 },
+  { slug: "plus", ar: "نقاء بلس", en: "Nuqa Plus", dAr: "توصيل مجاني غير محدود + خصم 10% على كل طلب", dEn: "Unlimited free delivery + 10% off every order", price: 9900, free: -1, disc: 10, nosf: 1, exp: 25, prio: 0, color: "#1A62EC", popular: 1 },
+  { slug: "family", ar: "نقاء العائلة", en: "Nuqa Family", dAr: "للعائلات: توصيل مجاني، خصم 15%، نصف سعر المستعجل ودعم أولوية", dEn: "For families: free delivery, 15% off, half-price express & priority support", price: 19900, free: -1, disc: 15, nosf: 1, exp: 50, prio: 1, color: "#7C3AED", popular: 0 },
+];
+
+export function seedSubscriptions(db: DatabaseSync) {
+  const nowD = new Date();
+  const ts = nowD.toISOString();
+  const ins = db.prepare(
+    "INSERT INTO plans(slug,name_ar,name_en,desc_ar,desc_en,price,interval_days,free_deliveries,discount_pct,no_service_fee,express_discount_pct,priority_support,color,popular,active,sort,created_at) VALUES(?,?,?,?,?,?,30,?,?,?,?,?,?,?,1,?,?)",
+  );
+  const planIds = PLANS.map((p, i) => Number(ins.run(p.slug, p.ar, p.en, p.dAr, p.dEn, p.price, p.free, p.disc, p.nosf, p.exp, p.prio, p.color, p.popular, i, ts).lastInsertRowid));
+
+  // demo subscribers: a growing member base over the last ~75 days (skips the demo customer so it can try subscribing)
+  const customers = db.prepare("SELECT id FROM users WHERE role='customer' AND phone!='+9647700000001' ORDER BY id").all() as any[];
+  if (!customers.length) return;
+  const insSub = db.prepare("INSERT INTO subscriptions(user_id,plan_id,status,auto_renew,payment_method,current_period_start,current_period_end,deliveries_used,started_at,cancelled_at,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)");
+  const insPay = db.prepare("INSERT INTO subscription_payments(subscription_id,user_id,plan_id,amount,kind,period_start,period_end,created_at) VALUES(?,?,?,?,?,?,?,?)");
+  const DAY = 86400000;
+  customers.forEach((c, i) => {
+    if (R() > 0.55) return;
+    const pi = R() < 0.55 ? 1 : R() < 0.6 ? 0 : 2;
+    const plan = PLANS[pi];
+    let start = nowD.getTime() - int(2, 75) * DAY;
+    const churnAt = R() < 0.14 ? start + int(25, 55) * DAY : Infinity; // some members cancel
+    const subStart = new Date(start).toISOString();
+    let periodStart = start;
+    let periodEnd = start + 30 * DAY;
+    const pays: [number, number, string][] = [[periodStart, periodEnd, "new"]];
+    while (periodEnd < nowD.getTime() && periodEnd < churnAt) {
+      periodStart = periodEnd;
+      periodEnd = periodStart + 30 * DAY;
+      pays.push([periodStart, periodEnd, "renewal"]);
+    }
+    const churned = churnAt !== Infinity && churnAt < nowD.getTime();
+    const status = churned && periodEnd < nowD.getTime() ? "expired" : "active"; // cancelled members keep benefits until period end
+    const sid = Number(
+      insSub.run(c.id, planIds[pi], status, churned ? 0 : 1, R() < 0.6 ? "card" : "wallet", new Date(periodStart).toISOString(), new Date(periodEnd).toISOString(), plan.free > 0 ? int(0, plan.free) : int(0, 6), subStart, churned ? new Date(churnAt).toISOString() : null, subStart).lastInsertRowid,
+    );
+    for (const [a, b, kind] of pays) insPay.run(sid, c.id, planIds[pi], plan.price, kind, new Date(a).toISOString(), new Date(b).toISOString(), new Date(a).toISOString());
+    // re-price this member's orders placed while subscribed, so analytics reflect member benefits
+    const until = new Date(Math.min(churned ? churnAt : Infinity, nowD.getTime(), periodEnd)).toISOString();
+    const orders = db.prepare("SELECT id,subtotal,delivery_fee,service_fee,total FROM orders WHERE customer_id=? AND created_at>=? AND created_at<=?").all(c.id, subStart, until) as any[];
+    for (const o of orders) {
+      const memberDiscount = Math.round((o.subtotal * plan.disc) / 100 / 250) * 250;
+      const savings = o.delivery_fee + (plan.nosf ? o.service_fee : 0) + memberDiscount;
+      db.prepare("UPDATE orders SET subscription_id=?,member_discount=?,sub_savings=?,sub_free_delivery=?,delivery_fee=0,service_fee=?,total=? WHERE id=?").run(
+        sid, memberDiscount, savings, plan.free > 0 && o.delivery_fee > 0 ? 1 : 0, plan.nosf ? 0 : o.service_fee, Math.max(0, o.total - savings), o.id,
+      );
+    }
+    void i;
+  });
+  void ts;
+}
