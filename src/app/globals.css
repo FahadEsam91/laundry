@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: light; }
+html { -webkit-tap-highlight-color: transparent; }
+body { @apply bg-ink-50 text-ink-900 antialiased; font-feature-settings: "ss01"; }
+* { scrollbar-width: thin; scrollbar-color: #C2C8D3 transparent; }
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.leaflet-container { font-family: inherit; background: #e8eef5; }
+.leaflet-tooltip { border-radius: 10px; font-weight: 600; font-size: 12px; box-shadow: 0 6px 16px rgba(0,0,0,.12); border: 0; }
+@keyframes pulse2 { 0% { transform: scale(1); opacity: .45 } 100% { transform: scale(2.2); opacity: 0 } }
+.pb-safe { padding-bottom: max(env(safe-area-inset-bottom), 0px); }
+.tabular { font-variant-numeric: tabular-nums; }
