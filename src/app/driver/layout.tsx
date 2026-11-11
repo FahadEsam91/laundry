@@ -5,5 +5,5 @@ export const metadata = { title: "Rider" };
 
 export default async function Layout({ children }: { children: React.ReactNode }) {
   await guard("driver", "/driver", true);
-  return <CustomerShell>{children}</CustomerShell>;
+  return <CustomerShell narrow>{children}</CustomerShell>;
 }

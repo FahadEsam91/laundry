@@ -118,9 +118,10 @@ function Inner({ id }: { id: string }) {
         </div>
       )}
 
+      <div className={cx("lg:mx-auto lg:max-w-7xl lg:items-start lg:gap-8 lg:px-8 lg:pt-8", !closed && "lg:grid lg:grid-cols-[minmax(0,1fr)_460px]")}>
       {!closed ? (
-        <div className="relative">
-          <MapView className="h-[44vh] min-h-[280px] w-full" markers={markers} route={tr ? [tr.from, tr.to] : [[o.partner.lat, o.partner.lng], [o.address_lat, o.address_lng]]} />
+        <div className="relative lg:sticky lg:top-24 lg:overflow-hidden lg:rounded-3xl lg:shadow-soft">
+          <MapView className="h-[44vh] min-h-[280px] w-full lg:h-[calc(100vh-8rem)]" markers={markers} route={tr ? [tr.from, tr.to] : [[o.partner.lat, o.partner.lng], [o.address_lat, o.address_lng]]} />
           <div className="absolute inset-x-0 top-0 z-[500]">
             <TopBar transparent back="/orders" right={<a href={`tel:${settings.support_phone}`} className="flex h-10 w-10 items-center justify-center rounded-full bg-white/90 shadow-soft"><Headphones className="h-5 w-5" /></a>} />
           </div>
@@ -134,7 +135,7 @@ function Inner({ id }: { id: string }) {
         <TopBar title={`${t("order")} ${o.code}`} back="/orders" />
       )}
 
-      <div className={cx("relative space-y-3 px-4", !closed && "-mt-6")}>
+      <div className={cx("relative space-y-3 px-4 lg:px-0", closed ? "lg:mx-auto lg:max-w-3xl" : "-mt-6 lg:mt-0")}>
         {/* status card */}
         <div className="rounded-3xl bg-white p-5 shadow-lift">
           <div className="flex items-start justify-between gap-3">
@@ -283,6 +284,7 @@ function Inner({ id }: { id: string }) {
             <a href="/"><Button variant="secondary" block><HomeIcon className="h-4 w-4" /> {t("nav_home")}</Button></a>
           )}
         </div>
+      </div>
       </div>
 
       <Sheet open={cancelOpen} onClose={() => setCancelOpen(false)} title={t("cancel_order")}>

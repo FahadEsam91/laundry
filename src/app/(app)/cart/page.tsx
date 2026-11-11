@@ -115,9 +115,11 @@ export default function CartPage() {
   const dayLabel = (d: string) => (d === "0" ? t("today") : d === "1" ? t("tomorrow") : fmtDate(new Date(Date.now() + 2 * 86400000).toISOString(), { weekday: "long" }));
 
   return (
-    <div className="bg-ink-50 pb-32">
+    <div className="bg-ink-50 pb-32 lg:pb-16">
       <TopBar title={t("checkout")} />
 
+      <div className="lg:mx-auto lg:grid lg:max-w-6xl lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start lg:gap-8 lg:px-8">
+      <div className="min-w-0 lg:[&>section]:mt-4 lg:[&>section]:rounded-2xl lg:[&>section]:border lg:[&>section]:border-ink-100 lg:[&>section]:p-6 lg:[&>section]:shadow-soft">
       {/* basket */}
       <section className="bg-white p-4">
         <div className="mb-3 flex items-center gap-3">
@@ -160,13 +162,13 @@ export default function CartPage() {
 
       {member ? (
         totals.subSavings > 0 && (
-          <div className="mx-4 mt-2 flex items-center gap-3 rounded-2xl bg-gradient-to-r from-amber-100 to-amber-50 p-3 text-sm font-bold text-amber-900">
+          <div className="mx-4 mt-2 flex items-center gap-3 rounded-2xl bg-gradient-to-r from-amber-100 to-amber-50 lg:mx-0 lg:mt-4 p-3 text-sm font-bold text-amber-900">
             <Crown className="h-5 w-5 text-amber-600" /> {t("member_savings_line", { x: money(totals.subSavings), p: L(member.plan, "name") })}
           </div>
         )
       ) : (
         upSave > 0 && (
-          <Link href="/plus" className="mx-4 mt-2 flex items-center gap-3 rounded-2xl bg-ink-900 p-3 text-sm font-semibold text-white">
+          <Link href="/plus" className="mx-4 mt-2 flex items-center gap-3 rounded-2xl bg-ink-900 lg:mx-0 lg:mt-4 p-3 text-sm font-semibold text-white">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-400 text-amber-950"><Crown className="h-5 w-5" /></span>
             <span className="flex-1">{t("upsell_plus", { x: money(upSave) })}</span>
             <span className="text-xs font-bold text-amber-300">{t("plus_cta")}</span>
@@ -304,8 +306,11 @@ export default function CartPage() {
         </div>
       </section>
 
+      </div>
+
       {/* summary */}
-      <section className="mt-2 bg-white p-4">
+      <div className="lg:sticky lg:top-24">
+      <section className="mt-2 bg-white p-4 lg:mt-4 lg:rounded-2xl lg:border lg:border-ink-100 lg:p-6 lg:shadow-soft">
         <h3 className="mb-3 font-bold">{t("summary")}</h3>
         <dl className="space-y-2 text-sm">
           <Row k={t("subtotal")} v={money(totals.subtotal)} />
@@ -320,10 +325,16 @@ export default function CartPage() {
             <dd>{money(totals.total)}</dd>
           </div>
         </dl>
+        <Button block size="lg" loading={placing} disabled={belowMin} onClick={place} className="mt-5 hidden justify-between lg:flex">
+          <span>{me?.user ? t("place_order") : t("verify")}</span>
+          <span>{money(totals.total)}</span>
+        </Button>
         <p className="mt-3 text-[11px] text-ink-400">{t("terms_note")}</p>
       </section>
+      </div>
+      </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-[460px] border-t border-ink-100 bg-white p-4 pb-safe">
+      <div className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-[460px] border-t border-ink-100 bg-white p-4 pb-safe lg:hidden">
         <Button block size="lg" loading={placing} disabled={belowMin} onClick={place} className="justify-between">
           <span>{me?.user ? t("place_order") : t("verify")}</span>
           <span>{money(totals.total)}</span>

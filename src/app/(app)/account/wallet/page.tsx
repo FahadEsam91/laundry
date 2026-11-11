@@ -26,7 +26,7 @@ export default function WalletPage() {
   };
   const KIND: Record<string, [string, string]> = { topup: ["شحن رصيد", "Top-up"], payment: ["دفع طلب", "Order payment"], refund: ["استرداد", "Refund"], credit: ["رصيد من الدعم", "Support credit"] };
   return (
-    <div>
+    <div className="lg:mx-auto lg:max-w-3xl lg:px-8">
       <TopBar title={t("wallet")} back="/account" />
       <div className="p-4">
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-700 via-brand-600 to-sky-500 p-6 text-white shadow-glow">

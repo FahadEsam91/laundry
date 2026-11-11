@@ -18,7 +18,7 @@ export default function NotificationsPage() {
   }, [!!data]);
   const list: any[] = data?.notifications || [];
   return (
-    <div>
+    <div className="lg:mx-auto lg:max-w-3xl lg:px-8">
       <TopBar title={t("notifications")} />
       {data && !list.length && <Empty icon={<Bell className="h-9 w-9" />} title={t("no_notifications")} />}
       <div className="divide-y divide-ink-100">

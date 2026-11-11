@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import useSWR from "swr";
 import {
   Home, ReceiptText, TicketPercent, UserRound, Star, Clock, Bike, MapPin, Check, Plus, Crosshair, Zap, Leaf, Crown, BadgePercent,
-  ChevronLeft, ChevronRight, Building2, Briefcase, LayoutDashboard, Store, Truck,
+  ChevronLeft, ChevronRight, Building2, Briefcase, Search, Bell, Languages, ShoppingBasket,
 } from "lucide-react";
 import { useApp, useCart, useToast } from "./providers";
 import { Button, Input, PartnerCover, PartnerLogo, Segmented, Sheet, cx, Logo } from "./ui";
@@ -15,49 +15,141 @@ import { api, errText } from "@/lib/client";
 
 // ------------------------------------------------------------- shell
 
-export function CustomerShell({ children }: { children: React.ReactNode }) {
-  const { t, lang } = useApp();
+export function CustomerShell({ children, narrow }: { children: React.ReactNode; narrow?: boolean }) {
+  // narrow = phone-only experiences (rider app): keep the app column on every screen size
+  if (narrow)
+    return (
+      <div className="min-h-screen bg-ink-50">
+        <div className="relative mx-auto min-h-screen max-w-[460px] bg-white shadow-[0_0_60px_rgba(16,24,40,.08)]">{children}</div>
+      </div>
+    );
   return (
-    <div className="min-h-screen bg-[radial-gradient(1200px_600px_at_80%_-10%,#D9EBFF_0%,transparent_60%),radial-gradient(900px_500px_at_-10%_110%,#E0F2FE_0%,transparent_60%)] bg-ink-50">
-      {/* desktop showcase panel */}
-      <aside className="fixed inset-y-0 start-0 hidden w-[calc(50%-230px)] flex-col justify-between p-10 xl:flex">
-        <Logo />
-        <div className="max-w-md">
-          <h1 className="text-4xl font-extrabold leading-tight text-ink-900">{lang === "ar" ? "ملابسك نظيفة… بدون ما تطلع من البيت" : "Fresh clothes, without leaving home"}</h1>
-          <p className="mt-4 text-lg text-ink-500">{t("tagline")}</p>
-          <div className="mt-8 grid grid-cols-3 gap-3 text-center">
-            {[
-              ["+9", lang === "ar" ? "مغاسل شريكة" : "partner laundries"],
-              ["45", lang === "ar" ? "دقيقة للاستلام" : "min pickup"],
-              ["4.8★", lang === "ar" ? "تقييم الزبائن" : "customer rating"],
-            ].map(([a, b]) => (
-              <div key={b} className="rounded-2xl bg-white/70 p-4 shadow-soft backdrop-blur">
-                <div className="text-2xl font-extrabold text-brand-700" dir="ltr">{a}</div>
-                <div className="mt-1 text-xs text-ink-500">{b}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="text-xs text-ink-400">© {new Date().getFullYear()} Nuqa</div>
-      </aside>
-      <aside className="fixed inset-y-0 end-0 hidden w-[calc(50%-230px)] flex-col items-end justify-center gap-3 p-10 xl:flex">
-        <div className="w-64 rounded-3xl bg-white/80 p-5 shadow-soft backdrop-blur">
-          <div className="mb-3 text-sm font-bold text-ink-800">{t("switch_panel")}</div>
-          {[
-            ["/admin", t("role_admin"), LayoutDashboard],
-            ["/partner", t("role_partner"), Store],
-            ["/driver", t("role_driver"), Truck],
-          ].map(([href, label, I]: any) => (
-            <Link key={href} href={href} className="mb-1.5 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-ink-700 hover:bg-brand-50 hover:text-brand-700">
-              <I className="h-4 w-4" /> {label}
-            </Link>
-          ))}
-        </div>
-      </aside>
-
-      <div className="relative mx-auto min-h-screen max-w-[460px] bg-white shadow-[0_0_60px_rgba(16,24,40,.08)]">{children}</div>
+    <div className="min-h-screen bg-ink-50 lg:bg-white">
+      <DesktopHeader />
+      <div className="relative mx-auto min-h-screen max-w-[460px] bg-white shadow-[0_0_60px_rgba(16,24,40,.08)] lg:min-h-[calc(100vh-4rem)] lg:max-w-none lg:shadow-none">
+        {children}
+      </div>
+      <DesktopFooter />
     </div>
   );
+}
+
+/** Desktop-only top navigation (phones use the bottom tab bar). */
+function DesktopHeader() {
+  const { t, lang, setLang, me } = useApp();
+  const { count, subtotal } = useCart();
+  const { money } = useApp();
+  const path = usePathname();
+  const router = useRouter();
+  const [q, setQ] = useState("");
+  const [addrOpen, setAddrOpen] = useState(false);
+  const addr = me?.addresses?.find((a: any) => a.is_default) || me?.addresses?.[0];
+  const links = [
+    { href: "/", label: t("nav_home") },
+    { href: "/orders", label: t("nav_orders") },
+    { href: "/plus", label: t("plus_title") },
+    { href: "/offers", label: t("nav_offers") },
+  ];
+  return (
+    <header className="sticky top-0 z-40 hidden border-b border-ink-100 bg-white/95 backdrop-blur lg:block">
+      <div className="mx-auto flex h-16 max-w-7xl items-center gap-5 px-8">
+        <Link href="/" className="shrink-0"><Logo /></Link>
+        <button onClick={() => setAddrOpen(true)} className="flex min-w-0 max-w-[220px] shrink-0 items-center gap-2 rounded-xl px-2 py-1.5 text-start hover:bg-ink-50">
+          <MapPin className="h-5 w-5 shrink-0 text-brand-600" />
+          <span className="min-w-0">
+            <span className="block text-[11px] text-ink-400">{t("deliver_to")}</span>
+            <span className="block truncate text-sm font-bold">{addr ? `${t(`label_${addr.label}` as any)} • ${addr.area}` : lang === "ar" ? "اختر موقعك" : "Choose location"}</span>
+          </span>
+        </button>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            router.push(q.trim() ? `/search?q=${encodeURIComponent(q.trim())}` : "/search");
+          }}
+          className="flex h-11 min-w-0 flex-1 items-center gap-2 rounded-xl bg-ink-100 px-4 focus-within:bg-white focus-within:ring-2 focus-within:ring-brand-500/30"
+        >
+          <Search className="h-4 w-4 shrink-0 text-ink-400" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("search_ph")} className="h-full min-w-0 flex-1 bg-transparent text-sm outline-none" />
+        </form>
+        <nav className="flex shrink-0 items-center gap-1">
+          {links.map((l) => {
+            const on = l.href === "/" ? path === "/" : path.startsWith(l.href);
+            return (
+              <Link key={l.href} href={l.href} className={cx("rounded-lg px-3 py-2 text-sm font-semibold transition", on ? "bg-brand-50 text-brand-700" : "text-ink-600 hover:bg-ink-50 hover:text-ink-900")}>
+                {l.label}
+              </Link>
+            );
+          })}
+        </nav>
+        <div className="flex shrink-0 items-center gap-1">
+          <button onClick={() => setLang(lang === "ar" ? "en" : "ar")} className="flex h-10 items-center gap-1 rounded-xl px-3 text-sm font-bold text-ink-600 hover:bg-ink-50" aria-label="language">
+            <Languages className="h-4 w-4" /> {lang === "ar" ? "EN" : "ع"}
+          </button>
+          <Link href={me?.user ? "/notifications" : "/login"} className="relative flex h-10 w-10 items-center justify-center rounded-xl text-ink-600 hover:bg-ink-50" aria-label={t("notifications")}>
+            <Bell className="h-5 w-5" />
+            {me?.unread > 0 && <span className="absolute end-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">{me.unread}</span>}
+          </Link>
+          <Link href="/cart" className={cx("flex h-10 items-center gap-2 rounded-xl px-3 text-sm font-bold transition", count ? "bg-brand-600 text-white shadow-glow hover:bg-brand-700" : "text-ink-600 hover:bg-ink-50")} aria-label={t("basket")}>
+            <ShoppingBasket className="h-5 w-5" />
+            {count ? <span>{count} • {money(subtotal)}</span> : null}
+          </Link>
+          {me?.user ? (
+            <Link href="/account" className="ms-1 flex items-center gap-2 rounded-xl py-1 pe-3 ps-1 hover:bg-ink-50">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-600 text-sm font-bold text-white">{me.user.name.slice(0, 1)}</span>
+              <span className="max-w-[110px] truncate text-sm font-semibold">{me.user.name.split(" ")[0]}</span>
+            </Link>
+          ) : (
+            <Link href="/login" className="ms-1"><Button size="sm">{t("verify")}</Button></Link>
+          )}
+        </div>
+      </div>
+      <AddressSheet open={addrOpen} onClose={() => setAddrOpen(false)} />
+    </header>
+  );
+}
+
+function DesktopFooter() {
+  const { t, lang, settings } = useApp();
+  return (
+    <footer className="mt-16 hidden bg-ink-950 text-white lg:block">
+      <div className="mx-auto grid max-w-7xl grid-cols-4 gap-10 px-8 py-12">
+        <div>
+          <Logo light />
+          <p className="mt-3 text-sm leading-6 text-white/60">{t("tagline")}</p>
+        </div>
+        <div>
+          <div className="mb-3 text-sm font-bold">{t("app_name")}</div>
+          <div className="space-y-2 text-sm text-white/60">
+            <Link href="/plus" className="block hover:text-white">{t("plus_title")}</Link>
+            <Link href="/offers" className="block hover:text-white">{t("nav_offers")}</Link>
+            <Link href="/orders" className="block hover:text-white">{t("nav_orders")}</Link>
+          </div>
+        </div>
+        <div>
+          <div className="mb-3 text-sm font-bold">{lang === "ar" ? "للشركاء" : "For partners"}</div>
+          <div className="space-y-2 text-sm text-white/60">
+            <Link href="/partner" className="block hover:text-white">{t("role_partner")}</Link>
+            <Link href="/driver" className="block hover:text-white">{t("role_driver")}</Link>
+            <Link href="/admin" className="block hover:text-white">{t("role_admin")}</Link>
+          </div>
+        </div>
+        <div>
+          <div className="mb-3 text-sm font-bold">{t("support")}</div>
+          <div className="space-y-2 text-sm text-white/60">
+            <a href={`tel:${settings.support_phone}`} className="block hover:text-white" dir="ltr">{settings.support_phone}</a>
+            <Link href="/privacy" className="block hover:text-white">{t("privacy")}</Link>
+            <Link href="/terms" className="block hover:text-white">{t("terms")}</Link>
+          </div>
+        </div>
+      </div>
+      <div className="border-t border-white/10 py-5 text-center text-xs text-white/40">© {new Date().getFullYear()} {t("app_name")}</div>
+    </footer>
+  );
+}
+
+/** Centered page container used on desktop (no-op on phones). */
+export function Page({ children, className, size = "7xl" }: { children: React.ReactNode; className?: string; size?: "3xl" | "5xl" | "7xl" }) {
+  return <div className={cx("lg:mx-auto lg:px-8", size === "3xl" ? "lg:max-w-3xl" : size === "5xl" ? "lg:max-w-5xl" : "lg:max-w-7xl", className)}>{children}</div>;
 }
 
 export function BottomNav() {
@@ -72,8 +164,8 @@ export function BottomNav() {
   ];
   return (
     <>
-      <div className="h-20" />
-      <nav className="pb-safe fixed inset-x-0 bottom-0 z-40 mx-auto max-w-[460px] border-t border-ink-100 bg-white/95 backdrop-blur">
+      <div className="h-20 lg:hidden" />
+      <nav className="pb-safe fixed inset-x-0 bottom-0 z-40 mx-auto max-w-[460px] border-t lg:hidden border-ink-100 bg-white/95 backdrop-blur">
         <div className="grid grid-cols-4">
           {items.map((it) => {
             const on = it.href === "/" ? path === "/" : path.startsWith(it.href);
@@ -97,7 +189,7 @@ export function TopBar({ title, back = true, right, transparent }: { title?: Rea
   const { dir } = useApp();
   const Chevron = dir === "rtl" ? ChevronRight : ChevronLeft;
   return (
-    <header className={cx("sticky top-0 z-30 flex h-14 items-center gap-2 px-3", transparent ? "" : "border-b border-ink-100 bg-white/95 backdrop-blur")}>
+    <header className={cx("sticky top-0 z-30 flex h-14 items-center gap-2 px-3", transparent ? "lg:top-16" : "border-b border-ink-100 bg-white/95 backdrop-blur lg:static lg:mx-auto lg:h-auto lg:max-w-7xl lg:border-0 lg:bg-transparent lg:px-8 lg:pb-2 lg:pt-8 lg:[&>div]:text-2xl lg:[&>div]:font-extrabold")}>
       {back && (
         <button
           onClick={() => (typeof back === "string" ? router.push(back) : window.history.length > 1 ? router.back() : router.push("/"))}
@@ -116,7 +208,7 @@ export function TopBar({ title, back = true, right, transparent }: { title?: Rea
 export function SectionTitle({ title, href, sub }: { title: string; href?: string; sub?: string }) {
   const { t } = useApp();
   return (
-    <div className="mb-3 flex items-end justify-between px-4">
+    <div className="mb-3 flex items-end justify-between px-4 lg:mb-5 lg:px-0 lg:[&_h2]:text-2xl">
       <div>
         <h2 className="text-lg font-bold text-ink-900">{title}</h2>
         {sub && <p className="text-xs text-ink-500">{sub}</p>}
@@ -151,13 +243,13 @@ export function PartnerTags({ tags, max = 2 }: { tags: string; max?: number }) {
   );
 }
 
-export function PartnerCard({ p, variant = "row" }: { p: any; variant?: "row" | "wide" }) {
+export function PartnerCard({ p, variant = "row" }: { p: any; variant?: "row" | "wide" | "grid" }) {
   const { L, t, money, num, me } = useApp();
   const fee = p.delivery_fee === 0 ? t("free") : me?.member?.benefits?.free_delivery ? `👑 ${t("free_with_plus")}` : money(p.delivery_fee);
-  if (variant === "wide")
+  if (variant === "wide" || variant === "grid")
     return (
-      <Link href={`/laundry/${p.id}`} className="block w-[270px] shrink-0 overflow-hidden rounded-2xl border border-ink-100 bg-white shadow-soft transition active:scale-[.99]">
-        <PartnerCover p={p} className="h-28">
+      <Link href={`/laundry/${p.id}`} className={cx("block shrink-0 overflow-hidden transition hover:-translate-y-0.5 hover:shadow-lift", variant === "grid" ? "w-full" : "w-[270px] lg:w-auto", " rounded-2xl border border-ink-100 bg-white shadow-soft active:scale-[.99]")}>
+        <PartnerCover p={p} className={variant === "grid" ? "h-36" : "h-28"}>
           <div className="absolute bottom-2 start-2 flex gap-1">
             <PartnerTags tags={p.tags} />
           </div>

@@ -63,14 +63,14 @@ export default function LaundryPage({ params }: { params: Promise<{ id: string }
   const jump = (sid: string) => {
     setTab(sid);
     const el = sectionRefs.current[sid];
-    if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 112, behavior: "smooth" });
+    if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - (window.innerWidth >= 1024 ? 180 : 112), behavior: "smooth" });
   };
   const inCart = cart.partner?.id === p.id && cart.count > 0;
 
   return (
     <div className="pb-28">
       <div className="relative">
-        <PartnerCover p={p} className="h-52" />
+        <PartnerCover p={p} className="h-52 lg:h-72" />
         <div className="absolute inset-x-0 top-0">
           <TopBar
             transparent
@@ -92,8 +92,8 @@ export default function LaundryPage({ params }: { params: Promise<{ id: string }
         </div>
       </div>
 
-      <div className="relative -mt-10 px-4">
-        <div className="rounded-3xl bg-white p-4 shadow-lift">
+      <div className="relative -mt-10 px-4 lg:mx-auto lg:-mt-24 lg:max-w-7xl lg:px-8">
+        <div className="rounded-3xl bg-white p-4 shadow-lift lg:p-7">
           <div className="flex gap-3">
             <PartnerLogo p={p} size={64} className="-mt-10 ring-4 ring-white" />
             <div className="min-w-0 flex-1">
@@ -135,15 +135,17 @@ export default function LaundryPage({ params }: { params: Promise<{ id: string }
         </div>
       </div>
 
+      <div className="lg:mx-auto lg:mt-6 lg:grid lg:max-w-7xl lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-8 lg:px-8">
+      <div className="min-w-0">
       {/* sticky tabs */}
-      <div className="sticky top-0 z-20 mt-4 border-b border-ink-100 bg-white/95 backdrop-blur">
-        <div className="px-4 pt-3">
+      <div className="sticky top-0 z-20 mt-4 border-b border-ink-100 bg-white/95 backdrop-blur lg:top-16 lg:mt-0">
+        <div className="px-4 pt-3 lg:px-0">
           <label className="flex h-10 items-center gap-2 rounded-xl bg-ink-100 px-3">
             <Search className="h-4 w-4 text-ink-400" />
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("search_items")} className="h-full flex-1 bg-transparent text-sm outline-none" />
           </label>
         </div>
-        <div className="no-scrollbar flex gap-1 overflow-x-auto px-3 py-2">
+        <div className="no-scrollbar flex gap-1 overflow-x-auto px-3 py-2 lg:px-0">
           {services.map((s) => (
             <button key={s.id} onClick={() => jump(String(s.id))} className={cx("h-9 shrink-0 rounded-full px-3.5 text-sm font-bold transition", tab === String(s.id) ? "bg-ink-900 text-white" : "text-ink-600 hover:bg-ink-100")}>
               {L(s, "name")}
@@ -155,12 +157,12 @@ export default function LaundryPage({ params }: { params: Promise<{ id: string }
       {/* popular */}
       {!q && popular.length > 0 && (
         <section className="pt-5">
-          <h2 className="mb-3 px-4 text-lg font-bold">🔥 {t("popular")}</h2>
-          <div className="no-scrollbar flex gap-3 overflow-x-auto px-4 pb-1">
+          <h2 className="mb-3 px-4 text-lg font-bold lg:px-0">🔥 {t("popular")}</h2>
+          <div className="no-scrollbar flex gap-3 overflow-x-auto px-4 pb-1 lg:grid lg:grid-cols-4 lg:overflow-visible lg:px-0">
             {popular.map((x) => {
               const qty = qtyOf(x.id);
               return (
-                <div key={x.id} className="w-36 shrink-0 rounded-2xl border border-ink-100 bg-white p-3 shadow-soft">
+                <div key={x.id} className="w-36 shrink-0 rounded-2xl border border-ink-100 bg-white p-3 shadow-soft lg:w-auto">
                   <div className="flex h-20 items-center justify-center rounded-xl text-4xl" style={{ background: `${p.color}10` }}>
                     {x.icon}
                   </div>
@@ -191,7 +193,7 @@ export default function LaundryPage({ params }: { params: Promise<{ id: string }
         if (!items.length) return null;
         return (
           <section key={s.id} ref={(el) => { sectionRefs.current[String(s.id)] = el; }} className="pt-6">
-            <div className="mb-1 px-4">
+            <div className="mb-1 px-4 lg:mb-3 lg:px-0">
               <h2 className="text-lg font-bold">{L(s, "name")}</h2>
               <p className="text-xs text-ink-500">{L(s, "desc")}</p>
             </div>
@@ -199,7 +201,7 @@ export default function LaundryPage({ params }: { params: Promise<{ id: string }
               const qty = qtyOf(x.id);
               const unit = UNIT_LABEL[x.unit] || UNIT_LABEL.piece;
               return (
-                <div key={x.id} className="flex items-center gap-3 px-4 py-3">
+                <div key={x.id} className="flex items-center gap-3 px-4 py-3 lg:px-0">
                   <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-ink-50 text-3xl">{x.icon}</div>
                   <div className="min-w-0 flex-1 border-b border-ink-100 pb-3">
                     <div className="flex items-center gap-2">
@@ -229,7 +231,7 @@ export default function LaundryPage({ params }: { params: Promise<{ id: string }
 
       {/* reviews */}
       {!!data?.reviews?.length && !q && (
-        <section className="px-4 pt-8">
+        <section className="px-4 pt-8 lg:px-0">
           <h2 className="mb-3 text-lg font-bold">{t("rating")}</h2>
           <div className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4">
             {data.reviews.map((r: any, i: number) => (
@@ -246,13 +248,46 @@ export default function LaundryPage({ params }: { params: Promise<{ id: string }
         </section>
       )}
 
-      <div className="mx-4 mt-8 flex items-center gap-2 rounded-2xl bg-emerald-50 p-3 text-xs font-medium text-emerald-800">
+      <div className="mx-4 mt-8 flex items-center gap-2 rounded-2xl bg-emerald-50 p-3 text-xs font-medium text-emerald-800 lg:mx-0">
         <ShieldCheck className="h-5 w-5 shrink-0" /> {t("guarantee")}
+      </div>
+      </div>
+
+      {/* desktop basket */}
+      <aside className="hidden lg:block">
+        <div className="sticky top-24 rounded-3xl border border-ink-100 bg-white p-5 shadow-soft">
+          <div className="mb-3 flex items-center gap-2 font-bold"><ShoppingBasket className="h-5 w-5 text-brand-600" /> {t("basket")}</div>
+          {inCart ? (
+            <>
+              <div className="max-h-[50vh] divide-y divide-ink-100 overflow-y-auto">
+                {Object.values(cart.lines).map((l) => (
+                  <div key={l.product_id} className="flex items-center gap-3 py-3">
+                    <span className="text-2xl">{l.icon}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-semibold">{L(l, "name")}</div>
+                      <div className="text-xs text-ink-500">{money(l.price * l.qty)}</div>
+                    </div>
+                    <QtyStepper small qty={l.qty} onChange={(n) => cart.setQty(cp, l, n)} />
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3 flex justify-between border-t border-ink-100 pt-3 font-extrabold"><span>{t("subtotal")}</span><span>{money(cart.subtotal)}</span></div>
+              {cart.subtotal < p.min_order && <p className="mt-2 rounded-xl bg-amber-50 p-2 text-xs font-semibold text-amber-800">{t("min_order_gap", { x: money(p.min_order) })}</p>}
+              <Link href="/cart" className="mt-4 block"><Button block size="lg">{t("checkout")}</Button></Link>
+            </>
+          ) : (
+            <div className="py-8 text-center">
+              <ShoppingBasket className="mx-auto h-10 w-10 text-ink-200" />
+              <p className="mt-2 text-sm text-ink-500">{t("empty_basket_sub")}</p>
+            </div>
+          )}
+        </div>
+      </aside>
       </div>
 
       {/* basket bar */}
       {inCart && (
-        <div className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-[460px] p-4 pb-safe">
+        <div className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-[460px] p-4 pb-safe lg:hidden">
           <Link href="/cart" className="animate-fade-up flex h-14 items-center gap-3 rounded-2xl bg-brand-600 px-4 text-white shadow-glow">
             <span className="flex h-8 min-w-8 items-center justify-center rounded-lg bg-white/20 px-2 text-sm font-extrabold">{cart.count}</span>
             <span className="flex-1 text-sm font-bold">{t("view_basket")}</span>

@@ -33,7 +33,8 @@ function SearchInner() {
   return (
     <>
       <TopBar title={svc ? L(svc, "name") : t("search")} />
-      <div className="px-4 pt-3">
+      <div className="lg:mx-auto lg:max-w-7xl lg:px-8">
+      <div className="px-4 pt-3 lg:max-w-2xl lg:px-0">
         <label className="flex h-12 items-center gap-2 rounded-2xl bg-ink-100 px-4">
           <Search className="h-5 w-5 text-ink-400" />
           <input autoFocus={!service} value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("search_ph")} className="h-full flex-1 bg-transparent text-sm outline-none" />
@@ -44,7 +45,7 @@ function SearchInner() {
           )}
         </label>
       </div>
-      <div className="no-scrollbar flex gap-2 overflow-x-auto px-4 py-3">
+      <div className="no-scrollbar flex gap-2 overflow-x-auto px-4 py-3 lg:flex-wrap lg:px-0">
         <button onClick={() => setService("")} className={cx("h-9 shrink-0 rounded-full border px-4 text-xs font-bold", !service ? "border-ink-900 bg-ink-900 text-white" : "border-ink-200 bg-white")}>
           {t("all")}
         </button>
@@ -54,10 +55,12 @@ function SearchInner() {
           </button>
         ))}
       </div>
-      {svc && <p className="px-4 pb-1 text-xs text-ink-500">{L(svc, "desc")}</p>}
+      {svc && <p className="px-4 pb-1 text-xs text-ink-500 lg:px-0 lg:text-sm">{L(svc, "desc")}</p>}
       {isLoading && [1, 2, 3, 4].map((i) => <Skeleton key={i} className="mx-4 my-3 h-20" />)}
       {data?.partners?.length === 0 && <Empty icon={<SearchX className="h-9 w-9" />} title={t("no_results")} />}
-      {data?.partners?.map((p: any) => <PartnerCard key={p.id} p={p} />)}
+      <div className="lg:hidden">{data?.partners?.map((p: any) => <PartnerCard key={p.id} p={p} />)}</div>
+      <div className="hidden grid-cols-3 gap-5 pt-4 lg:grid xl:grid-cols-4">{data?.partners?.map((p: any) => <PartnerCard key={p.id} p={p} variant="grid" />)}</div>
+      </div>
       <BottomNav />
     </>
   );

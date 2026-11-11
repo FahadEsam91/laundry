@@ -12,7 +12,7 @@ export default function AddressesPage() {
   const [open, setOpen] = useState(false);
   const list: any[] = me?.addresses || [];
   return (
-    <div>
+    <div className="lg:mx-auto lg:max-w-3xl lg:px-8">
       <TopBar title={t("addresses")} back="/account" />
       {me?.user && !list.length && <Empty icon={<Plus className="h-8 w-8" />} title={t("add_address")} />}
       <div className="space-y-2 p-4">

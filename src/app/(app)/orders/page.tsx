@@ -28,8 +28,8 @@ export default function OrdersPage() {
   };
 
   return (
-    <div>
-      <header className="sticky top-0 z-30 border-b border-ink-100 bg-white/95 px-4 pb-3 pt-4 backdrop-blur">
+    <div className="lg:mx-auto lg:max-w-5xl lg:px-8 lg:pt-8">
+      <header className="sticky top-0 z-30 border-b border-ink-100 bg-white/95 px-4 pb-3 pt-4 backdrop-blur lg:static lg:border-0 lg:bg-transparent lg:px-0 lg:[&>div]:max-w-sm">
         <h1 className="mb-3 text-2xl font-extrabold">{t("my_orders")}</h1>
         <Segmented
           value={tab}
@@ -48,7 +48,7 @@ export default function OrdersPage() {
       {me?.user && data && !list.length && (
         <Empty icon={<ReceiptText className="h-9 w-9" />} title={t("no_orders")} sub={t("no_orders_sub")} action={<Link href="/"><Button>{t("browse")}</Button></Link>} />
       )}
-      <div className="space-y-3 p-4">
+      <div className="space-y-3 p-4 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0 lg:px-0">
         {list.map((o) => {
           const p = { color: o.partner_color, color2: o.partner_color2, initials: o.partner_initials };
           return (

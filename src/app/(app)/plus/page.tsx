@@ -60,7 +60,7 @@ export default function PlusPage() {
   const left = cur ? (cur.free_deliveries === -1 ? t("unlimited") : String(Math.max(0, cur.free_deliveries - sub.deliveries_used))) : "";
 
   return (
-    <div className="bg-ink-50 pb-32">
+    <div className="bg-ink-50 pb-32 lg:pb-16">
       <div className="bg-gradient-to-b from-ink-950 via-ink-900 to-brand-900 text-white">
         <TopBar transparent back="/" />
         <div className="px-5 pb-10 pt-2 text-center">
@@ -71,9 +71,10 @@ export default function PlusPage() {
       </div>
 
       {/* membership status */}
-      {!sum && me?.user && <div className="-mt-6 px-4"><Skeleton className="h-40" /></div>}
+      <div className="lg:mx-auto lg:max-w-5xl lg:px-8">
+      {!sum && me?.user && <div className="-mt-6 px-4 lg:px-0"><Skeleton className="h-40" /></div>}
       {sub && cur && (
-        <div className="-mt-6 px-4">
+        <div className="-mt-6 px-4 lg:mx-auto lg:max-w-2xl lg:px-0">
           <div className="rounded-3xl bg-white p-5 shadow-lift">
             <div className="flex items-center justify-between">
               <div>
@@ -114,10 +115,10 @@ export default function PlusPage() {
       )}
 
       {/* plans */}
-      <section className={cx("px-4", sub ? "pt-6" : "-mt-6")}>
+      <section className={cx("px-4 lg:px-0", sub ? "pt-6" : "-mt-6")}>
         {sub && <h2 className="mb-3 text-lg font-bold">{t("choose_plan")}</h2>}
         {!plansData && <Skeleton className="h-64" />}
-        <div className="space-y-3">
+        <div className="space-y-3 lg:grid lg:grid-cols-3 lg:gap-5 lg:space-y-0">
           {plans.map((p) => {
             const on = sel === p.id;
             return (
@@ -143,7 +144,7 @@ export default function PlusPage() {
 
       {/* payment */}
       {plan && !isCurrent && (
-        <section className="px-4 pt-6">
+        <section className="px-4 pt-6 lg:mx-auto lg:max-w-2xl lg:px-0">
           <h2 className="mb-3 text-lg font-bold">{t("payment")}</h2>
           <div className="grid grid-cols-2 gap-2">
             {[
@@ -163,7 +164,7 @@ export default function PlusPage() {
       )}
 
       {/* FAQ */}
-      <section className="px-4 pt-8">
+      <section className="px-4 pt-8 lg:mx-auto lg:max-w-2xl lg:px-0">
         <h2 className="mb-3 text-lg font-bold">{t("plus_faq_title")}</h2>
         <div className="divide-y divide-ink-100 rounded-2xl bg-white">
           {[1, 2, 3].map((i) => (
@@ -180,7 +181,7 @@ export default function PlusPage() {
 
       {/* billing history */}
       {!!sum?.payments?.length && (
-        <section className="px-4 pt-8">
+        <section className="px-4 pt-8 lg:mx-auto lg:max-w-2xl lg:px-0">
           <h2 className="mb-3 text-lg font-bold">{t("billing_history")}</h2>
           <div className="divide-y divide-ink-100 rounded-2xl bg-white">
             {sum.payments.map((p: any) => (
@@ -197,13 +198,15 @@ export default function PlusPage() {
       )}
 
       {plan && !isCurrent && (
-        <div className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-[460px] border-t border-ink-100 bg-white p-4 pb-safe">
+        <div className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-[460px] border-t border-ink-100 bg-white p-4 pb-safe lg:static lg:mt-8 lg:max-w-2xl lg:border-0 lg:bg-transparent lg:p-0">
           <Button block size="lg" loading={busy} onClick={subscribe} className="justify-between">
             <span className="flex items-center gap-2"><Sparkles className="h-5 w-5" />{cur ? t("switch_plan") : t("subscribe_to", { x: L(plan, "name") })}</span>
             <span>{money(plan.price)}</span>
           </Button>
         </div>
       )}
+
+      </div>
 
       <Sheet open={cancelOpen} onClose={() => setCancelOpen(false)} title={t("cancel_membership")}>
         <p className="text-sm text-ink-600">{t("cancel_membership_note")}</p>

@@ -58,7 +58,7 @@ export default function AccountPage() {
   };
 
   return (
-    <div className="bg-ink-50">
+    <div className="bg-ink-50 lg:mx-auto lg:max-w-3xl lg:space-y-4 lg:bg-transparent lg:px-8 lg:py-8 lg:[&>div:not(.fixed)]:overflow-hidden lg:[&>div:not(.fixed)]:rounded-2xl lg:[&>div:not(.fixed)]:border lg:[&>div:not(.fixed)]:border-ink-100">
       {u ? (
         <>
           <header className="bg-white px-4 pb-5 pt-6">

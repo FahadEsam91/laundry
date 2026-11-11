@@ -11,13 +11,13 @@ export default function OffersPage() {
   const toast = useToast();
   const { data } = useSWR("/api/promos");
   return (
-    <div>
-      <header className="bg-gradient-to-br from-violet-600 to-brand-600 px-4 pb-8 pt-6 text-white">
+    <div className="lg:mx-auto lg:max-w-5xl lg:px-8 lg:pt-8">
+      <header className="bg-gradient-to-br from-violet-600 to-brand-600 px-4 pb-8 pt-6 text-white lg:rounded-3xl lg:px-10 lg:py-12">
         <TicketPercent className="h-8 w-8" />
         <h1 className="mt-3 text-2xl font-extrabold">{t("offers_title")}</h1>
         <p className="text-sm text-white/80">{lang === "ar" ? "انسخ الكود واستخدمه عند إتمام الطلب" : "Copy a code and apply it at checkout"}</p>
       </header>
-      <div className="-mt-4 space-y-3 px-4 pb-6">
+      <div className="-mt-4 space-y-3 px-4 pb-6 lg:mt-6 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0 lg:px-0">
         {!data && [1, 2, 3].map((i) => <Skeleton key={i} className="h-28" />)}
         {data?.promos?.map((p: any) => {
           const I = p.kind === "delivery" ? Truck : p.kind === "percent" ? Percent : Gift;
