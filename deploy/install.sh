@@ -93,7 +93,8 @@ if [ "${NUQA_SKIP_SYSTEM:-0}" != 1 ]; then
 
   for port in 80 443; do
     if ss -ltnH "( sport = :$port )" 2>/dev/null | grep -q . && ! docker ps --format '{{.Ports}}' | grep -q ":$port->"; then
-      warn "Port $port is already used by another program (e.g. nginx/apache). Stop it first: systemctl stop nginx apache2"
+      ss -ltnpH "( sport = :$port )" 2>/dev/null | head -2
+      die "Port $port is already used by another program (shown above). Nuqa needs ports 80 and 443 for HTTPS — stop that program or use a separate server."
     fi
   done
 fi
@@ -109,9 +110,32 @@ set -a; . ./.env; set +a
 
 if [ "${NUQA_SKIP_SYSTEM:-0}" != 1 ]; then
   say "Firewall"
-  ssh_port=$(echo "${SSH_CONNECTION:-x x x 22}" | awk '{print $4}')
-  ufw allow "${ssh_port:-22}/tcp" >/dev/null; ufw allow 80/tcp >/dev/null; ufw allow 443/tcp >/dev/null
-  ufw --force enable >/dev/null && ok "Open ports: ${ssh_port:-22} (SSH), 80, 443"
+  ssh_port=$(echo "${SSH_CONNECTION:-x x x 22}" | awk '{print $4}'); ssh_port=${ssh_port:-22}
+  if ufw status 2>/dev/null | grep -q "Status: active"; then
+    # already managed: only add what Nuqa needs, never remove existing rules
+    ufw allow 80/tcp >/dev/null; ufw allow 443/tcp >/dev/null
+    ok "Firewall already active — added 80 and 443, kept your existing rules"
+  else
+    # other public services on this server (e.g. a bot or another app)? don't lock them out
+    others=$(ss -ltnH 2>/dev/null | awk '{print $4}' | grep -vE '^(127\.|\[::1\]|\[::ffff:127\.)' | sed -E 's/.*:([0-9]+)$/\1/' | sort -un | grep -vxE "22|80|443|$ssh_port" | tr '\n' ' ' || true)
+    if [ -n "${others// /}" ] && [ "${FORCE_FIREWALL:-0}" != 1 ]; then
+      warn "Other services listen on ports: $others— firewall NOT enabled so they keep working."
+      warn "To enable it anyway (allowing only SSH/80/443): FORCE_FIREWALL=1 bash $DIR/deploy/install.sh"
+    else
+      ufw allow "$ssh_port/tcp" >/dev/null; ufw allow 80/tcp >/dev/null; ufw allow 443/tcp >/dev/null
+      ufw --force enable >/dev/null && ok "Firewall on — open ports: $ssh_port (SSH), 80, 443"
+    fi
+  fi
+
+  # small servers: add swap so the build doesn't run out of memory
+  mem_mb=$(awk '/MemTotal/ {print int($2/1024)}' /proc/meminfo)
+  if [ "$mem_mb" -lt 3500 ] && [ "$(swapon --show --noheadings | wc -l)" = 0 ]; then
+    say "Adding 2 GB swap (server has ${mem_mb} MB RAM)"
+    fallocate -l 2G /swapfile 2>/dev/null || dd if=/dev/zero of=/swapfile bs=1M count=2048 status=none
+    chmod 600 /swapfile && mkswap /swapfile >/dev/null && swapon /swapfile
+    grep -q '^/swapfile' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab
+    ok "Swap enabled"
+  fi
 
   say "Building and starting (first time takes a few minutes)"
   docker compose up -d --build
