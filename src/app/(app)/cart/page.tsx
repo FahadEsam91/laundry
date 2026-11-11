@@ -40,7 +40,7 @@ export default function CartPage() {
   const [promoInput, setPromoInput] = useState("");
   const [promo, setPromo] = useState<Promo | null>(null);
   const [promoBusy, setPromoBusy] = useState(false);
-  const [pay, setPay] = useState<"cash" | "card" | "wallet">("cash");
+  const [pay, setPay] = useState<"cash" | "card_pos" | "card" | "wallet">("cash");
   const [addrOpen, setAddrOpen] = useState(false);
   const [placing, setPlacing] = useState(false);
   const [card, setCard] = useState("4242 4242 4242 4242");
@@ -277,10 +277,11 @@ export default function CartPage() {
         <h3 className="mb-3 font-bold">{t("payment")}</h3>
         <div className="space-y-2">
           {[
-            { v: "cash" as const, icon: Banknote, label: t("pay_cash"), sub: "" },
-            { v: "card" as const, icon: CreditCard, label: t("pay_card"), sub: "Visa • Mastercard" },
-            { v: "wallet" as const, icon: Wallet, label: t("pay_wallet"), sub: `${t("balance")}: ${money(wallet)}` },
-          ].map((o) => (
+            { v: "cash" as const, icon: Banknote, label: t("pay_cash"), sub: t("pay_cash_sub"), show: true },
+            { v: "card_pos" as const, icon: CreditCard, label: t("pay_card_pos"), sub: t("pay_card_pos_sub"), show: true },
+            { v: "card" as const, icon: CreditCard, label: t("pay_card"), sub: "Visa • Mastercard", show: !!settings.online_payments },
+            { v: "wallet" as const, icon: Wallet, label: t("pay_wallet"), sub: `${t("balance")}: ${money(wallet)}`, show: wallet > 0 || !!settings.online_payments },
+          ].filter((o) => o.show).map((o) => (
             <button key={o.v} onClick={() => setPay(o.v)} className={cx("flex w-full items-center gap-3 rounded-2xl border-2 p-3 text-start transition", pay === o.v ? "border-brand-600 bg-brand-50/40" : "border-ink-100")}>
               <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-ink-100"><o.icon className="h-5 w-5 text-ink-700" /></span>
               <span className="flex-1">

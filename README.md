@@ -86,7 +86,12 @@ Turn it off to drive orders manually from the partner and rider apps.
 ## Run it
 
 Requires **Node.js 22.5+**. Uses **PostgreSQL** when `DATABASE_URL` is set, otherwise a zero‑setup SQLite file
-(handy for development). **Going live? Read [DEPLOYMENT.md](DEPLOYMENT.md)** (Docker + PostgreSQL + automatic HTTPS).
+(handy for development). **Going live? Read [DEPLOYMENT.md](DEPLOYMENT.md)** (Docker + PostgreSQL + automatic HTTPS) —
+or the Arabic guide **[DEPLOYMENT.ar.md](DEPLOYMENT.ar.md)**. One command on a fresh VPS:
+`curl -fsSL https://raw.githubusercontent.com/FahadEsam91/laundry/main/deploy/install.sh | sudo bash`
+
+**Payments:** cash and card‑on‑delivery (rider POS) work out of the box. Online card payments and wallet top‑ups stay
+disabled (Admin → Settings → Online card payments) until a payment gateway is connected.
 
 ```bash
 npm install

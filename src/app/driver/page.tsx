@@ -128,7 +128,7 @@ function JobCard({ j, action, onAct, busy, mapsUrl }: { j: any; action?: { actio
   const stops = isPickupLeg
     ? [{ icon: Home, title: j.customer_name, sub: j.address_text, phone: j.customer_phone }, { icon: Store, title: L({ name_ar: j.partner_ar, name_en: j.partner_en }, "name"), sub: L({ area_ar: j.area_ar, area_en: j.area_en }, "area"), phone: j.partner_phone }]
     : [{ icon: Store, title: L({ name_ar: j.partner_ar, name_en: j.partner_en }, "name"), sub: L({ area_ar: j.area_ar, area_en: j.area_en }, "area"), phone: j.partner_phone }, { icon: Home, title: j.customer_name, sub: j.address_text, phone: j.customer_phone }];
-  const collectCash = j.payment_method === "cash" && j.payment_status !== "paid" && ["ready", "out_for_delivery"].includes(j.status);
+  const collectCash = ["cash", "card_pos"].includes(j.payment_method) && j.payment_status !== "paid" && ["ready", "out_for_delivery"].includes(j.status);
   return (
     <div className="rounded-2xl bg-white p-4 shadow-soft">
       <div className="flex items-center justify-between">
@@ -161,7 +161,7 @@ function JobCard({ j, action, onAct, busy, mapsUrl }: { j: any; action?: { actio
         ))}
       </div>
       {j.notes && <div className="mt-3 rounded-lg bg-amber-50 p-2 text-xs text-amber-900">📝 {j.notes}</div>}
-      {collectCash && <div className="mt-3 flex items-center justify-between rounded-xl bg-emerald-50 p-3 text-sm font-bold text-emerald-800"><span>💵 {t("collect_cash")}</span><span>{money(j.total)}</span></div>}
+      {collectCash && <div className="mt-3 flex items-center justify-between rounded-xl bg-emerald-50 p-3 text-sm font-bold text-emerald-800"><span>{j.payment_method === "card_pos" ? `💳 ${t("collect_card")}` : `💵 ${t("collect_cash")}`}</span><span>{money(j.total)}</span></div>}
       <div className="mt-4 flex gap-2">
         {mapsUrl && <a href={mapsUrl} target="_blank" rel="noreferrer" className="flex-1"><Button variant="outline" block><MapPin className="h-4 w-4" /> {t("navigate")}</Button></a>}
         {action && <Button className="flex-[2]" variant={action.action === "take" ? "primary" : "success"} loading={busy} onClick={() => onAct(action.action)}>{t(action.key)}</Button>}

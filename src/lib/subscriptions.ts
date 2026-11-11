@@ -3,6 +3,7 @@ import { all, get, run, tx, now, insert } from "./db";
 import { HttpError, type SessionUser } from "./auth";
 import type { Benefits } from "./pricing";
 import { notify } from "./orders";
+import { getSettings } from "./settings";
 
 const DAY = 86400000;
 
@@ -38,8 +39,8 @@ async function charge(userId: number, method: string, amount: number, note: stri
     await run("INSERT INTO wallet_tx(user_id,amount,kind,note,created_at) VALUES(?,?,?,?,?)", userId, -amount, "subscription", note, now());
     return true;
   }
-  // card: charge the saved card through the payment gateway here (demo: always succeeds)
-  return true;
+  // card: charge the saved card through the payment gateway here. Without a gateway, card renewals can't be collected.
+  return (await getSettings()).online_payments;
 }
 
 /**
@@ -110,6 +111,7 @@ export async function subscribe(user: SessionUser, planId: number, method: "wall
   const plan = await get<Plan>("SELECT * FROM plans WHERE id=? AND active=1", planId);
   if (!plan) throw new HttpError(400, "plan_unavailable");
   if (!["wallet", "card"].includes(method)) throw new HttpError(400, "invalid_payment");
+  if (method === "card" && !(await getSettings()).online_payments) throw new HttpError(400, "online_payments_disabled");
   const current = await activeSubscription(user.id);
   if (current && current.plan.id === plan.id) throw new HttpError(409, "already_subscribed");
   return await tx(async () => {

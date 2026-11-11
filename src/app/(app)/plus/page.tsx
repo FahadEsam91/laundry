@@ -11,7 +11,7 @@ import { Button, Sheet, Skeleton, Toggle, cx } from "@/components/ui";
 import { api, errText } from "@/lib/client";
 
 export default function PlusPage() {
-  const { t, L, money, me, lang, fmtDate, refreshMe } = useApp();
+  const { t, L, money, me, lang, fmtDate, refreshMe, settings } = useApp();
   const toast = useToast();
   const router = useRouter();
   const { data: plansData } = useSWR("/api/plans");
@@ -20,7 +20,7 @@ export default function PlusPage() {
   const sub = sum?.subscription;
   const cur = sum?.plan;
   const [sel, setSel] = useState<number | null>(null);
-  const [pay, setPay] = useState<"card" | "wallet">("card");
+  const [pay, setPay] = useState<"card" | "wallet">("wallet");
   const [busy, setBusy] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [faq, setFaq] = useState<number | null>(0);
@@ -147,7 +147,7 @@ export default function PlusPage() {
           <h2 className="mb-3 text-lg font-bold">{t("payment")}</h2>
           <div className="grid grid-cols-2 gap-2">
             {[
-              { v: "card" as const, icon: CreditCard, label: t("pay_card"), sub: "Visa • Mastercard" },
+              ...(settings.online_payments ? [{ v: "card" as const, icon: CreditCard, label: t("pay_card"), sub: "Visa • Mastercard" }] : []),
               { v: "wallet" as const, icon: Wallet, label: t("pay_wallet"), sub: `${t("balance")}: ${money(wallet)}` },
             ].map((o) => (
               <button key={o.v} onClick={() => setPay(o.v)} className={cx("rounded-2xl border-2 bg-white p-3 text-start", pay === o.v ? "border-brand-600" : "border-transparent")}>
@@ -158,6 +158,7 @@ export default function PlusPage() {
             ))}
           </div>
           {pay === "card" && <p className="mt-2 text-xs text-ink-400">{t("card_note")}</p>}
+          {!settings.online_payments && <p className="mt-2 rounded-xl bg-amber-50 p-3 text-xs text-amber-800">{t("membership_wallet_only")}</p>}
         </section>
       )}
 

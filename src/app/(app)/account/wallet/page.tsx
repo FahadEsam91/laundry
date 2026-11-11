@@ -9,7 +9,7 @@ import { Button, Sheet, cx, LogoMark } from "@/components/ui";
 import { api } from "@/lib/client";
 
 export default function WalletPage() {
-  const { t, money, fmtDate, refreshMe, lang } = useApp();
+  const { t, money, fmtDate, refreshMe, lang, settings } = useApp();
   const toast = useToast();
   const { data, mutate } = useSWR("/api/wallet");
   const [open, setOpen] = useState(false);
@@ -34,7 +34,7 @@ export default function WalletPage() {
           <div className="flex items-center gap-2 text-sm text-white/80"><Wallet className="h-4 w-4" /> {t("balance")}</div>
           <div className="mt-2 text-4xl font-extrabold">{money(data?.balance || 0)}</div>
           <div className="mt-1 text-sm text-white/70">{data?.points || 0} {t("points")}</div>
-          <Button variant="dark" className="mt-5 bg-white text-brand-700 hover:bg-white/90" onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> {t("top_up")}</Button>
+          {settings.online_payments && <Button variant="dark" className="mt-5 bg-white text-brand-700 hover:bg-white/90" onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> {t("top_up")}</Button>}
         </div>
         <h3 className="mb-2 mt-6 font-bold">{t("transactions")}</h3>
         <div className="divide-y divide-ink-100 rounded-2xl border border-ink-100">

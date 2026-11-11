@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import useSWR from "swr";
-import { Bot, Coins, Globe2 } from "lucide-react";
+import { Bot, Coins, Globe2, CreditCard } from "lucide-react";
 import { useApp, useToast } from "@/components/providers";
 import { PageHead, Panel } from "@/components/admin";
 import { Button, Input, Skeleton, Toggle } from "@/components/ui";
@@ -37,6 +37,9 @@ export default function SettingsPage() {
             <div className="w-48">{F("autopilot_seconds", t("step_seconds"), "number")}</div>
           </div>
           <p className="mt-3 text-xs text-ink-400">{lang === "ar" ? "يطبق على الطلبات الجديدة فقط. أوقفه لتشغيل المغاسل والمندوبين يدوياً من لوحاتهم." : "Applies to newly placed orders. Turn it off to run orders manually from the laundry & rider apps."}</p>
+        </Panel>
+        <Panel title={<span className="flex items-center gap-2"><CreditCard className="h-5 w-5 text-amber-600" /> {t("online_payments")}</span>} sub={t("online_payments_d")}>
+          <label className="flex items-center gap-3 text-sm font-semibold"><Toggle checked={!!s.online_payments} onChange={(v) => setS({ ...s, online_payments: v })} /> {s.online_payments ? t("active") : t("inactive")}</label>
         </Panel>
         <Panel title={<span className="flex items-center gap-2"><Coins className="h-5 w-5 text-emerald-600" /> {t("fees_taxes")}</span>}>
           <div className="grid gap-4 md:grid-cols-2">

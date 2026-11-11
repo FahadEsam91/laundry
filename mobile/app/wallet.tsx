@@ -12,7 +12,7 @@ import { Btn, Header, Icon, Sheet, Txt } from "@/ui";
 const KIND: Record<string, [string, string]> = { topup: ["شحن رصيد", "Top-up"], payment: ["دفع طلب", "Order payment"], refund: ["استرداد", "Refund"], credit: ["رصيد من الدعم", "Support credit"], subscription: ["اشتراك", "Membership"] };
 
 export default function Wallet() {
-  const { t, money, fmtDate, lang } = useI18n();
+  const { t, money, fmtDate, lang, settings } = useI18n();
   const { refreshMe } = useAuth();
   const toast = useToast();
   const { data, mutate } = useSWR("/api/wallet");
@@ -31,7 +31,7 @@ export default function Wallet() {
               <Txt color="rgba(255,255,255,.8)">{t("balance")}</Txt>
               <Txt w="bold" size={34} color="#fff">{money(data?.balance || 0)}</Txt>
               <Txt color="rgba(255,255,255,.7)">{data?.points || 0} {t("points")}</Txt>
-              <Btn title={t("top_up")} variant="outline" icon="add" style={{ marginTop: 16, alignSelf: "flex-start" }} onPress={() => setOpen(true)} />
+              {settings.online_payments ? <Btn title={t("top_up")} variant="outline" icon="add" style={{ marginTop: 16, alignSelf: "flex-start" }} onPress={() => setOpen(true)} /> : null}
             </LinearGradient>
             <Txt w="bold" size={16} style={{ marginTop: 20 }}>{t("transactions")}</Txt>
           </View>

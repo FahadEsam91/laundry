@@ -11,7 +11,16 @@ The native apps (see `mobile/`) talk to this same server, so deploy it **first**
 | Twilio account | For SMS/WhatsApp verification codes (or any SMS provider — see `src/lib/sms.ts`) |
 | Payment gateway | Card payments are **demo** until connected — see "Payments" below |
 
-## 2. Deploy with Docker (recommended)
+## 2a. One-command install on a VPS (easiest)
+On a fresh Ubuntu 22.04/24.04 or Debian 12 server (2 GB RAM+), as root:
+```bash
+curl -fsSL https://raw.githubusercontent.com/FahadEsam91/laundry/main/deploy/install.sh | sudo bash
+```
+It installs Docker, downloads the app to `/opt/nuqa`, asks 3–4 questions (domain — or a free `<ip>.sslip.io` address,
+admin phone, production/demo, optional Twilio), generates all secrets and web-push keys, opens the firewall,
+starts everything with HTTPS and schedules daily backups. Update later with `sudo bash /opt/nuqa/deploy/update.sh`.
+
+## 2b. Manual Docker deployment
 ```bash
 git clone https://github.com/FahadEsam91/laundry && cd laundry
 cp .env.example .env

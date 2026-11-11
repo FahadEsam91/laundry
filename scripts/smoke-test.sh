@@ -17,7 +17,7 @@ n=$(curl -s "$BASE/api/partners" | jqv "['partners'].__len__()"); [ "${n:-0}" -g
 
 echo "orders"
 call admin PATCH /api/admin/settings '{"autopilot":false}' >/dev/null
-r=$(call customer POST /api/orders '{"partner_id":1,"items":[{"product_id":1,"qty":8}],"address_id":1,"payment_method":"card","promo_code":"nuqa20"}')
+r=$(call customer POST /api/orders '{"partner_id":1,"items":[{"product_id":1,"qty":8}],"address_id":1,"payment_method":"card_pos","promo_code":"nuqa20"}')
 ID=$(echo "$r" | jqv "['id']"); CODE=$(echo "$r" | jqv "['code']")
 [ -n "$ID" ] && pass "create order $CODE (promo case-insensitive)" || fail "create order" "$r"
 st(){ call customer GET /api/orders/$ID | jqv "['order']['status']"; }
@@ -27,6 +27,7 @@ for a in take picked_up at_laundry; do call driver POST /api/driver/jobs/$ID "{\
 for a in start ready; do call partner POST /api/partner/orders/$ID "{\"action\":\"$a\"}" >/dev/null; done
 for a in take out_for_delivery delivered; do call driver POST /api/driver/jobs/$ID "{\"action\":\"$a\"}" >/dev/null; done
 [ "$(st)" = "delivered" ] && pass "full lifecycle → delivered" || fail lifecycle "$(st)"
+[ "$(call customer GET /api/orders/$ID | jqv "['order']['payment_status']")" = "paid" ] && pass "card on delivery marked paid at delivery" || fail "card_pos paid" "-"
 [ "$(call customer POST /api/orders/$ID/rate '{"rating":5,"review":"ok"}' | jqv "['ok']")" = "True" ] && pass rating || fail rating "-"
 w1=$(call customer GET /api/me | jqv "['user']['wallet']")
 r=$(call customer POST /api/orders '{"partner_id":1,"items":[{"product_id":1,"qty":4}],"address_id":1,"payment_method":"wallet"}'); ID2=$(echo "$r" | jqv "['id']")
@@ -35,8 +36,16 @@ w2=$(call customer GET /api/me | jqv "['user']['wallet']")
 [ "$w1" = "$w2" ] && pass "wallet pay + cancel refund ($w1)" || fail refund "$w1 -> $w2"
 [ "$(call customer POST /api/orders '{"partner_id":1,"items":[{"product_id":1,"qty":1}],"address_id":1,"payment_method":"cash"}' | jqv "['error']")" = "min_order:5000" ] && pass "min order enforced" || fail "min order" "-"
 
+echo "payments"
+call admin PATCH /api/admin/settings '{"online_payments":false}' >/dev/null
+[ "$(call customer POST /api/orders '{"partner_id":1,"items":[{"product_id":1,"qty":8}],"address_id":1,"payment_method":"card"}' | jqv "['error']")" = "online_payments_disabled" ] && pass "online card refused while gateway off" || fail "online card gate" "-"
+[ "$(call customer POST /api/wallet '{"amount":5000}' | jqv "['error']")" = "online_payments_disabled" ] && pass "wallet top-up refused while gateway off" || fail "topup gate" "-"
+call admin PATCH /api/admin/settings '{"online_payments":true}' >/dev/null
+[ -n "$(call customer POST /api/orders '{"partner_id":1,"items":[{"product_id":1,"qty":8}],"address_id":1,"payment_method":"card"}' | jqv "['id']")" ] && pass "online card accepted when enabled" || fail "online card enabled" "-"
+call admin PATCH /api/admin/settings '{"online_payments":false}' >/dev/null
+
 echo "membership"
-r=$(call customer POST /api/subscription '{"plan_id":2,"payment_method":"card"}')
+r=$(call customer POST /api/subscription '{"plan_id":2,"payment_method":"wallet"}')
 if [ -n "$(echo "$r" | jqv "['id']")" ]; then pass subscribe; elif [ "$(echo "$r" | jqv "['error']")" = "already_subscribed" ]; then pass "subscribe (already a member — duplicate correctly refused)"; else fail subscribe "$r"; fi
 r=$(call customer POST /api/orders '{"partner_id":1,"items":[{"product_id":1,"qty":10}],"address_id":1,"payment_method":"cash"}'); ID3=$(echo "$r" | jqv "['id']")
 sv=$(call customer GET /api/orders/$ID3 | jqv "['order']['sub_savings']"); [ "${sv%.*}" -gt 0 ] 2>/dev/null && pass "member savings applied ($sv)" || fail savings "$sv"

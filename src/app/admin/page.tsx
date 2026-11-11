@@ -12,7 +12,7 @@ import { MapView, type MapMarker } from "@/components/map-view";
 import { ORDER_FLOW } from "@/lib/constants";
 
 const BRAND = "#1A62EC";
-const PAY_COLORS: Record<string, string> = { cash: "#2a78d6", card: "#eb6834", wallet: "#1baf7a" };
+const PAY_COLORS: Record<string, string> = { cash: "#2a78d6", card: "#eb6834", wallet: "#1baf7a", card_pos: "#eda100" };
 
 function ChartTip({ active, payload, label, fmt, lf }: any) {
   if (!active || !payload?.length) return null;

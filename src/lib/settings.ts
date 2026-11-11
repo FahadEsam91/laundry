@@ -11,6 +11,7 @@ export type Settings = {
   vat_pct: number;
   free_delivery_over: number;
   autopilot: boolean;
+  online_payments: boolean;
   autopilot_seconds: number;
   support_phone: string;
   city_ar: string;
@@ -31,9 +32,10 @@ export async function getSettings(): Promise<Settings> {
   for (const r of rows) {
     if (r.key.startsWith("vapid_")) continue; // server-only secrets
     if (NUM.includes(r.key)) o[r.key] = Number(r.value);
-    else if (r.key === "autopilot") o[r.key] = r.value === "1";
+    else if (r.key === "autopilot" || r.key === "online_payments") o[r.key] = r.value === "1";
     else o[r.key] = r.value;
   }
+  o.online_payments = !!o.online_payments; // off until a payment gateway is connected
   cache = { at: Date.now(), v: o as Settings };
   return o as Settings;
 }

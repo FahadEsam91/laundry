@@ -96,7 +96,7 @@ export default function Rider() {
     const customerStop = { icon: "home-outline", title: j.customer_name, sub: j.address_text, phone: j.customer_phone, lat: j.address_lat, lng: j.address_lng };
     const stops = pickupLeg ? [customerStop, partnerStop] : [partnerStop, customerStop];
     const target = j.status === "driver_assigned" || j.status === "accepted" || j.status === "out_for_delivery" ? customerStop : partnerStop;
-    const cash = j.payment_method === "cash" && j.payment_status !== "paid" && ["ready", "out_for_delivery"].includes(j.status);
+    const cash = ["cash", "card_pos"].includes(j.payment_method) && j.payment_status !== "paid" && ["ready", "out_for_delivery"].includes(j.status);
     return (
       <View style={{ backgroundColor: C.white, borderRadius: 22, padding: 16, ...shadow }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
@@ -122,7 +122,7 @@ export default function Rider() {
           </View>
         ))}
         {j.notes ? <View style={{ backgroundColor: C.amberSoft, borderRadius: 10, padding: 8, marginTop: 10 }}><Txt size={12} color={C.amber}>📝 {j.notes}</Txt></View> : null}
-        {cash ? <View style={{ flexDirection: "row", justifyContent: "space-between", backgroundColor: C.greenSoft, borderRadius: 12, padding: 12, marginTop: 10 }}><Txt w="bold" color="#065F46">💵 {t("collect_cash")}</Txt><Txt w="bold" color="#065F46">{money(j.total)}</Txt></View> : null}
+        {cash ? <View style={{ flexDirection: "row", justifyContent: "space-between", backgroundColor: C.greenSoft, borderRadius: 12, padding: 12, marginTop: 10 }}><Txt w="bold" color="#065F46">{j.payment_method === "card_pos" ? `💳 ${t("collect_card")}` : `💵 ${t("collect_cash")}`}</Txt><Txt w="bold" color="#065F46">{money(j.total)}</Txt></View> : null}
         <View style={{ flexDirection: "row", gap: 8, marginTop: 14 }}>
           {action?.action !== "take" && <Btn title={t("navigate")} variant="outline" icon="navigate-outline" style={{ flex: 1 }} onPress={() => navigate(target.lat, target.lng)} />}
           {action && <Btn title={t(action.key)} variant={action.action === "take" ? "primary" : "success"} style={{ flex: 2 }} loading={busy === String(j.id)} onPress={() => act(j.id, action.action)} />}

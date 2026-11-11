@@ -56,7 +56,9 @@ export const STATUS_HEX: Record<OrderStatus, string> = {
   cancelled: "#EF4444",
 };
 
-export const PAYMENT_METHODS = ["cash", "card", "wallet"] as const;
+/** cash & card_pos are collected by the rider at delivery; card = online gateway (enable in settings once connected). */
+export const PAYMENT_METHODS = ["cash", "card_pos", "card", "wallet"] as const;
+export const PAY_ON_DELIVERY = ["cash", "card_pos"];
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
 export const UNIT_LABEL: Record<string, { ar: string; en: string }> = {

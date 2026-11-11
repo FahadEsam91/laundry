@@ -23,7 +23,7 @@ function benefits(p: any, t: any) {
 }
 
 export default function Plus() {
-  const { t, L, money, lang, fmtDate } = useI18n();
+  const { t, L, money, lang, fmtDate, settings } = useI18n();
   const { token, me, refreshMe } = useAuth();
   const toast = useToast();
   const router = useRouter();
@@ -34,7 +34,7 @@ export default function Plus() {
   const sub = sum?.subscription;
   const cur = sum?.plan;
   const [sel, setSel] = useState<number | null>(null);
-  const [pay, setPay] = useState<"card" | "wallet">("card");
+  const [pay, setPay] = useState<"card" | "wallet">("wallet");
   const [busy, setBusy] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   useEffect(() => {
@@ -118,9 +118,10 @@ export default function Plus() {
               </Pressable>
             );
           })}
+          {plan && cur?.id !== plan.id && !settings.online_payments && <View style={{ backgroundColor: C.amberSoft, borderRadius: 12, padding: 12 }}><Txt size={12} color={C.amber}>{t("membership_wallet_only")}</Txt></View>}
           {plan && cur?.id !== plan.id && (
             <View style={{ flexDirection: "row", gap: 8 }}>
-              {([["card", "card-outline", t("pay_card"), "Visa • Mastercard"], ["wallet", "wallet-outline", t("pay_wallet"), `${t("balance")}: ${money(wallet)}`]] as const).map(([v, ic, l, s]) => (
+              {([["card", "card-outline", t("pay_card"), "Visa • Mastercard"], ["wallet", "wallet-outline", t("pay_wallet"), `${t("balance")}: ${money(wallet)}`]] as const).filter(([v]) => v !== "card" || settings.online_payments).map(([v, ic, l, s]) => (
                 <Choice key={v} selected={pay === v} onPress={() => setPay(v)} style={{ flex: 1 }}>
                   <Icon name={ic} size={20} color={C.ink700} />
                   <Txt w="bold" size={13} style={{ marginTop: 6 }}>{l}</Txt>

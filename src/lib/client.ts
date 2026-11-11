@@ -38,6 +38,7 @@ const ERR: Record<string, [string, string]> = {
   code_exists: ["الكود موجود مسبقاً", "Code already exists"],
   unauthorized: ["يرجى تسجيل الدخول", "Please sign in"],
   account_suspended: ["الحساب موقوف", "Account suspended"],
+  online_payments_disabled: ["الدفع الإلكتروني غير متاح حالياً", "Online payment isn't available yet"],
   forbidden: ["ليست لديك صلاحية لهذا الإجراء", "You don't have permission for this action"],
   cannot_change_own_access: ["لا يمكنك تغيير دورك أو إيقاف حسابك بنفسك", "You can't change your own role or suspend yourself"],
   last_super_admin: ["لا يمكن إزالة آخر مدير عام", "You can't remove the last super admin"],

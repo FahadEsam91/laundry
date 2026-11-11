@@ -1,6 +1,7 @@
 import { all, get, run, tx, now } from "@/lib/db";
 import { handler, ok, body, fail } from "@/lib/api";
 import { requireUser } from "@/lib/auth";
+import { getSettings } from "@/lib/settings";
 export const GET = handler(async () => {
   const u = await requireUser();
   return ok({ balance: (await get<any>("SELECT wallet FROM users WHERE id=?", u.id))!.wallet, points: u.points, transactions: await all("SELECT * FROM wallet_tx WHERE user_id=? ORDER BY id DESC LIMIT 50", u.id) });
@@ -8,6 +9,8 @@ export const GET = handler(async () => {
 // Demo top-up (would be a payment-gateway callback in production)
 export const POST = handler(async (req: Request) => {
   const u = await requireUser();
+  // top-ups are card payments: only when an online gateway is connected
+  if (!(await getSettings()).online_payments) return fail(403, "online_payments_disabled");
   const amount = Math.round(Number((await body(req)).amount));
   if (!(amount > 0 && amount <= 1000000)) return fail(400, "invalid_amount");
   await tx(async () => {

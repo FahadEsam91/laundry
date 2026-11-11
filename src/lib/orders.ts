@@ -3,7 +3,7 @@ import { all, get, run, tx, now, insert } from "./db";
 import { getSettings } from "./settings";
 import { computeTotals, type Promo } from "./pricing";
 import { HttpError, type SessionUser } from "./auth";
-import { CANCELLABLE, NEXT_STATUS, ORDER_FLOW, STATUS_META, type OrderStatus } from "./constants";
+import { CANCELLABLE, NEXT_STATUS, ORDER_FLOW, PAY_ON_DELIVERY, STATUS_META, type OrderStatus } from "./constants";
 import { driverUser, onlineDriverUsers, partnerStaff, queuePush } from "./push";
 import { activeSubscription, refundFreeDelivery, renewSweep } from "./subscriptions";
 
@@ -140,7 +140,7 @@ export async function transition(orderId: number, to: OrderStatus, actor: string
       driverId = null;
     }
     let payStatus = o.payment_status;
-    if (to === "delivered" && o.payment_method === "cash") payStatus = "paid";
+    if (to === "delivered" && PAY_ON_DELIVERY.includes(o.payment_method)) payStatus = "paid";
     if (to === "cancelled" && o.payment_status === "paid") {
       payStatus = "refunded";
       await run("UPDATE users SET wallet=wallet+? WHERE id=?", o.total, o.customer_id);
@@ -210,7 +210,7 @@ export type CreateOrderInput = {
   address_id: number;
   pickup_slot?: string; // 'asap' | ISO
   notes?: string;
-  payment_method: "cash" | "card" | "wallet";
+  payment_method: "cash" | "card_pos" | "card" | "wallet";
   promo_code?: string | null;
 };
 
@@ -221,7 +221,8 @@ export async function createOrder(user: SessionUser, input: CreateOrderInput) {
   const addr = await get<any>("SELECT * FROM addresses WHERE id=? AND user_id=?", input.address_id, user.id);
   if (!addr) throw new HttpError(400, "address_required");
   if (!Array.isArray(input.items) || !input.items.length) throw new HttpError(400, "empty_basket");
-  if (!["cash", "card", "wallet"].includes(input.payment_method)) throw new HttpError(400, "invalid_payment");
+  if (!["cash", "card_pos", "card", "wallet"].includes(input.payment_method)) throw new HttpError(400, "invalid_payment");
+  if (input.payment_method === "card" && !(await getSettings()).online_payments) throw new HttpError(400, "online_payments_disabled");
 
   const lines: { p: any; qty: number }[] = [];
   for (const it of input.items) {

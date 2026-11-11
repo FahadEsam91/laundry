@@ -40,7 +40,7 @@ export default function Cart() {
   const [notes, setNotes] = useState("");
   const [promoText, setPromoText] = useState("");
   const [promo, setPromo] = useState<Promo | null>(null);
-  const [pay, setPay] = useState<"cash" | "card" | "wallet">("cash");
+  const [pay, setPay] = useState<"cash" | "card_pos" | "card" | "wallet">("cash");
   const [busy, setBusy] = useState<string | null>(null);
   const allSlots = useMemo(() => slots(lang), [lang]);
   const { data: plans } = useSWR(me?.member ? null : "/api/plans");
@@ -199,7 +199,12 @@ export default function Cart() {
         </Section>
 
         <Section title={t("payment")}>
-          {([["cash", "cash-outline", t("pay_cash"), ""], ["card", "card-outline", t("pay_card"), "Visa • Mastercard"], ["wallet", "wallet-outline", t("pay_wallet"), `${t("balance")}: ${money(wallet)}`]] as const).map(([v, ic, label, sub]) => (
+          {([
+            ["cash", "cash-outline", t("pay_cash"), t("pay_cash_sub"), true],
+            ["card_pos", "card-outline", t("pay_card_pos"), t("pay_card_pos_sub"), true],
+            ["card", "card-outline", t("pay_card"), "Visa • Mastercard", !!settings.online_payments],
+            ["wallet", "wallet-outline", t("pay_wallet"), `${t("balance")}: ${money(wallet)}`, wallet > 0 || !!settings.online_payments],
+          ] as const).filter((o) => o[4]).map(([v, ic, label, sub]) => (
             <Choice key={v} selected={pay === v} onPress={() => setPay(v)} style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 8 }}>
               <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: C.ink100, alignItems: "center", justifyContent: "center" }}><Icon name={ic} size={20} color={C.ink700} /></View>
               <View style={{ flex: 1 }}><Txt w="bold">{label}</Txt>{sub ? <Txt size={12} color={v === "wallet" && wallet < totals.total ? C.red : C.ink500}>{sub}</Txt> : null}</View>
