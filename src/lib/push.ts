@@ -40,10 +40,57 @@ export type PushMessage = {
   tag?: string;
 };
 
-/** Send to every device of the given users. Fire-and-forget safe; returns number of successful deliveries. */
+/** Native apps: deliver through Expo's push service (APNs for iOS, FCM for Android). */
+async function sendExpo(ids: number[], msg: PushMessage): Promise<number> {
+  const tokens = await all<any>(`SELECT * FROM mobile_push_tokens WHERE user_id IN (${ids.map(() => "?").join(",")})`, ...ids);
+  if (!tokens.length) return 0;
+  let sent = 0;
+  for (let i = 0; i < tokens.length; i += 100) {
+    const batch = tokens.slice(i, i + 100);
+    const messages = batch.map((t) => ({
+      to: t.token,
+      title: t.lang === "ar" ? msg.title_ar : msg.title_en,
+      body: (t.lang === "ar" ? msg.body_ar : msg.body_en) || "",
+      data: { url: msg.url || "/" },
+      sound: "default",
+      priority: "high",
+      channelId: "default",
+      ...(msg.tag ? { collapseId: msg.tag, threadId: msg.tag } : {}),
+    }));
+    try {
+      const res = await fetch("https://exp.host/--/api/v2/push/send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          ...(process.env.EXPO_ACCESS_TOKEN ? { Authorization: `Bearer ${process.env.EXPO_ACCESS_TOKEN}` } : {}),
+        },
+        body: JSON.stringify(messages),
+      });
+      const json: any = await res.json().catch(() => ({}));
+      const tickets: any[] = Array.isArray(json?.data) ? json.data : [];
+      for (const [k, tk] of tickets.entries()) {
+        if (tk?.status === "ok") {
+          sent++;
+          await run("UPDATE mobile_push_tokens SET last_success_at=? WHERE id=?", now(), batch[k].id);
+        } else if (tk?.details?.error === "DeviceNotRegistered") await run("DELETE FROM mobile_push_tokens WHERE id=?", batch[k].id);
+      }
+    } catch (e: any) {
+      if (process.env.NODE_ENV !== "production") console.warn("[push] expo send failed:", e?.message);
+    }
+  }
+  return sent;
+}
+
+/** Send to every device (browsers + native apps) of the given users. Returns number of successful deliveries. */
 export async function sendPush(userIds: number[], msg: PushMessage): Promise<number> {
   const ids = [...new Set(userIds)].filter(Boolean);
   if (!ids.length) return 0;
+  const [web, native] = await Promise.all([sendWeb(ids, msg), sendExpo(ids, msg)]);
+  return web + native;
+}
+
+async function sendWeb(ids: number[], msg: PushMessage): Promise<number> {
   const subs = await all<any>(`SELECT * FROM push_subscriptions WHERE user_id IN (${ids.map(() => "?").join(",")})`, ...ids);
   if (!subs.length) return 0;
   await vapid();

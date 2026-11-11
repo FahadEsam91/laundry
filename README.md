@@ -4,7 +4,13 @@ A complete, production‑grade laundry marketplace (the "Talabat model" applied 
 customers order washing, ironing, dry cleaning and more from partner laundries; riders collect
 and deliver; the platform earns commission + fees. Fully bilingual **Arabic (RTL) / English (LTR)**.
 
-## Four apps in one codebase
+## Apps
+
+**Native mobile apps (iOS & Android)** live in [`mobile/`](mobile/README.md) — Expo / React Native, one codebase that builds
+two store apps: **Nuqa** (customers) and **Nuqa Rider** (riders). The step‑by‑step App Store / Google Play guide is in
+[`mobile/README.md`](mobile/README.md).
+
+## Web platform (four interfaces in one codebase)
 
 | App | URL | Who |
 |---|---|---|

@@ -16,10 +16,11 @@ const ids = async (aud: string) => (await all<any>(AUDIENCE[aud], ...(aud === "i
 
 export const GET = handler(async () => {
   await requireUser("admin");
-  const devices = await all("SELECT u.role, COUNT(*) c, COUNT(DISTINCT p.user_id) users FROM push_subscriptions p JOIN users u ON u.id=p.user_id GROUP BY u.role");
+  const devices = await all("SELECT u.role, COUNT(*) c, COUNT(DISTINCT p.user_id) users FROM (SELECT user_id FROM push_subscriptions UNION ALL SELECT user_id FROM mobile_push_tokens) p JOIN users u ON u.id=p.user_id GROUP BY u.role");
   const audiences = Object.fromEntries(await Promise.all(Object.keys(AUDIENCE).map(async (a) => {
     const list = await ids(a);
-    const reach = list.length ? (await get<any>(`SELECT COUNT(DISTINCT user_id) c FROM push_subscriptions WHERE user_id IN (${list.map(() => "?").join(",")})`, ...list))!.c : 0;
+    const ph = list.map(() => "?").join(",");
+    const reach = list.length ? (await get<any>(`SELECT COUNT(DISTINCT user_id) c FROM (SELECT user_id FROM push_subscriptions UNION ALL SELECT user_id FROM mobile_push_tokens) x WHERE user_id IN (${ph})`, ...list))!.c : 0;
     return [a, { users: list.length, push: reach }];
   })));
   return ok({ devices, audiences, history: await all("SELECT * FROM broadcasts ORDER BY id DESC LIMIT 20") });

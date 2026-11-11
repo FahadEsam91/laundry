@@ -69,7 +69,7 @@ export async function currentUser(): Promise<SessionUser | null> {
   // throttle last_seen writes to once a minute per user
   if (u && !lastSeen.has(uid)) {
     lastSeen.add(uid);
-    setTimeout(() => lastSeen.delete(uid), 60000).unref?.();
+    (setTimeout(() => lastSeen.delete(uid), 60000) as any).unref?.();
     await run("UPDATE users SET last_seen=? WHERE id=?", now(), uid);
   }
   return u || null;

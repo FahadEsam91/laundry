@@ -1,0 +1,86 @@
+{
+  "cli": {
+    "version": ">= 16.0.0",
+    "appVersionSource": "local"
+  },
+  "build": {
+    "base": {
+      "node": "22.12.0",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://app.example.com"
+      }
+    },
+    "development": {
+      "extends": "base",
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "APP_VARIANT": "customer",
+        "EXPO_PUBLIC_API_URL": "http://192.168.1.10:3000"
+      }
+    },
+    "development-rider": {
+      "extends": "base",
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "APP_VARIANT": "rider",
+        "EXPO_PUBLIC_API_URL": "http://192.168.1.10:3000"
+      }
+    },
+    "customer-preview": {
+      "extends": "base",
+      "distribution": "internal",
+      "env": {
+        "APP_VARIANT": "customer"
+      },
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "rider-preview": {
+      "extends": "base",
+      "distribution": "internal",
+      "env": {
+        "APP_VARIANT": "rider"
+      },
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "customer-production": {
+      "extends": "base",
+      "env": {
+        "APP_VARIANT": "customer"
+      },
+      "autoIncrement": true
+    },
+    "rider-production": {
+      "extends": "base",
+      "env": {
+        "APP_VARIANT": "rider"
+      },
+      "autoIncrement": true
+    }
+  },
+  "submit": {
+    "customer-production": {
+      "ios": {
+        "ascAppId": "REPLACE_WITH_APP_STORE_CONNECT_APP_ID"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./google-play-key.json",
+        "track": "internal"
+      }
+    },
+    "rider-production": {
+      "ios": {
+        "ascAppId": "REPLACE_WITH_RIDER_APP_STORE_CONNECT_APP_ID"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./google-play-key.json",
+        "track": "internal"
+      }
+    }
+  }
+}
