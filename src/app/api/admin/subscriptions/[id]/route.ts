@@ -1,10 +1,11 @@
 import { get, run, now } from "@/lib/db";
 import { handler, ok, body, fail } from "@/lib/api";
-import { requireUser } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth";
+import { audit } from "@/lib/audit";
 import { notify } from "@/lib/orders";
 
 export const POST = handler(async (req: Request, { params }: { params: Promise<{ id: string }> }) => {
-  await requireUser("admin");
+  const me = await requirePermission("subscriptions.manage");
   const id = Number((await params).id);
   const s = await get<any>("SELECT * FROM subscriptions WHERE id=?", id);
   if (!s) return fail(404, "not_found");
@@ -18,5 +19,6 @@ export const POST = handler(async (req: Request, { params }: { params: Promise<{
     await run("UPDATE subscriptions SET current_period_end=? WHERE id=?", end, id);
     await notify(s.user_id, `🎁 أضفنا ${days} يوم لاشتراكك`, `🎁 ${days} free days added`, "هدية من فريق نقاء", "A gift from the Nuqa team", undefined, "/plus");
   } else return fail(400, "invalid_action");
+  await audit(me, `subscription.${b.action}`, "subscription", id, b.action === "extend" ? { days: b.days ?? 7 } : undefined);
   return ok({ ok: true });
 });

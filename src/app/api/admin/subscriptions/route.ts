@@ -1,11 +1,11 @@
 import { all, get } from "@/lib/db";
 import { handler, ok } from "@/lib/api";
-import { requireUser } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth";
 import { renewDue } from "@/lib/subscriptions";
 import { getSettings } from "@/lib/settings";
 
 export const GET = handler(async (req: Request) => {
-  await requireUser("admin");
+  await requirePermission("subscriptions.view");
   await renewDue();
   const sp = new URL(req.url).searchParams;
   const status = sp.get("status") || "active";

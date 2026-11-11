@@ -163,6 +163,19 @@ function LoginInner() {
                     </button>
                   ))}
                 </div>
+                <div className="mb-2 mt-5 text-center text-[11px] font-bold uppercase text-ink-400">{t("staff_roles_demo")}</div>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    ["operations", lang === "ar" ? "العمليات" : "Operations"],
+                    ["support", lang === "ar" ? "خدمة العملاء" : "Support"],
+                    ["finance", lang === "ar" ? "المالية" : "Finance"],
+                    ["marketing", lang === "ar" ? "التسويق" : "Marketing"],
+                  ].map(([role, label]) => (
+                    <button key={role} onClick={() => demo(role)} disabled={!!busy} className="rounded-xl border border-ink-200 p-2.5 text-xs font-bold text-ink-700 hover:bg-ink-50 disabled:opacity-60">
+                      {busy === role ? "…" : label}
+                    </button>
+                  ))}
+                </div>
               </div>}
               <p className="mt-8 text-center text-xs text-ink-400">
                 <a href="/terms" className="underline">{lang === "ar" ? "الشروط والأحكام" : "Terms"}</a> · <a href="/privacy" className="underline">{lang === "ar" ? "سياسة الخصوصية" : "Privacy"}</a>

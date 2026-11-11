@@ -36,7 +36,8 @@ w2=$(call customer GET /api/me | jqv "['user']['wallet']")
 [ "$(call customer POST /api/orders '{"partner_id":1,"items":[{"product_id":1,"qty":1}],"address_id":1,"payment_method":"cash"}' | jqv "['error']")" = "min_order:5000" ] && pass "min order enforced" || fail "min order" "-"
 
 echo "membership"
-r=$(call customer POST /api/subscription '{"plan_id":2,"payment_method":"card"}'); [ -n "$(echo "$r" | jqv "['id']")" ] && pass subscribe || fail subscribe "$r"
+r=$(call customer POST /api/subscription '{"plan_id":2,"payment_method":"card"}')
+if [ -n "$(echo "$r" | jqv "['id']")" ]; then pass subscribe; elif [ "$(echo "$r" | jqv "['error']")" = "already_subscribed" ]; then pass "subscribe (already a member — duplicate correctly refused)"; else fail subscribe "$r"; fi
 r=$(call customer POST /api/orders '{"partner_id":1,"items":[{"product_id":1,"qty":10}],"address_id":1,"payment_method":"cash"}'); ID3=$(echo "$r" | jqv "['id']")
 sv=$(call customer GET /api/orders/$ID3 | jqv "['order']['sub_savings']"); [ "${sv%.*}" -gt 0 ] 2>/dev/null && pass "member savings applied ($sv)" || fail savings "$sv"
 

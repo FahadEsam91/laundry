@@ -8,6 +8,10 @@ const PHONES: Record<string, string> = {
   admin: "+9647700000000",
   partner: "+9647700000002",
   driver: "+9647700000003",
+  operations: "+9647700000004",
+  support: "+9647700000005",
+  finance: "+9647700000006",
+  marketing: "+9647700000007",
 };
 
 /** One-tap demo logins — only exists while NUQA_DEMO is enabled. */

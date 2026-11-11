@@ -1,13 +1,13 @@
 import { all, get } from "@/lib/db";
 import { handler, ok } from "@/lib/api";
-import { requireUser } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth";
 import { autopilotTick, listOrders } from "@/lib/orders";
 import { getSettings } from "@/lib/settings";
 
 const pct = (a: number, b: number) => (b ? ((a - b) / b) * 100 : a ? 100 : 0);
 
 export const GET = handler(async (req: Request) => {
-  await requireUser("admin");
+  const me = await requirePermission("dashboard.view");
   await autopilotTick();
   const s = await getSettings();
   const days = Math.min(365, Math.max(1, Number(new URL(req.url).searchParams.get("days")) || 30));

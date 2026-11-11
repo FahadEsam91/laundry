@@ -4,7 +4,7 @@ import { useState } from "react";
 import useSWR from "swr";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Crown, Repeat, Banknote, UserPlus, TrendingDown, Percent, PiggyBank, ShoppingCart, Plus, Pencil, Gift, Ban } from "lucide-react";
-import { useApp, useToast } from "@/components/providers";
+import { useApp, useCan, useToast } from "@/components/providers";
 import { Kpi, PageHead, Pager, Panel, Table, Td } from "@/components/admin";
 import { PlanBenefits } from "@/components/plus";
 import { Badge, Button, Input, Sheet, Skeleton, Toggle, cx } from "@/components/ui";
@@ -16,6 +16,7 @@ const EMPTY = { name_ar: "", name_en: "", desc_ar: "", desc_en: "", price: 9900,
 export default function SubscriptionsAdmin() {
   const { t, L, money, num, fmtDate, lang } = useApp();
   const toast = useToast();
+  const manage = useCan()("subscriptions.manage");
   const [status, setStatus] = useState("active");
   const [page, setPage] = useState(1);
   const [edit, setEdit] = useState<any>(null);
@@ -61,7 +62,7 @@ export default function SubscriptionsAdmin() {
 
   return (
     <div className="animate-fade-up">
-      <PageHead title={t("subscriptions")} sub={t("plus_tagline")} actions={<Button onClick={() => setEdit({ ...EMPTY })}><Plus className="h-4 w-4" /> {t("add_plan")}</Button>} />
+      <PageHead title={t("subscriptions")} sub={t("plus_tagline")} actions={manage ? <Button onClick={() => setEdit({ ...EMPTY })}><Plus className="h-4 w-4" /> {t("add_plan")}</Button> : undefined} />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
         {!k ? [...Array(8)].map((_, i) => <Skeleton key={i} className="h-[122px]" />) : (
@@ -126,13 +127,13 @@ export default function SubscriptionsAdmin() {
                 <div className="flex items-center justify-between gap-2"><span className="text-xs text-ink-500">{t("mrr")}</span><span className="whitespace-nowrap font-extrabold tabular">{money((p.subscribers - p.cancelling) * p.price)}</span></div>
               </div>
               <PlanBenefits plan={p} className="mt-3 flex-1 [&_li]:text-xs" />
-              <div className="mt-4 flex items-center justify-between border-t border-ink-100 pt-3">
+              {manage && <div className="mt-4 flex items-center justify-between border-t border-ink-100 pt-3">
                 <label className="flex items-center gap-2 text-xs font-semibold"><Toggle checked={!!p.active} onChange={(v) => patchPlan(p.id, { active: v })} /> {p.active ? t("active") : t("inactive")}</label>
                 <div className="flex">
                   {!p.popular && <button onClick={() => patchPlan(p.id, { popular: true })} className="rounded-lg p-2 text-ink-400 hover:bg-amber-50 hover:text-amber-600" title={t("most_popular")}><Crown className="h-4 w-4" /></button>}
                   <button onClick={() => setEdit({ ...p, no_service_fee: !!p.no_service_fee, priority_support: !!p.priority_support })} className="rounded-lg p-2 text-ink-400 hover:bg-ink-100 hover:text-ink-800" title={t("edit")}><Pencil className="h-4 w-4" /></button>
                 </div>
-              </div>
+              </div>}
             </div>
           ))}
         </div>
@@ -160,7 +161,7 @@ export default function SubscriptionsAdmin() {
                   <Td className="tabular text-emerald-700">{money(s.saved)}</Td>
                   <Td className="text-xs text-ink-500">{fmtDate(s.started_at, { day: "numeric", month: "short", year: "numeric" })}</Td>
                   <Td>
-                    {live && (
+                    {live && manage && (
                       <div className="flex">
                         <button onClick={() => act(s.id, { action: "extend", days: 7 })} className="rounded-lg p-2 text-ink-400 hover:bg-emerald-50 hover:text-emerald-600" title={t("extend_7")}><Gift className="h-4 w-4" /></button>
                         <button onClick={() => act(s.id, { action: "terminate" })} className="rounded-lg p-2 text-ink-400 hover:bg-red-50 hover:text-red-600" title={t("terminate")}><Ban className="h-4 w-4" /></button>

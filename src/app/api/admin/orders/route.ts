@@ -1,10 +1,11 @@
 import { all } from "@/lib/db";
 import { handler, ok } from "@/lib/api";
-import { requireUser } from "@/lib/auth";
+import { can, HttpError, requirePermission } from "@/lib/auth";
+import { audit } from "@/lib/audit";
 import { autopilotTick, countOrders, listOrders } from "@/lib/orders";
 
 export const GET = handler(async (req: Request) => {
-  await requireUser("admin");
+  const me = await requirePermission("orders.view");
   await autopilotTick();
   const sp = new URL(req.url).searchParams;
   const where: string[] = ["1=1"];
@@ -23,9 +24,11 @@ export const GET = handler(async (req: Request) => {
   const size = Math.min(500, Number(sp.get("size")) || 20);
 
   if (sp.get("format") === "csv") {
+    if (!can(me, "orders.export")) throw new HttpError(403, "forbidden");
     const rows = await listOrders(w, params, 10000);
     const cols = ["code", "created_at", "status", "customer_name", "customer_phone", "partner_en", "driver_name", "items_count", "subtotal", "total", "payment_method", "payment_status"];
     const esc = (v: any) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    await audit(me, "orders.export", "order", null, { rows: rows.length, filters: Object.fromEntries(sp) });
     const csv = "﻿" + [cols.join(","), ...rows.map((r: any) => cols.map((c) => esc(r[c])).join(","))].join("\n");
     return new Response(csv, { headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="nuqa-orders-${Date.now()}.csv"` } });
   }

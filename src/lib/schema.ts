@@ -250,6 +250,28 @@ const BASE = [
   last_success_at TEXT
 )`,
   `CREATE INDEX IF NOT EXISTS idx_mpt_user ON mobile_push_tokens(user_id)`,
+  `CREATE TABLE IF NOT EXISTS admin_roles(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  key TEXT NOT NULL UNIQUE,
+  name_ar TEXT NOT NULL, name_en TEXT NOT NULL,
+  desc_ar TEXT, desc_en TEXT,
+  permissions TEXT NOT NULL DEFAULT '',
+  system INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL
+)`,
+  `CREATE TABLE IF NOT EXISTS audit_log(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER,
+  user_name TEXT,
+  action TEXT NOT NULL,
+  entity TEXT,
+  entity_id TEXT,
+  details TEXT,
+  ip TEXT,
+  created_at TEXT NOT NULL
+)`,
+  `CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_log(created_at)`,
+  `CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_log(user_id)`,
 ];
 
 const pg = (s: string) =>
@@ -268,6 +290,7 @@ const COLUMNS: [table: string, column: string, def: string][] = [
   ["orders", "sub_savings", "REAL NOT NULL DEFAULT 0"],
   ["orders", "sub_free_delivery", "INTEGER NOT NULL DEFAULT 0"],
   ["users", "deleted_at", "TEXT"],
+  ["users", "admin_role_id", "INTEGER"],
 ];
 
 export function MIGRATIONS(kind: "postgres" | "sqlite") {

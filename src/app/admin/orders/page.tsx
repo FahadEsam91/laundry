@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import useSWR from "swr";
 import { Download, Search, Phone, MapPin, XCircle, ChevronsRight, UserCheck, Zap } from "lucide-react";
-import { useApp, useToast } from "@/components/providers";
+import { useApp, useCan, useToast } from "@/components/providers";
 import { PageHead, Pager, Panel, Table, Td } from "@/components/admin";
 import { Button, Input, PartnerLogo, Select, Sheet, Skeleton, StatusBadge, cx } from "@/components/ui";
 import { MapView } from "@/components/map-view";
@@ -13,6 +13,7 @@ import { api, errText } from "@/lib/client";
 
 function OrdersInner() {
   const { t, L, money, fmtDate, statusLabel, lang } = useApp();
+  const can = useCan();
   const sp = useSearchParams();
   const router = useRouter();
   const [status, setStatus] = useState(sp.get("status") || "");
@@ -46,9 +47,11 @@ function OrdersInner() {
         title={t("orders")}
         sub={`${data?.total ?? "…"} ${t("orders")}`}
         actions={
-          <a href={`/api/admin/orders?${qs}&format=csv`}>
-            <Button variant="outline"><Download className="h-4 w-4" /> {t("export_csv")}</Button>
-          </a>
+          can("orders.export") ? (
+            <a href={`/api/admin/orders?${qs}&format=csv`}>
+              <Button variant="outline"><Download className="h-4 w-4" /> {t("export_csv")}</Button>
+            </a>
+          ) : undefined
         }
       />
       <div className="no-scrollbar mb-4 flex gap-1 overflow-x-auto">
@@ -101,6 +104,7 @@ function OrdersInner() {
 
 function OrderDrawer({ id, onClose, onChanged }: { id: number | null; onClose: () => void; onChanged: () => void }) {
   const { t, L, money, fmtDate, statusLabel, lang } = useApp();
+  const can = useCan();
   const toast = useToast();
   const { data, mutate } = useSWR(id ? `/api/admin/orders/${id}` : null, { refreshInterval: 4000 });
   const [busy, setBusy] = useState(false);
@@ -168,8 +172,9 @@ function OrderDrawer({ id, onClose, onChanged }: { id: number | null; onClose: (
           </div>
 
           <div className="space-y-4 md:col-span-2">
-            {!["delivered", "cancelled"].includes(o.status) && (
+            {!["delivered", "cancelled"].includes(o.status) && (can("orders.manage") || can("orders.cancel")) && (
               <div className="space-y-2 rounded-2xl border border-ink-100 p-4">
+                {can("orders.manage") && <>
                 {next && (
                   <Button block loading={busy} onClick={() => act({ action: "status", to: next })}>
                     <ChevronsRight className="h-4 w-4" /> {statusLabel(next)}
@@ -182,7 +187,8 @@ function OrderDrawer({ id, onClose, onChanged }: { id: number | null; onClose: (
                   <option value="">{t("unassigned")}</option>
                   {data.drivers.map((d: any) => <option key={d.id} value={d.id}>{d.name} {d.status === "online" ? "🟢" : "⚪"}</option>)}
                 </Select>
-                <Button variant="danger" block loading={busy} onClick={() => act({ action: "cancel" })}><XCircle className="h-4 w-4" /> {t("cancel_order")}{o.payment_status === "paid" ? ` + ${t("refund")}` : ""}</Button>
+                </>}
+                {can("orders.cancel") && <Button variant="danger" block loading={busy} onClick={() => act({ action: "cancel" })}><XCircle className="h-4 w-4" /> {t("cancel_order")}{o.payment_status === "paid" ? ` + ${t("refund")}` : ""}</Button>}
               </div>
             )}
             {o.driver && (

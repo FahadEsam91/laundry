@@ -1,8 +1,8 @@
 import { all } from "@/lib/db";
 import { handler, ok } from "@/lib/api";
-import { requireUser } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth";
 export const GET = handler(async () => {
-  await requireUser("admin");
+  await requirePermission("catalog.manage");
   const since = new Date(Date.now() - 30 * 86400000).toISOString();
   return ok({
     services: await all(

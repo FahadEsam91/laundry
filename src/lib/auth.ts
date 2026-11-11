@@ -2,6 +2,7 @@ import "server-only";
 import crypto from "node:crypto";
 import { cookies, headers } from "next/headers";
 import { sessionSecret } from "./env";
+import { ALL_PERMISSIONS, SYSTEM_ROLES, type Permission } from "./permissions";
 import { get, run, now } from "./db";
 
 export type Role = "customer" | "admin" | "partner" | "driver";
@@ -15,7 +16,19 @@ export type SessionUser = {
   points: number;
   created_at: string;
   driver_id?: number | null;
+  admin_role_id?: number | null;
+  admin_role?: string | null;
+  permissions: Permission[];
 };
+
+/** Resolve a staff member's permissions: super_admin = everything; system roles from code; custom roles from DB. */
+export function resolvePermissions(roleKey?: string | null, stored?: string | null): Permission[] {
+  if (!roleKey) return [];
+  if (roleKey === "super_admin") return [...ALL_PERMISSIONS];
+  const sys = SYSTEM_ROLES.find((r) => r.key === roleKey);
+  if (sys) return sys.perms === "*" ? [...ALL_PERMISSIONS] : [...sys.perms];
+  return String(stored || "").split(",").filter((p): p is Permission => (ALL_PERMISSIONS as string[]).includes(p));
+}
 
 const COOKIE = "nuqa_session";
 const MAX_AGE = 60 * 60 * 24 * 30;
@@ -62,10 +75,17 @@ export async function currentUser(): Promise<SessionUser | null> {
   const bearer = (await headers()).get("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1];
   const uid = readToken(bearer || (await cookies()).get(COOKIE)?.value);
   if (!uid) return null;
-  const u = await get<SessionUser>(
-    "SELECT u.id,u.name,u.phone,u.role,u.partner_id,u.wallet,u.points,u.created_at,d.id AS driver_id FROM users u LEFT JOIN drivers d ON d.user_id=u.id WHERE u.id=? AND u.status='active'",
+  const u = await get<any>(
+    `SELECT u.id,u.name,u.phone,u.role,u.partner_id,u.wallet,u.points,u.created_at,u.admin_role_id,d.id AS driver_id,
+            r.key AS admin_role, r.permissions AS role_permissions
+     FROM users u LEFT JOIN drivers d ON d.user_id=u.id LEFT JOIN admin_roles r ON r.id=u.admin_role_id
+     WHERE u.id=? AND u.status='active'`,
     uid,
   );
+  if (u) {
+    u.permissions = u.role === "admin" ? resolvePermissions(u.admin_role || "super_admin", u.role_permissions) : [];
+    delete u.role_permissions;
+  }
   // throttle last_seen writes to once a minute per user
   if (u && !lastSeen.has(uid)) {
     lastSeen.add(uid);
@@ -84,9 +104,20 @@ export class HttpError extends Error {
 export async function requireUser(...roles: Role[]): Promise<SessionUser> {
   const u = await currentUser();
   if (!u) throw new HttpError(401, "unauthorized");
-  if (roles.length && !roles.includes(u.role) && u.role !== "admin") throw new HttpError(403, "forbidden");
+  // only super admins may act inside partner / rider APIs on others' behalf
+  if (roles.length && !roles.includes(u.role) && !(u.role === "admin" && u.admin_role === "super_admin")) throw new HttpError(403, "forbidden");
   return u;
 }
+
+/** Staff guard: must be an admin user holding every listed permission. */
+export async function requirePermission(...perms: Permission[]): Promise<SessionUser> {
+  const u = await currentUser();
+  if (!u) throw new HttpError(401, "unauthorized");
+  if (u.role !== "admin" || !perms.every((p) => u.permissions.includes(p))) throw new HttpError(403, "forbidden");
+  return u;
+}
+
+export const can = (u: SessionUser | null | undefined, p: Permission) => !!u && u.role === "admin" && u.permissions.includes(p);
 
 /** Normalize phone numbers like 0770..., 770..., +964770... → +964770... */
 export function normalizePhone(raw: string) {

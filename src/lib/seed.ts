@@ -1,4 +1,5 @@
 import { all, get, insert, run, tx } from "./db";
+import { SYSTEM_ROLES } from "./permissions";
 import { ORDER_FLOW } from "./constants";
 
 /** Deterministic demo data so dashboards look alive on first run. */
@@ -169,11 +170,40 @@ export async function bootstrap() {
       if ((await get<any>("SELECT COUNT(*) AS c FROM plans"))!.c) return;
       await seedSubscriptions(DEMO);
     });
+  await ensureRoles();
   const adminPhone = process.env.ADMIN_PHONE?.replace(/[^\d+]/g, "");
   if (adminPhone) {
     const ex = await get<any>("SELECT id,role FROM users WHERE phone=?", adminPhone);
-    if (!ex) await insert("INSERT INTO users(name,phone,role,created_at) VALUES(?,?,'admin',?)", process.env.ADMIN_NAME || "Admin", adminPhone, new Date().toISOString());
-    else if (ex.role !== "admin") await run("UPDATE users SET role='admin' WHERE id=?", ex.id);
+    const sa = (await get<any>("SELECT id FROM admin_roles WHERE key='super_admin'"))!.id;
+    if (!ex) await insert("INSERT INTO users(name,phone,role,admin_role_id,created_at) VALUES(?,?,'admin',?,?)", process.env.ADMIN_NAME || "Admin", adminPhone, sa, new Date().toISOString());
+    else if (ex.role !== "admin") await run("UPDATE users SET role='admin', admin_role_id=? WHERE id=?", sa, ex.id);
+  }
+}
+
+/** Built-in staff roles (permissions of system roles live in code: src/lib/permissions.ts). */
+async function ensureRoles() {
+  const ts = new Date().toISOString();
+  for (const r of SYSTEM_ROLES) {
+    const ex = await get<any>("SELECT id FROM admin_roles WHERE key=?", r.key);
+    if (ex) await run("UPDATE admin_roles SET name_ar=?,name_en=?,desc_ar=?,desc_en=?,system=1 WHERE id=?", r.ar, r.en, r.desc_ar, r.desc_en, ex.id);
+    else await insert("INSERT INTO admin_roles(key,name_ar,name_en,desc_ar,desc_en,permissions,system,created_at) VALUES(?,?,?,?,?,'',1,?)", r.key, r.ar, r.en, r.desc_ar, r.desc_en, ts);
+  }
+  // admins created before roles existed become super admins
+  const sa = (await get<any>("SELECT id FROM admin_roles WHERE key='super_admin'"))!.id;
+  await run("UPDATE users SET admin_role_id=? WHERE role='admin' AND admin_role_id IS NULL", sa);
+  // demo staff, one per role, to explore the permission system
+  if (DEMO) {
+    const staff = [
+      ["+9647700000004", "سارة — العمليات", "operations"],
+      ["+9647700000005", "مصطفى — خدمة العملاء", "support"],
+      ["+9647700000006", "هبة — المالية", "finance"],
+      ["+9647700000007", "يوسف — التسويق", "marketing"],
+    ];
+    for (const [phone, name, key] of staff) {
+      if (await get("SELECT 1 FROM users WHERE phone=?", phone)) continue;
+      const rid = (await get<any>("SELECT id FROM admin_roles WHERE key=?", key))!.id;
+      await insert("INSERT INTO users(name,phone,role,admin_role_id,created_at) VALUES(?,?,'admin',?,?)", name, phone, rid, ts);
+    }
   }
 }
 

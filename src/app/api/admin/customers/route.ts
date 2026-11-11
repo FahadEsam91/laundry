@@ -1,8 +1,8 @@
 import { all, get } from "@/lib/db";
 import { handler, ok } from "@/lib/api";
-import { requireUser } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth";
 export const GET = handler(async (req: Request) => {
-  await requireUser("admin");
+  await requirePermission("customers.view");
   const sp = new URL(req.url).searchParams;
   const q = sp.get("q")?.trim();
   const page = Math.max(1, Number(sp.get("page")) || 1);

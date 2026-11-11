@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { PAGE_PERMISSION } from "@/lib/permissions";
 import {
-  LayoutDashboard, ReceiptText, Store, Bike, Users, Tags, TicketPercent, Settings, Crown, Megaphone, Menu, X, Languages, LogOut, ExternalLink, TrendingUp, TrendingDown,
+  LayoutDashboard, ReceiptText, Store, Bike, Users, Tags, TicketPercent, Settings, Crown, Megaphone, ShieldCheck, ScrollText, Lock, Menu, X, Languages, LogOut, ExternalLink, TrendingUp, TrendingDown,
 } from "lucide-react";
-import { useApp } from "./providers";
+import { useApp, useCan } from "./providers";
 import { Logo, cx } from "./ui";
 import { api } from "@/lib/client";
 
@@ -15,11 +16,13 @@ export function PanelShell({
   title,
   children,
   badge,
+  userBadge,
 }: {
   nav: { href: string; label: string; icon: any; exact?: boolean; count?: number }[];
   title: string;
   children: React.ReactNode;
   badge?: React.ReactNode;
+  userBadge?: React.ReactNode;
 }) {
   const { t, lang, setLang, me, refreshMe } = useApp();
   const path = usePathname();
@@ -56,7 +59,7 @@ export function PanelShell({
           <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-600 text-sm font-bold text-white">{me?.user?.name?.slice(0, 1)}</span>
           <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-bold">{me?.user?.name}</div>
-            <div className="truncate text-[11px] text-ink-500" dir="ltr">{me?.user?.phone}</div>
+            {userBadge || <div className="truncate text-[11px] text-ink-500" dir="ltr">{me?.user?.phone}</div>}
           </div>
           <button onClick={logout} className="rounded-lg p-1.5 text-ink-500 hover:bg-white hover:text-red-600" aria-label={t("logout")}><LogOut className="h-4 w-4" /></button>
         </div>
@@ -85,26 +88,63 @@ export function PanelShell({
 }
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
-  const { t } = useApp();
+  const { t, me, lang } = useApp();
+  const can = useCan();
+  const path = usePathname();
+  const router = useRouter();
+  const all = [
+    { href: "/admin", label: t("overview"), icon: LayoutDashboard, exact: true },
+    { href: "/admin/orders", label: t("orders"), icon: ReceiptText },
+    { href: "/admin/partners", label: t("partners"), icon: Store },
+    { href: "/admin/drivers", label: t("drivers"), icon: Bike },
+    { href: "/admin/customers", label: t("customers"), icon: Users },
+    { href: "/admin/catalog", label: t("catalog"), icon: Tags },
+    { href: "/admin/subscriptions", label: t("subscriptions"), icon: Crown },
+    { href: "/admin/promos", label: t("promos"), icon: TicketPercent },
+    { href: "/admin/campaigns", label: t("campaigns"), icon: Megaphone },
+    { href: "/admin/staff", label: t("staff"), icon: ShieldCheck },
+    { href: "/admin/audit", label: t("audit_log"), icon: ScrollText },
+    { href: "/admin/settings", label: t("settings"), icon: Settings },
+  ];
+  const loaded = !!me?.user;
+  const nav = all.filter((n) => !loaded || can(PAGE_PERMISSION[n.href]));
+  // the page being viewed and whether this staff member may see it
+  const page = Object.keys(PAGE_PERMISSION).filter((k) => path === k || (k !== "/admin" && path.startsWith(k))).sort((a, b) => b.length - a.length)[0];
+  const allowed = !loaded || !page || can(PAGE_PERMISSION[page]);
+  useEffect(() => {
+    // staff without dashboard access land on their first permitted page
+    if (loaded && path === "/admin" && !can("dashboard.view") && nav[0]) router.replace(nav[0].href);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded, path]);
+  const role = me?.user?.admin_role;
   return (
     <PanelShell
       title={t("dashboard")}
       badge={<LiveBadge />}
-      nav={[
-        { href: "/admin", label: t("overview"), icon: LayoutDashboard, exact: true },
-        { href: "/admin/orders", label: t("orders"), icon: ReceiptText },
-        { href: "/admin/partners", label: t("partners"), icon: Store },
-        { href: "/admin/drivers", label: t("drivers"), icon: Bike },
-        { href: "/admin/customers", label: t("customers"), icon: Users },
-        { href: "/admin/catalog", label: t("catalog"), icon: Tags },
-        { href: "/admin/subscriptions", label: t("subscriptions"), icon: Crown },
-        { href: "/admin/promos", label: t("promos"), icon: TicketPercent },
-        { href: "/admin/campaigns", label: t("campaigns"), icon: Megaphone },
-        { href: "/admin/settings", label: t("settings"), icon: Settings },
-      ]}
+      nav={nav}
+      userBadge={role ? <div className="truncate text-[11px] font-semibold text-brand-700">{ROLE_LABEL[role]?.[lang] || (lang === "ar" ? "دور مخصص" : "Custom role")}</div> : undefined}
     >
-      {children}
+      {allowed ? children : <NoAccess />}
     </PanelShell>
+  );
+}
+
+const ROLE_LABEL: Record<string, { ar: string; en: string }> = {
+  super_admin: { ar: "مدير عام", en: "Super admin" },
+  operations: { ar: "العمليات", en: "Operations" },
+  support: { ar: "خدمة العملاء", en: "Customer support" },
+  finance: { ar: "المالية", en: "Finance" },
+  marketing: { ar: "التسويق", en: "Marketing" },
+};
+
+export function NoAccess() {
+  const { t } = useApp();
+  return (
+    <div className="flex flex-col items-center justify-center rounded-2xl border border-ink-100 bg-white px-6 py-24 text-center shadow-soft">
+      <span className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-ink-100 text-ink-500"><Lock className="h-7 w-7" /></span>
+      <h2 className="text-lg font-bold">{t("no_access")}</h2>
+      <p className="mt-1 max-w-sm text-sm text-ink-500">{t("no_access_sub")}</p>
+    </div>
   );
 }
 

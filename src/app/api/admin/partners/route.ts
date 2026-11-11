@@ -1,9 +1,10 @@
 import { all, get, run, tx, now, insert } from "@/lib/db";
 import { handler, ok, body, fail } from "@/lib/api";
-import { requireUser } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth";
+import { audit } from "@/lib/audit";
 
 export const GET = handler(async () => {
-  await requireUser("admin");
+  const me = await requirePermission("partners.view");
   const since = new Date(Date.now() - 30 * 86400000).toISOString();
   const partners = await all(
     `SELECT p.*,
@@ -20,7 +21,7 @@ export const GET = handler(async () => {
 const PALETTE = [["#1A62EC", "#56A3FD"], ["#0F766E", "#2DD4BF"], ["#7C3AED", "#C4B5FD"], ["#BE185D", "#F9A8D4"], ["#B45309", "#FBBF24"], ["#15803D", "#86EFAC"]];
 
 export const POST = handler(async (req: Request) => {
-  await requireUser("admin");
+  const me = await requirePermission("partners.manage");
   const b = await body(req);
   if (!b.name_ar || !b.name_en) return fail(400, "name_required");
   const services: string[] = Array.isArray(b.services) && b.services.length ? b.services : ["wash_iron", "iron"];
@@ -42,5 +43,7 @@ export const POST = handler(async (req: Request) => {
     for (const t of template) await insert("INSERT INTO products(partner_id,service_id,name_ar,name_en,icon,price,unit,popular) VALUES(?,?,?,?,?,?,?,?)", id, t.service_id, t.name_ar, t.name_en, t.icon, t.price, t.unit, t.popular);
     return id;
   });
-  return ok({ id: (await get<any>("SELECT id FROM partners WHERE id=?", id))!.id }, 201);
+  await audit(me, "partner.create", "partner", id, { name_en: b.name_en, services });
+  return ok({ id }, 201);
+
 });

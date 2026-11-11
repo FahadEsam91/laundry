@@ -3,7 +3,7 @@
 import { useState } from "react";
 import useSWR from "swr";
 import { Plus, Star, Bike, Car, Ban, RotateCcw } from "lucide-react";
-import { useApp, useToast } from "@/components/providers";
+import { useApp, useCan, useToast } from "@/components/providers";
 import { Kpi, PageHead, Panel, Table, Td } from "@/components/admin";
 import { Badge, Button, Input, Select, Sheet, Skeleton, Toggle } from "@/components/ui";
 import { api, errText } from "@/lib/client";
@@ -11,6 +11,7 @@ import { api, errText } from "@/lib/client";
 export default function DriversPage() {
   const { t, num, fmtDate, lang } = useApp();
   const toast = useToast();
+  const manage = useCan()("drivers.manage");
   const { data, mutate } = useSWR("/api/admin/drivers", { refreshInterval: 8000 });
   const [form, setForm] = useState<any>(null);
   const [busy, setBusy] = useState(false);
@@ -34,7 +35,7 @@ export default function DriversPage() {
   };
   return (
     <div className="animate-fade-up">
-      <PageHead title={t("drivers")} actions={<Button onClick={() => setForm({ name: "", phone: "", vehicle: "motorbike", plate: "" })}><Plus className="h-4 w-4" /> {t("add_driver")}</Button>} />
+      <PageHead title={t("drivers")} actions={manage ? <Button onClick={() => setForm({ name: "", phone: "", vehicle: "motorbike", plate: "" })}><Plus className="h-4 w-4" /> {t("add_driver")}</Button> : undefined} />
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi label={t("drivers")} value={num(list.length)} icon={Bike} />
         <Kpi label={t("online")} value={num(list.filter((d) => d.status === "online").length)} icon={Bike} accent="#059669" />
@@ -55,13 +56,13 @@ export default function DriversPage() {
                 <Td dir="ltr" className="text-ink-500">{d.phone}</Td>
                 <Td><span className="flex items-center gap-1.5">{d.vehicle === "car" ? <Car className="h-4 w-4" /> : <Bike className="h-4 w-4" />} {t(d.vehicle)} <span className="text-xs text-ink-400">{d.plate}</span></span></Td>
                 <Td>{d.user_status === "suspended" ? <Badge tone="red">{t("suspended")}</Badge> : d.active_jobs > 0 ? <Badge tone="amber">{t("busy")}</Badge> : d.status === "online" ? <Badge tone="green">{t("online")}</Badge> : <Badge>{t("offline")}</Badge>}</Td>
-                <Td><Toggle checked={d.status === "online"} disabled={d.user_status === "suspended"} onChange={(v) => patch(d.id, { status: v ? "online" : "offline" })} /></Td>
+                <Td><Toggle checked={d.status === "online"} disabled={!manage || d.user_status === "suspended"} onChange={(v) => patch(d.id, { status: v ? "online" : "offline" })} /></Td>
                 <Td className="tabular">{d.active_jobs}</Td>
                 <Td className="tabular">{num(d.deliveries_30)}</Td>
                 <Td><span className="flex items-center gap-1 font-bold"><Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />{d.rating}</span></Td>
                 <Td className="text-xs text-ink-500">{fmtDate(d.created_at, { day: "numeric", month: "short", year: "numeric" })}</Td>
                 <Td>
-                  {d.user_status === "suspended" ? (
+                  {!manage ? null : d.user_status === "suspended" ? (
                     <button onClick={() => patch(d.id, { user_status: "active" })} className="rounded-lg p-2 text-ink-400 hover:bg-emerald-50 hover:text-emerald-600" title={t("approve")}><RotateCcw className="h-4 w-4" /></button>
                   ) : (
                     <button onClick={() => patch(d.id, { user_status: "suspended" })} className="rounded-lg p-2 text-ink-400 hover:bg-red-50 hover:text-red-600" title={t("suspend")}><Ban className="h-4 w-4" /></button>

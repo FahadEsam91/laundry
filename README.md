@@ -58,6 +58,17 @@ two store apps: **Nuqa** (customers) and **Nuqa Rider** (riders). The step‑by�
   laundries; bilingual message with live phone preview, reach counts, campaign history
 - Dead devices are cleaned up automatically (HTTP 404/410 from the push service)
 
+### Staff roles & permissions (RBAC)
+- 19 granular permissions in 9 groups (orders, laundries, riders, customers, services, memberships, marketing, system…)
+- Built‑in roles: **Super admin**, **Operations**, **Customer support**, **Finance**, **Marketing** — plus **custom roles**
+  built from a permission matrix (Admin → Staff & permissions → Roles)
+- Invite staff by phone number (they sign in with OTP — no passwords); change role or suspend access instantly
+- Enforced on the server for every endpoint; the dashboard hides pages and buttons a person can't use
+- Safety rules: no self‑demotion/suspension, the last super admin can't be removed, only super admins edit super admins,
+  and **nobody can grant permissions they don't hold** (anti privilege‑escalation)
+- **Audit log** of every staff change (who, what, which record, details, IP), filterable — Admin → Audit log
+- Demo mode includes one staff account per role (buttons on `/login`)
+
 ### Partner panel
 Kanban board (new → inbound → cleaning → ready) with accept/reject, start cleaning, mark ready,
 new‑order alerts, today's sales, 30‑day net earnings after commission, price list editor, history.
@@ -90,7 +101,8 @@ In production (`NUQA_DEMO=0`) codes are random 6‑digit SMS/WhatsApp codes, and
 
 **Where is the super admin?** → `/admin` (role `admin`, full access).
 
-Tests: `scripts/smoke-test.sh` runs 22 end‑to‑end API checks against a running demo instance.
+Tests (against a running demo instance): `scripts/smoke-test.sh` (22 end‑to‑end API checks) and
+`scripts/rbac-test.sh` (41 role/permission checks, including privilege‑escalation attempts).
 
 ## Production readiness
 - PostgreSQL (or SQLite) behind one async data layer; additive automatic migrations; atomic wallet debits;

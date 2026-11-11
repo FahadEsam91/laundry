@@ -3,7 +3,7 @@
 import { useState } from "react";
 import useSWR from "swr";
 import { Plus, Star, Pencil, CheckCircle2, Ban, Tags, MapPin } from "lucide-react";
-import { useApp, useToast } from "@/components/providers";
+import { useApp, useCan, useToast } from "@/components/providers";
 import { PageHead, Panel, Table, Td } from "@/components/admin";
 import { Badge, Button, Input, PartnerLogo, Sheet, Skeleton, Toggle, cx } from "@/components/ui";
 import { MapView } from "@/components/map-view";
@@ -14,6 +14,8 @@ const EMPTY = { name_ar: "", name_en: "", area_ar: "", area_en: "", desc_ar: "",
 export default function PartnersPage() {
   const { t, L, money, num, services, lang } = useApp();
   const toast = useToast();
+  const can = useCan();
+  const manage = can("partners.manage");
   const { data, mutate } = useSWR("/api/admin/partners");
   const [edit, setEdit] = useState<any>(null);
   const [prices, setPrices] = useState<any>(null);
@@ -47,7 +49,7 @@ export default function PartnersPage() {
 
   return (
     <div className="animate-fade-up">
-      <PageHead title={t("partners")} sub={`${list.length} ${t("partners")}`} actions={<Button onClick={() => setEdit({ ...EMPTY })}><Plus className="h-4 w-4" /> {t("add_partner")}</Button>} />
+      <PageHead title={t("partners")} sub={`${list.length} ${t("partners")}`} actions={manage ? <Button onClick={() => setEdit({ ...EMPTY })}><Plus className="h-4 w-4" /> {t("add_partner")}</Button> : undefined} />
       <Panel bodyClass="p-0">
         {!data ? <div className="p-4"><Skeleton className="h-64" /></div> : (
           <Table head={[t("partner"), t("status"), t("open"), t("rating"), `${t("orders")} (30d)`, `${t("gmv")} (30d)`, t("active_orders"), t("commission"), t("delivery_fee"), ""]}>
@@ -65,7 +67,7 @@ export default function PartnersPage() {
                 <Td>
                   {p.status === "active" ? <Badge tone="green">{t("active")}</Badge> : p.status === "pending" ? <Badge tone="amber">{t("pending_approval")}</Badge> : <Badge tone="red">{t("suspended")}</Badge>}
                 </Td>
-                <Td><Toggle checked={!!p.is_open} disabled={p.status !== "active"} onChange={(v) => patch(p.id, { is_open: v })} /></Td>
+                <Td><Toggle checked={!!p.is_open} disabled={!manage || p.status !== "active"} onChange={(v) => patch(p.id, { is_open: v })} /></Td>
                 <Td><span className="flex items-center gap-1 font-bold"><Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />{num(p.rating, 1)}</span><span className="text-xs text-ink-400">{num(p.rating_count)}</span></Td>
                 <Td className="tabular">{num(p.orders_30)}</Td>
                 <Td className="font-bold tabular">{money(p.gmv_30)}</Td>
@@ -73,7 +75,7 @@ export default function PartnersPage() {
                 <Td className="tabular">{p.commission}%</Td>
                 <Td className="tabular">{p.delivery_fee ? money(p.delivery_fee) : t("free")}</Td>
                 <Td>
-                  <div className="flex items-center gap-1">
+                  {manage && <div className="flex items-center gap-1">
                     {p.status !== "active" ? (
                       <Button size="sm" variant="success" onClick={() => patch(p.id, { status: "active" })}><CheckCircle2 className="h-4 w-4" /> {t("approve")}</Button>
                     ) : (
@@ -81,7 +83,7 @@ export default function PartnersPage() {
                     )}
                     <button onClick={() => setPrices(p)} className="rounded-lg p-2 text-ink-400 hover:bg-ink-100 hover:text-ink-800" title={t("menu")}><Tags className="h-4 w-4" /></button>
                     <button onClick={() => setEdit({ ...p })} className="rounded-lg p-2 text-ink-400 hover:bg-ink-100 hover:text-ink-800" title={t("edit")}><Pencil className="h-4 w-4" /></button>
-                  </div>
+                  </div>}
                 </Td>
               </tr>
             ))}

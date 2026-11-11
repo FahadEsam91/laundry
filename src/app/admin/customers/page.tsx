@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import useSWR from "swr";
 import { Search, Wallet, Ban, RotateCcw, ReceiptText } from "lucide-react";
-import { useApp, useToast } from "@/components/providers";
+import { useApp, useCan, useToast } from "@/components/providers";
 import { PageHead, Pager, Panel, Table, Td } from "@/components/admin";
 import { Badge, Button, Input, Sheet, Skeleton } from "@/components/ui";
 import { api } from "@/lib/client";
@@ -12,6 +12,7 @@ import { api } from "@/lib/client";
 export default function CustomersPage() {
   const { t, money, num, fmtDate } = useApp();
   const toast = useToast();
+  const can = useCan();
   const [q, setQ] = useState("");
   const [dq, setDq] = useState("");
   const [page, setPage] = useState(1);
@@ -52,9 +53,9 @@ export default function CustomersPage() {
                 <Td className="text-xs text-ink-500">{fmtDate(c.created_at, { day: "numeric", month: "short", year: "numeric" })}</Td>
                 <Td>
                   <div className="flex gap-1">
-                    <Link href={`/admin/orders?customer=${c.id}`} className="rounded-lg p-2 text-ink-400 hover:bg-ink-100 hover:text-ink-800" title={t("orders")}><ReceiptText className="h-4 w-4" /></Link>
-                    <button onClick={() => setCredit(c)} className="rounded-lg p-2 text-ink-400 hover:bg-brand-50 hover:text-brand-700" title={t("wallet_topup_admin")}><Wallet className="h-4 w-4" /></button>
-                    {c.status === "suspended" ? (
+                    {can("orders.view") && <Link href={`/admin/orders?customer=${c.id}`} className="rounded-lg p-2 text-ink-400 hover:bg-ink-100 hover:text-ink-800" title={t("orders")}><ReceiptText className="h-4 w-4" /></Link>}
+                    {can("customers.credit") && <button onClick={() => setCredit(c)} className="rounded-lg p-2 text-ink-400 hover:bg-brand-50 hover:text-brand-700" title={t("wallet_topup_admin")}><Wallet className="h-4 w-4" /></button>}
+                    {!can("customers.manage") ? null : c.status === "suspended" ? (
                       <button onClick={() => act(c.id, { action: "status", status: "active" })} className="rounded-lg p-2 text-ink-400 hover:bg-emerald-50 hover:text-emerald-600"><RotateCcw className="h-4 w-4" /></button>
                     ) : (
                       <button onClick={() => act(c.id, { action: "status", status: "suspended" })} className="rounded-lg p-2 text-ink-400 hover:bg-red-50 hover:text-red-600" title={t("suspend")}><Ban className="h-4 w-4" /></button>

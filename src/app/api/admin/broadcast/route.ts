@@ -1,6 +1,7 @@
 import { all, get, run, tx, now, insert } from "@/lib/db";
 import { handler, ok, body, fail } from "@/lib/api";
-import { requireUser } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth";
+import { audit } from "@/lib/audit";
 import { sendPush } from "@/lib/push";
 
 const AUDIENCE: Record<string, string> = {
@@ -15,7 +16,7 @@ const AUDIENCE: Record<string, string> = {
 const ids = async (aud: string) => (await all<any>(AUDIENCE[aud], ...(aud === "inactive" ? [new Date(Date.now() - 30 * 86400000).toISOString()] : []))).map((r) => r.id);
 
 export const GET = handler(async () => {
-  await requireUser("admin");
+  await requirePermission("campaigns.send");
   const devices = await all("SELECT u.role, COUNT(*) c, COUNT(DISTINCT p.user_id) users FROM (SELECT user_id FROM push_subscriptions UNION ALL SELECT user_id FROM mobile_push_tokens) p JOIN users u ON u.id=p.user_id GROUP BY u.role");
   const audiences = Object.fromEntries(await Promise.all(Object.keys(AUDIENCE).map(async (a) => {
     const list = await ids(a);
@@ -27,7 +28,7 @@ export const GET = handler(async () => {
 });
 
 export const POST = handler(async (req: Request) => {
-  await requireUser("admin");
+  const me = await requirePermission("campaigns.send");
   const b = await body(req);
   if (!AUDIENCE[b.audience]) return fail(400, "invalid_audience");
   if (!b.title_ar || !b.title_en) return fail(400, "title_required");
@@ -40,5 +41,6 @@ export const POST = handler(async (req: Request) => {
   });
   const sent = await sendPush(list, { title_ar: b.title_ar, title_en: b.title_en, body_ar: b.body_ar, body_en: b.body_en, url, tag: `campaign-${bid}` });
   await run("UPDATE broadcasts SET push_sent=? WHERE id=?", sent, bid);
+  await audit(me, "campaign.send", "broadcast", bid, { audience: b.audience, title_en: b.title_en, recipients: list.length });
   return ok({ recipients: list.length, push_sent: sent });
 });

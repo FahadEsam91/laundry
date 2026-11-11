@@ -170,6 +170,13 @@ function ToastProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** Staff permission check for the dashboard UI (the server enforces the same rules). */
+export function useCan() {
+  const { me } = useApp();
+  const perms: string[] = me?.user?.permissions || [];
+  return (p: string) => perms.includes(p);
+}
+
 export function usePickLang() {
   return useApp().L;
 }
