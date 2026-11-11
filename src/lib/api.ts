@@ -13,7 +13,8 @@ export function handler<A extends any[]>(fn: (...args: A) => Promise<Response>) 
     } catch (e: any) {
       if (e instanceof HttpError) return fail(e.status, e.message);
       console.error(e);
-      return fail(500, e?.message || "server_error");
+      // never leak internals (SQL, stack, config) to clients in production
+      return fail(500, process.env.NODE_ENV === "production" ? "server_error" : e?.message || "server_error");
     }
   };
 }

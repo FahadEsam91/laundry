@@ -9,7 +9,7 @@ export const GET = handler(async (req: Request) => {
   const size = 20;
   const where = q ? "u.role='customer' AND (u.name LIKE ? OR u.phone LIKE ?)" : "u.role='customer'";
   const params = q ? [`%${q}%`, `%${q}%`] : [];
-  const customers = all(
+  const customers = await all(
     `SELECT u.id,u.name,u.phone,u.wallet,u.points,u.status,u.created_at,u.last_seen,
       (SELECT COUNT(*) FROM orders o WHERE o.customer_id=u.id AND o.status!='cancelled') orders,
       (SELECT COALESCE(SUM(total),0) FROM orders o WHERE o.customer_id=u.id AND o.status='delivered') spent,
@@ -18,6 +18,6 @@ export const GET = handler(async (req: Request) => {
      FROM users u WHERE ${where} ORDER BY spent DESC LIMIT ? OFFSET ?`,
     ...params, size, (page - 1) * size,
   );
-  const total = get<any>(`SELECT COUNT(*) c FROM users u WHERE ${where}`, ...params)!.c;
+  const total = (await get<any>(`SELECT COUNT(*) c FROM users u WHERE ${where}`, ...params))!.c;
   return ok({ customers, total, page, size });
 });

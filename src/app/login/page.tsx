@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Phone, ShieldCheck, UserRound, LayoutDashboard, Store, Truck, ShoppingBag, Languages, ArrowLeft, ArrowRight } from "lucide-react";
 import { useApp, useToast } from "@/components/providers";
@@ -17,7 +17,10 @@ function LoginInner() {
   const [step, setStep] = useState<"phone" | "otp" | "name">("phone");
   const [phone, setPhone] = useState("");
   const [norm, setNorm] = useState("");
-  const [code, setCode] = useState(["", "", "", ""]);
+  const [len, setLen] = useState(4);
+  const [code, setCode] = useState<string[]>(Array(4).fill(""));
+  const [resendIn, setResendIn] = useState(0);
+  const { settings } = useApp();
   const [name, setName] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const boxes = useRef<(HTMLInputElement | null)[]>([]);
@@ -33,8 +36,11 @@ function LoginInner() {
   const sendOtp = async () => {
     setBusy("otp");
     try {
-      const r = await api("/api/auth/otp", { body: { phone } });
+      const r = await api("/api/auth/otp", { body: { phone, lang } });
       setNorm(r.phone);
+      setLen(r.length || 4);
+      setCode(Array(r.length || 4).fill(""));
+      setResendIn(45);
       setStep("otp");
       setTimeout(() => boxes.current[0]?.focus(), 50);
     } catch (e) {
@@ -43,6 +49,12 @@ function LoginInner() {
       setBusy(null);
     }
   };
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const id = setTimeout(() => setResendIn((x) => x - 1), 1000);
+    return () => clearTimeout(id);
+  }, [resendIn]);
+
   const verify = async (c = code.join(""), n?: string) => {
     setBusy("verify");
     try {
@@ -51,7 +63,7 @@ function LoginInner() {
       else go(r.role);
     } catch (e) {
       toast(errText(e, lang), "error");
-      setCode(["", "", "", ""]);
+      setCode(Array(len).fill(""));
       boxes.current[0]?.focus();
     } finally {
       setBusy(null);
@@ -72,7 +84,7 @@ function LoginInner() {
     const nc = [...code];
     nc[i] = d;
     setCode(nc);
-    if (d && i < 3) boxes.current[i + 1]?.focus();
+    if (d && i < len - 1) boxes.current[i + 1]?.focus();
     if (nc.every(Boolean)) verify(nc.join(""));
   };
 
@@ -135,7 +147,7 @@ function LoginInner() {
               </Button>
               <p className="mt-3 text-center text-xs text-ink-400">{t("terms_note")}</p>
 
-              <div className="mt-10">
+              {settings.demo && <div className="mt-10">
                 <div className="mb-3 flex items-center gap-3 text-xs font-bold uppercase text-ink-400">
                   <span className="h-px flex-1 bg-ink-100" /> {t("demo_accounts")} <span className="h-px flex-1 bg-ink-100" />
                 </div>
@@ -151,7 +163,10 @@ function LoginInner() {
                     </button>
                   ))}
                 </div>
-              </div>
+              </div>}
+              <p className="mt-8 text-center text-xs text-ink-400">
+                <a href="/terms" className="underline">{lang === "ar" ? "الشروط والأحكام" : "Terms"}</a> · <a href="/privacy" className="underline">{lang === "ar" ? "سياسة الخصوصية" : "Privacy"}</a>
+              </p>
             </div>
           )}
 
@@ -170,11 +185,27 @@ function LoginInner() {
                     onKeyDown={(e) => e.key === "Backspace" && !d && i > 0 && boxes.current[i - 1]?.focus()}
                     inputMode="numeric"
                     maxLength={1}
-                    className="h-16 w-14 rounded-2xl border-2 border-ink-200 text-center text-2xl font-extrabold outline-none focus:border-brand-600"
+                    autoComplete={i === 0 ? "one-time-code" : "off"}
+                    onPaste={(e) => {
+                      const digits = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, len);
+                      if (digits.length === len) {
+                        e.preventDefault();
+                        setCode(digits.split(""));
+                        verify(digits);
+                      }
+                    }}
+                    className={cx("rounded-2xl border-2 border-ink-200 text-center font-extrabold outline-none focus:border-brand-600", len > 4 ? "h-14 w-11 text-xl" : "h-16 w-14 text-2xl")}
                   />
                 ))}
               </div>
-              <div className="mt-5 rounded-xl bg-amber-50 p-3 text-center text-sm font-semibold text-amber-800">{t("otp_demo")}</div>
+              {settings.demo && <div className="mt-5 rounded-xl bg-amber-50 p-3 text-center text-sm font-semibold text-amber-800">{t("otp_demo")}</div>}
+              <div className="mt-4 text-center text-sm">
+                {resendIn > 0 ? (
+                  <span className="text-ink-400">{lang === "ar" ? `إعادة الإرسال بعد ${resendIn} ثانية` : `Resend in ${resendIn}s`}</span>
+                ) : (
+                  <button onClick={sendOtp} className="font-bold text-brand-600">{lang === "ar" ? "إعادة إرسال الرمز" : "Resend code"}</button>
+                )}
+              </div>
               <Button block size="lg" className="mt-4" loading={busy === "verify"} disabled={!code.every(Boolean)} onClick={() => verify()}>{t("verify")}</Button>
             </div>
           )}

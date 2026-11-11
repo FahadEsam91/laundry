@@ -5,7 +5,7 @@ export const GET = handler(async () => {
   await requireUser("admin");
   const since = new Date(Date.now() - 30 * 86400000).toISOString();
   return ok({
-    services: all(
+    services: await all(
       `SELECT s.*,
         (SELECT COUNT(DISTINCT partner_id) FROM products p WHERE p.service_id=s.id AND p.active=1) partners,
         (SELECT COUNT(*) FROM products p WHERE p.service_id=s.id) products,

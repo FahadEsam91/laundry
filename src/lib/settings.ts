@@ -22,8 +22,11 @@ export type Settings = {
 
 const NUM = ["service_fee", "express_pct", "vat_pct", "free_delivery_over", "autopilot_seconds", "map_lat", "map_lng"];
 
-export function getSettings(): Settings {
-  const rows = all<{ key: string; value: string }>("SELECT key,value FROM settings");
+let cache: { at: number; v: Settings } | null = null;
+
+export async function getSettings(): Promise<Settings> {
+  if (cache && Date.now() - cache.at < 5000) return cache.v;
+  const rows = await all<{ key: string; value: string }>("SELECT key,value FROM settings");
   const o: any = {};
   for (const r of rows) {
     if (r.key.startsWith("vapid_")) continue; // server-only secrets
@@ -31,13 +34,15 @@ export function getSettings(): Settings {
     else if (r.key === "autopilot") o[r.key] = r.value === "1";
     else o[r.key] = r.value;
   }
+  cache = { at: Date.now(), v: o as Settings };
   return o as Settings;
 }
 
-export function updateSettings(patch: Partial<Record<keyof Settings, any>>) {
+export async function updateSettings(patch: Partial<Record<keyof Settings, any>>) {
   for (const [k, v] of Object.entries(patch)) {
     const val = typeof v === "boolean" ? (v ? "1" : "0") : String(v);
-    run("INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", k, val);
+    await run("INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", k, val);
   }
-  return getSettings();
+  cache = null;
+  return await getSettings();
 }

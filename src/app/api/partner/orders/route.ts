@@ -7,17 +7,17 @@ export const GET = handler(async (req: Request) => {
   const u = await requireUser("partner");
   const pid = u.role === "admin" ? Number(new URL(req.url).searchParams.get("partner_id")) || 1 : u.partner_id;
   if (!pid) return fail(403, "no_partner");
-  autopilotTick();
-  const partner = get<any>("SELECT * FROM partners WHERE id=?", pid);
-  const active = listOrders("o.partner_id=? AND o.status NOT IN ('delivered','cancelled')", [pid], 200);
-  const history = listOrders("o.partner_id=? AND o.status IN ('delivered','cancelled')", [pid], 30);
+  await autopilotTick();
+  const partner = await get<any>("SELECT * FROM partners WHERE id=?", pid);
+  const active = await listOrders("o.partner_id=? AND o.status NOT IN ('delivered','cancelled')", [pid], 200);
+  const history = await listOrders("o.partner_id=? AND o.status IN ('delivered','cancelled')", [pid], 30);
   const since = new Date();
   since.setHours(0, 0, 0, 0);
-  const today = get<any>(
+  const today = await get<any>(
     "SELECT COUNT(*) orders, COALESCE(SUM(subtotal),0) sales FROM orders WHERE partner_id=? AND status!='cancelled' AND created_at>=?",
     pid, since.toISOString(),
   );
-  const month = get<any>(
+  const month = await get<any>(
     "SELECT COUNT(*) orders, COALESCE(SUM(subtotal),0) sales, AVG(rating) rating FROM orders WHERE partner_id=? AND status='delivered' AND created_at>=?",
     pid, new Date(Date.now() - 30 * 86400000).toISOString(),
   );

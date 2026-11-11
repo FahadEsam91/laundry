@@ -1,6 +1,7 @@
 import { get } from "@/lib/db";
 import { handler, ok, body, fail } from "@/lib/api";
-import { setSession } from "@/lib/auth";
+import { makeToken, setSession } from "@/lib/auth";
+import { DEMO } from "@/lib/env";
 
 const PHONES: Record<string, string> = {
   customer: "+9647700000001",
@@ -9,11 +10,13 @@ const PHONES: Record<string, string> = {
   driver: "+9647700000003",
 };
 
+/** One-tap demo logins — only exists while NUQA_DEMO is enabled. */
 export const POST = handler(async (req: Request) => {
-  if (process.env.NUQA_DEMO === "0") return fail(404, "not_found");
-  const { role } = await body(req);
-  const u = get<any>("SELECT id,role FROM users WHERE phone=?", PHONES[role] || "");
+  if (!DEMO) return fail(404, "not_found");
+  const { role, client } = await body(req);
+  const u = await get<any>("SELECT id,role FROM users WHERE phone=?", PHONES[role] || "");
   if (!u) return fail(404, "demo_user_missing");
+  if (client === "mobile") return ok({ ok: true, role: u.role, token: makeToken(u.id) });
   await setSession(u.id);
   return ok({ ok: true, role: u.role });
 });

@@ -1,327 +1,209 @@
 import "server-only";
 import path from "node:path";
 import fs from "node:fs";
+import { AsyncLocalStorage } from "node:async_hooks";
 import type { DatabaseSync } from "node:sqlite";
-import { seed, seedSubscriptions } from "./seed";
+import type { Pool, PoolClient } from "pg";
+import { SCHEMA, MIGRATIONS } from "./schema";
+import { bootstrap } from "./seed";
 
 /**
- * Data layer.
- * Uses Node's built-in SQLite (node >= 22.5) so the project runs with zero native deps.
- * All SQL lives behind these helpers, so swapping to Postgres (e.g. via `pg`) later
- * only touches this file + the query strings.
+ * Data layer with two interchangeable drivers:
+ *  - PostgreSQL  → set DATABASE_URL=postgres://…  (production)
+ *  - SQLite      → default, zero-setup file at data/nuqa.db (development / small single-server installs)
+ *
+ * SQL is written once in a portable dialect ("?" placeholders); the Postgres driver translates it.
+ * All functions are async. `tx()` runs a callback in a transaction; queries made inside it (anywhere in
+ * the call stack) automatically use the transaction connection.
  */
 
 type Row = Record<string, any>;
-const g = globalThis as unknown as { __nuqaDb?: DatabaseSync };
+type Driver = {
+  kind: "postgres" | "sqlite";
+  query(sql: string, params: any[], ctx?: any): Promise<{ rows: Row[]; changes: number }>;
+  begin(): Promise<any>;
+  commit(ctx: any): Promise<void>;
+  rollback(ctx: any): Promise<void>;
+};
 
-const SCHEMA = `
-PRAGMA journal_mode = WAL;
-PRAGMA foreign_keys = ON;
+const g = globalThis as unknown as { __nuqaDb?: Promise<Driver> };
+const txStore = new AsyncLocalStorage<{ ctx: any }>();
 
-CREATE TABLE IF NOT EXISTS users(
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL,
-  phone TEXT NOT NULL UNIQUE,
-  email TEXT,
-  role TEXT NOT NULL DEFAULT 'customer',
-  partner_id INTEGER,
-  wallet REAL NOT NULL DEFAULT 0,
-  points INTEGER NOT NULL DEFAULT 0,
-  status TEXT NOT NULL DEFAULT 'active',
-  created_at TEXT NOT NULL,
-  last_seen TEXT
-);
+export const dialect = () => (process.env.DATABASE_URL ? "postgres" : "sqlite");
 
-CREATE TABLE IF NOT EXISTS addresses(
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  label TEXT NOT NULL,
-  area TEXT NOT NULL,
-  street TEXT,
-  building TEXT,
-  notes TEXT,
-  lat REAL NOT NULL,
-  lng REAL NOT NULL,
-  is_default INTEGER NOT NULL DEFAULT 0
-);
+// ------------------------------------------------------------------ postgres
 
-CREATE TABLE IF NOT EXISTS services(
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  slug TEXT NOT NULL UNIQUE,
-  name_ar TEXT NOT NULL, name_en TEXT NOT NULL,
-  desc_ar TEXT, desc_en TEXT,
-  icon TEXT NOT NULL, color TEXT NOT NULL,
-  sort INTEGER NOT NULL DEFAULT 0,
-  active INTEGER NOT NULL DEFAULT 1
-);
+function toPg(sql: string) {
+  let i = 0;
+  return sql
+    .replace(/\?/g, () => `$${++i}`)
+    .replace(/\bGROUP_CONCAT\(DISTINCT ([^)]+)\)/gi, "string_agg(DISTINCT $1, ',')")
+    .replace(/\sLIKE\s/g, " ILIKE ");
+}
 
-CREATE TABLE IF NOT EXISTS partners(
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name_ar TEXT NOT NULL, name_en TEXT NOT NULL,
-  desc_ar TEXT, desc_en TEXT,
-  area_ar TEXT, area_en TEXT,
-  lat REAL NOT NULL, lng REAL NOT NULL,
-  rating REAL NOT NULL DEFAULT 5, rating_count INTEGER NOT NULL DEFAULT 0,
-  eta_hours INTEGER NOT NULL DEFAULT 24, express_hours INTEGER NOT NULL DEFAULT 6,
-  delivery_fee REAL NOT NULL DEFAULT 0, min_order REAL NOT NULL DEFAULT 0,
-  commission REAL NOT NULL DEFAULT 15,
-  color TEXT NOT NULL, color2 TEXT NOT NULL, initials TEXT NOT NULL,
-  is_open INTEGER NOT NULL DEFAULT 1,
-  status TEXT NOT NULL DEFAULT 'active',
-  featured INTEGER NOT NULL DEFAULT 0,
-  tags TEXT NOT NULL DEFAULT '',
-  phone TEXT,
-  created_at TEXT NOT NULL
-);
+async function postgresDriver(): Promise<Driver> {
+  const pg = await import("pg");
+  const { Pool, types } = (pg as any).default || pg;
+  types.setTypeParser(20, (v: string) => parseInt(v, 10)); // int8 (COUNT/SUM of ints)
+  types.setTypeParser(1700, (v: string) => parseFloat(v)); // numeric (AVG/ROUND)
+  const pool: Pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    max: Number(process.env.DB_POOL_MAX || 10),
+    ssl: process.env.DATABASE_SSL === "1" ? { rejectUnauthorized: process.env.DATABASE_SSL_STRICT !== "0" } : undefined,
+  });
+  return {
+    kind: "postgres",
+    async query(sql, params, ctx?: PoolClient) {
+      const r = await (ctx || pool).query(toPg(sql), params);
+      return { rows: r.rows, changes: r.rowCount || 0 };
+    },
+    async begin() {
+      const c = await pool.connect();
+      await c.query("BEGIN");
+      return c;
+    },
+    async commit(c: PoolClient) {
+      try {
+        await c.query("COMMIT");
+      } finally {
+        c.release();
+      }
+    },
+    async rollback(c: PoolClient) {
+      try {
+        await c.query("ROLLBACK");
+      } finally {
+        c.release();
+      }
+    },
+  };
+}
 
-CREATE TABLE IF NOT EXISTS products(
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  partner_id INTEGER NOT NULL REFERENCES partners(id) ON DELETE CASCADE,
-  service_id INTEGER NOT NULL REFERENCES services(id),
-  name_ar TEXT NOT NULL, name_en TEXT NOT NULL,
-  icon TEXT NOT NULL,
-  price REAL NOT NULL,
-  unit TEXT NOT NULL DEFAULT 'piece',
-  popular INTEGER NOT NULL DEFAULT 0,
-  active INTEGER NOT NULL DEFAULT 1
-);
-CREATE INDEX IF NOT EXISTS idx_products_partner ON products(partner_id);
+// ------------------------------------------------------------------ sqlite
 
-CREATE TABLE IF NOT EXISTS drivers(
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
-  vehicle TEXT NOT NULL DEFAULT 'motorbike',
-  plate TEXT,
-  status TEXT NOT NULL DEFAULT 'offline',
-  lat REAL, lng REAL,
-  rating REAL NOT NULL DEFAULT 5,
-  created_at TEXT NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS orders(
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  code TEXT NOT NULL UNIQUE,
-  customer_id INTEGER NOT NULL REFERENCES users(id),
-  partner_id INTEGER NOT NULL REFERENCES partners(id),
-  driver_id INTEGER REFERENCES drivers(id),
-  pickup_driver_id INTEGER,
-  status TEXT NOT NULL,
-  express INTEGER NOT NULL DEFAULT 0,
-  address_text TEXT NOT NULL,
-  address_lat REAL NOT NULL, address_lng REAL NOT NULL,
-  pickup_slot TEXT, delivery_slot TEXT,
-  subtotal REAL NOT NULL, delivery_fee REAL NOT NULL, express_fee REAL NOT NULL,
-  service_fee REAL NOT NULL, discount REAL NOT NULL, vat REAL NOT NULL DEFAULT 0, total REAL NOT NULL,
-  payment_method TEXT NOT NULL, payment_status TEXT NOT NULL,
-  promo_code TEXT, notes TEXT,
-  rating INTEGER, review TEXT,
-  items_count INTEGER NOT NULL DEFAULT 0,
-  auto INTEGER NOT NULL DEFAULT 0,
-  created_at TEXT NOT NULL, updated_at TEXT NOT NULL, status_at TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS idx_orders_customer ON orders(customer_id);
-CREATE INDEX IF NOT EXISTS idx_orders_partner ON orders(partner_id);
-CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
-CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_at);
-
-CREATE TABLE IF NOT EXISTS order_items(
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
-  product_id INTEGER,
-  service_id INTEGER,
-  name_ar TEXT NOT NULL, name_en TEXT NOT NULL,
-  service_ar TEXT, service_en TEXT,
-  icon TEXT,
-  qty REAL NOT NULL, unit_price REAL NOT NULL
-);
-CREATE INDEX IF NOT EXISTS idx_items_order ON order_items(order_id);
-
-CREATE TABLE IF NOT EXISTS order_events(
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
-  status TEXT NOT NULL,
-  note TEXT,
-  actor TEXT,
-  created_at TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS idx_events_order ON order_events(order_id);
-
-CREATE TABLE IF NOT EXISTS promos(
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  code TEXT NOT NULL UNIQUE,
-  kind TEXT NOT NULL,
-  value REAL NOT NULL,
-  min_order REAL NOT NULL DEFAULT 0,
-  max_discount REAL,
-  usage_limit INTEGER,
-  used INTEGER NOT NULL DEFAULT 0,
-  first_order_only INTEGER NOT NULL DEFAULT 0,
-  active INTEGER NOT NULL DEFAULT 1,
-  expires_at TEXT,
-  title_ar TEXT, title_en TEXT,
-  created_at TEXT NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY, value TEXT NOT NULL);
-
-CREATE TABLE IF NOT EXISTS notifications(
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  title_ar TEXT NOT NULL, title_en TEXT NOT NULL,
-  body_ar TEXT, body_en TEXT,
-  order_id INTEGER,
-  read INTEGER NOT NULL DEFAULT 0,
-  created_at TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS idx_notif_user ON notifications(user_id);
-
-CREATE TABLE IF NOT EXISTS wallet_tx(
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  amount REAL NOT NULL,
-  kind TEXT NOT NULL,
-  note TEXT,
-  created_at TEXT NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS favorites(
-  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  partner_id INTEGER NOT NULL REFERENCES partners(id) ON DELETE CASCADE,
-  PRIMARY KEY(user_id, partner_id)
-);
-
-CREATE TABLE IF NOT EXISTS plans(
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  slug TEXT NOT NULL UNIQUE,
-  name_ar TEXT NOT NULL, name_en TEXT NOT NULL,
-  desc_ar TEXT, desc_en TEXT,
-  price REAL NOT NULL,
-  interval_days INTEGER NOT NULL DEFAULT 30,
-  free_deliveries INTEGER NOT NULL DEFAULT 0,      -- -1 = unlimited
-  discount_pct REAL NOT NULL DEFAULT 0,
-  no_service_fee INTEGER NOT NULL DEFAULT 0,
-  express_discount_pct REAL NOT NULL DEFAULT 0,
-  priority_support INTEGER NOT NULL DEFAULT 0,
-  color TEXT NOT NULL DEFAULT '#1A62EC',
-  popular INTEGER NOT NULL DEFAULT 0,
-  active INTEGER NOT NULL DEFAULT 1,
-  sort INTEGER NOT NULL DEFAULT 0,
-  created_at TEXT NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS subscriptions(
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  plan_id INTEGER NOT NULL REFERENCES plans(id),
-  status TEXT NOT NULL,                             -- active | cancelled | expired
-  auto_renew INTEGER NOT NULL DEFAULT 1,
-  payment_method TEXT NOT NULL DEFAULT 'wallet',
-  current_period_start TEXT NOT NULL,
-  current_period_end TEXT NOT NULL,
-  deliveries_used INTEGER NOT NULL DEFAULT 0,
-  started_at TEXT NOT NULL,
-  cancelled_at TEXT,
-  created_at TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS idx_subs_user ON subscriptions(user_id);
-CREATE INDEX IF NOT EXISTS idx_subs_status ON subscriptions(status);
-
-CREATE TABLE IF NOT EXISTS subscription_payments(
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  subscription_id INTEGER NOT NULL REFERENCES subscriptions(id) ON DELETE CASCADE,
-  user_id INTEGER NOT NULL,
-  plan_id INTEGER NOT NULL,
-  amount REAL NOT NULL,
-  kind TEXT NOT NULL DEFAULT 'new',                 -- new | renewal
-  period_start TEXT NOT NULL, period_end TEXT NOT NULL,
-  created_at TEXT NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS push_subscriptions(
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  endpoint TEXT NOT NULL UNIQUE,
-  p256dh TEXT NOT NULL, auth TEXT NOT NULL,
-  lang TEXT NOT NULL DEFAULT 'ar',
-  user_agent TEXT,
-  created_at TEXT NOT NULL,
-  last_success_at TEXT, fail_count INTEGER NOT NULL DEFAULT 0
-);
-CREATE INDEX IF NOT EXISTS idx_push_user ON push_subscriptions(user_id);
-
-CREATE TABLE IF NOT EXISTS broadcasts(
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  title_ar TEXT NOT NULL, title_en TEXT NOT NULL,
-  body_ar TEXT, body_en TEXT, url TEXT,
-  audience TEXT NOT NULL,
-  recipients INTEGER NOT NULL DEFAULT 0,
-  push_sent INTEGER NOT NULL DEFAULT 0,
-  created_at TEXT NOT NULL
-);
-`;
-
-export function db(): DatabaseSync {
-  if (g.__nuqaDb) return g.__nuqaDb;
+function sqliteDriver(): Driver {
   const { DatabaseSync } = process.getBuiltinModule("node:sqlite") as typeof import("node:sqlite");
   const dir = path.join(process.cwd(), "data");
   fs.mkdirSync(dir, { recursive: true });
-  const file = process.env.DATABASE_FILE || path.join(dir, "nuqa.db");
-  const conn = new DatabaseSync(file);
-  conn.exec(SCHEMA);
-  migrate(conn);
-  const once = (fn: () => void) => {
-    conn.exec("BEGIN");
-    try {
-      fn();
+  const conn: DatabaseSync = new DatabaseSync(process.env.DATABASE_FILE || path.join(dir, "nuqa.db"));
+  conn.exec("PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;");
+  // A single connection is shared, so transactions are serialized with a lock and queries from
+  // other requests wait until the open transaction finishes.
+  let lock: Promise<void> = Promise.resolve();
+  let release: (() => void) | null = null;
+  return {
+    kind: "sqlite",
+    async query(sql, params, ctx) {
+      if (!ctx && release) await lock;
+      const st = conn.prepare(sql);
+      const isRead = /^\s*(SELECT|WITH|PRAGMA)/i.test(sql) || /\bRETURNING\b/i.test(sql);
+      if (isRead) return { rows: (st.all(...params) as Row[]).map((r) => ({ ...r })), changes: 0 };
+      const r = st.run(...params);
+      return { rows: [], changes: Number(r.changes) };
+    },
+    async begin() {
+      while (release) await lock;
+      lock = new Promise<void>((res) => (release = res));
+      conn.exec("BEGIN");
+      return { sqlite: true };
+    },
+    async commit() {
       conn.exec("COMMIT");
-    } catch (e) {
-      conn.exec("ROLLBACK");
-      throw e;
+      const r = release;
+      release = null;
+      r?.();
+    },
+    async rollback() {
+      try {
+        conn.exec("ROLLBACK");
+      } finally {
+        const r = release;
+        release = null;
+        r?.();
+      }
+    },
+  };
+}
+
+// ------------------------------------------------------------------ init
+
+async function init(): Promise<Driver> {
+  const d = dialect() === "postgres" ? await postgresDriver() : sqliteDriver();
+  for (const stmt of SCHEMA(d.kind)) await d.query(stmt, []);
+  for (const stmt of MIGRATIONS(d.kind)) {
+    try {
+      await d.query(stmt, []);
+    } catch (e: any) {
+      // SQLite has no "ADD COLUMN IF NOT EXISTS": ignore duplicate-column errors
+      if (!/duplicate column/i.test(String(e?.message))) throw e;
     }
-  };
-  const has = conn.prepare("SELECT COUNT(*) AS c FROM services").get() as Row;
-  if (!has.c) once(() => seed(conn));
-  const hasPlans = conn.prepare("SELECT COUNT(*) AS c FROM plans").get() as Row;
-  if (!hasPlans.c) once(() => seedSubscriptions(conn));
-  g.__nuqaDb = conn;
-  return conn;
+  }
+  return d;
 }
 
-/** Additive, idempotent column migrations for databases created by older versions. */
-function migrate(conn: DatabaseSync) {
-  const cols = (t: string) => (conn.prepare(`PRAGMA table_info(${t})`).all() as Row[]).map((c) => c.name);
-  const add = (t: string, col: string, def: string) => {
-    if (!cols(t).includes(col)) conn.exec(`ALTER TABLE ${t} ADD COLUMN ${col} ${def}`);
-  };
-  add("orders", "subscription_id", "INTEGER");
-  add("orders", "member_discount", "REAL NOT NULL DEFAULT 0");
-  add("orders", "sub_savings", "REAL NOT NULL DEFAULT 0");
-  add("orders", "sub_free_delivery", "INTEGER NOT NULL DEFAULT 0");
+let booted: Promise<void> | null = null;
+
+async function driver(): Promise<Driver> {
+  if (!g.__nuqaDb) g.__nuqaDb = init();
+  const d = await g.__nuqaDb;
+  if (!booted) {
+    booted = bootstrapping.run(true, () => bootstrap()).catch((e) => {
+      booted = null;
+      throw e;
+    });
+  }
+  // the bootstrap itself runs queries; don't wait on our own promise from inside it
+  if (!bootstrapping.getStore()) await booted;
+  return d;
 }
 
-const plain = <T,>(r: any): T => (r ? ({ ...r } as T) : (undefined as T));
+export const bootstrapping = new AsyncLocalStorage<boolean>();
 
-export function all<T = Row>(sql: string, ...params: any[]): T[] {
-  return (db().prepare(sql).all(...params) as any[]).map((r) => plain<T>(r));
+async function execSql(sql: string, params: any[]) {
+  const d = await driver();
+  return d.query(sql, params.map((p) => (p === undefined ? null : typeof p === "boolean" ? (p ? 1 : 0) : p)), txStore.getStore()?.ctx);
 }
-export function get<T = Row>(sql: string, ...params: any[]): T | undefined {
-  return plain<T>(db().prepare(sql).get(...params));
+
+// ------------------------------------------------------------------ public API
+
+export async function all<T = Row>(sql: string, ...params: any[]): Promise<T[]> {
+  return (await execSql(sql, params)).rows as T[];
 }
-export function run(sql: string, ...params: any[]) {
-  const r = db().prepare(sql).run(...params);
-  return { id: Number(r.lastInsertRowid), changes: Number(r.changes) };
+
+export async function get<T = Row>(sql: string, ...params: any[]): Promise<T | undefined> {
+  return (await execSql(sql, params)).rows[0] as T | undefined;
 }
-export function tx<T>(fn: () => T): T {
-  const c = db();
-  c.exec("BEGIN");
+
+/** UPDATE / DELETE / statements without a generated id */
+export async function run(sql: string, ...params: any[]): Promise<{ changes: number }> {
+  return { changes: (await execSql(sql, params)).changes };
+}
+
+/** INSERT into a table with an `id` primary key; returns the new id. */
+export async function insert(sql: string, ...params: any[]): Promise<number> {
+  const r = await execSql(`${sql} RETURNING id`, params);
+  return Number(r.rows[0]?.id);
+}
+
+/** Run `fn` in a transaction. Re-entrant: nested calls join the outer transaction. */
+export async function tx<T>(fn: () => Promise<T>): Promise<T> {
+  if (txStore.getStore()) return fn();
+  const d = await driver();
+  const ctx = await d.begin();
   try {
-    const out = fn();
-    c.exec("COMMIT");
+    const out = await txStore.run({ ctx }, fn);
+    await d.commit(ctx);
     return out;
   } catch (e) {
-    c.exec("ROLLBACK");
+    await d.rollback(ctx);
     throw e;
   }
 }
 
 export const now = () => new Date().toISOString();
+
+export async function dbHealth() {
+  const d = await driver();
+  await d.query("SELECT 1 AS ok", []);
+  return d.kind;
+}

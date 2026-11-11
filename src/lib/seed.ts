@@ -1,4 +1,4 @@
-import type { DatabaseSync } from "node:sqlite";
+import { all, get, insert, run, tx } from "./db";
 import { ORDER_FLOW } from "./constants";
 
 /** Deterministic demo data so dashboards look alive on first run. */
@@ -137,11 +137,48 @@ const DRIVERS = ["كرار حسن", "مهند جاسم", "عباس فاضل", "�
 const iso = (d: Date) => d.toISOString();
 const jitter = (v: number, s = 0.02) => v + (R() - 0.5) * s;
 
-export function seed(db: DatabaseSync) {
-  const nowD = new Date();
-  const ts = iso(nowD);
-  const q = (sql: string) => db.prepare(sql);
+/** Prepared-statement-like helper: INSERTs resolve to the new row id. */
+function stmt(sql: string) {
+  const noId = /^\s*INSERT INTO (settings|favorites)\b/i.test(sql);
+  return { run: (...p: any[]): Promise<number> => (noId ? run(sql, ...p).then(() => 0) : insert(sql, ...p)) };
+}
 
+export const DEMO = process.env.NUQA_DEMO !== "0";
+
+/**
+ * Runs on every start. Idempotent:
+ *  - core platform data (settings, services, membership plans) — always
+ *  - first admin account from ADMIN_PHONE (+ optional ADMIN_NAME) — always
+ *  - demo marketplace (laundries, riders, customers, 75 days of orders) — only when NUQA_DEMO != 0
+ */
+export async function bootstrap() {
+  const lockPg = async () => {
+    if (process.env.DATABASE_URL) await run("SELECT pg_advisory_xact_lock(424242)"); // one instance seeds at a time
+  };
+  const fresh = !(await get<any>("SELECT COUNT(*) AS c FROM services"))!.c;
+  if (fresh)
+    await tx(async () => {
+      await lockPg();
+      if ((await get<any>("SELECT COUNT(*) AS c FROM services"))!.c) return;
+      await seedCore();
+      if (DEMO) await seedDemo();
+    });
+  if (!(await get<any>("SELECT COUNT(*) AS c FROM plans"))!.c)
+    await tx(async () => {
+      await lockPg();
+      if ((await get<any>("SELECT COUNT(*) AS c FROM plans"))!.c) return;
+      await seedSubscriptions(DEMO);
+    });
+  const adminPhone = process.env.ADMIN_PHONE?.replace(/[^\d+]/g, "");
+  if (adminPhone) {
+    const ex = await get<any>("SELECT id,role FROM users WHERE phone=?", adminPhone);
+    if (!ex) await insert("INSERT INTO users(name,phone,role,created_at) VALUES(?,?,'admin',?)", process.env.ADMIN_NAME || "Admin", adminPhone, new Date().toISOString());
+    else if (ex.role !== "admin") await run("UPDATE users SET role='admin' WHERE id=?", ex.id);
+  }
+}
+
+async function seedCore() {
+  const q = stmt;
   // ---------- settings
   const settings: Record<string, string> = {
     app_name: "Nuqa",
@@ -162,14 +199,18 @@ export function seed(db: DatabaseSync) {
     timezone: "Asia/Baghdad",
   };
   const setS = q("INSERT INTO settings(key,value) VALUES(?,?)");
-  for (const [k, v] of Object.entries(settings)) setS.run(k, v);
+  for (const [k, v] of Object.entries(settings)) await setS.run(k, v);
 
   // ---------- services
   const insSvc = q("INSERT INTO services(slug,name_ar,name_en,desc_ar,desc_en,icon,color,sort) VALUES(?,?,?,?,?,?,?,?)");
-  const svcId: Record<string, number> = {};
-  SERVICES.forEach((s, i) => {
-    svcId[s.slug] = Number(insSvc.run(s.slug, s.ar, s.en, s.dAr, s.dEn, s.icon, s.color, i).lastInsertRowid);
-  });
+  for (const [i, s] of SERVICES.entries()) await insSvc.run(s.slug, s.ar, s.en, s.dAr, s.dEn, s.icon, s.color, i);
+}
+
+async function seedDemo() {
+  const nowD = new Date();
+  const ts = iso(nowD);
+  const q = stmt;
+  const svcId: Record<string, number> = Object.fromEntries((await all<any>("SELECT id,slug FROM services")).map((r) => [r.slug, r.id]));
 
   // ---------- partners + products
   const insP = q(`INSERT INTO partners(name_ar,name_en,desc_ar,desc_en,area_ar,area_en,lat,lng,rating,rating_count,eta_hours,express_hours,delivery_fee,min_order,commission,color,color2,initials,is_open,status,featured,tags,phone,created_at)
@@ -177,69 +218,67 @@ export function seed(db: DatabaseSync) {
   const insProd = q("INSERT INTO products(partner_id,service_id,name_ar,name_en,icon,price,unit,popular) VALUES(?,?,?,?,?,?,?,?)");
   const partnerProducts: Record<number, { id: number; price: number; ar: string; en: string; icon: string; svc: string }[]> = {};
   const partnerIds: number[] = [];
-  PARTNERS.forEach((p, i) => {
+  for (const [i, p] of PARTNERS.entries()) {
     const a = AREAS[p.area];
     const created = new Date(nowD.getTime() - (200 - i * 12) * 86400000);
-    const id = Number(
-      insP.run(p.ar, p.en, p.dAr, p.dEn, a.ar, a.en, jitter(a.lat, 0.01), jitter(a.lng, 0.01), p.r, p.n, p.eta, p.ex, p.fee, p.min, 12 + (i % 3) * 3, p.c[0], p.c[1], p.ini, i === 6 ? 0 : 1, "active", p.featured, p.tags, `+96477${int(10000000, 99999999)}`, iso(created)).lastInsertRowid,
-    );
+    const id = (await insP.run(p.ar, p.en, p.dAr, p.dEn, a.ar, a.en, jitter(a.lat, 0.01), jitter(a.lng, 0.01), p.r, p.n, p.eta, p.ex, p.fee, p.min, 12 + (i % 3) * 3, p.c[0], p.c[1], p.ini, i === 6 ? 0 : 1, "active", p.featured, p.tags, `+96477${int(10000000, 99999999)}`, iso(created)));
     partnerIds.push(id);
     partnerProducts[id] = [];
     for (const slug of p.services) {
       for (const [en, ar, icon, price, unit, popular] of CATALOG[slug]) {
         const pr = Math.max(250, round250(price * p.mult));
-        const pid = Number(insProd.run(id, svcId[slug], ar, en, icon, pr, unit || "piece", popular ? 1 : 0).lastInsertRowid);
+        const pid = (await insProd.run(id, svcId[slug], ar, en, icon, pr, unit || "piece", popular ? 1 : 0));
         partnerProducts[id].push({ id: pid, price: pr, ar, en, icon, svc: slug });
       }
     }
-  });
+  }
   // one pending partner awaiting approval (for the admin workflow)
   {
     const a = AREAS[9];
-    const id = Number(insP.run("مغسلة الريم", "Al Reem Laundry", "مغسلة جديدة بانتظار التفعيل", "New partner awaiting activation", a.ar, a.en, a.lat, a.lng, 5, 0, 24, 6, 2000, 5000, 15, "#0369A1", "#7DD3FC", "AR", 0, "pending", 0, "", "+9647712345678", ts).lastInsertRowid);
-    for (const slug of ["wash_iron", "iron"]) for (const [en, ar, icon, price, unit] of CATALOG[slug]) insProd.run(id, svcId[slug], ar, en, icon, price, unit || "piece", 0);
+    const id = (await insP.run("مغسلة الريم", "Al Reem Laundry", "مغسلة جديدة بانتظار التفعيل", "New partner awaiting activation", a.ar, a.en, a.lat, a.lng, 5, 0, 24, 6, 2000, 5000, 15, "#0369A1", "#7DD3FC", "AR", 0, "pending", 0, "", "+9647712345678", ts));
+    for (const slug of ["wash_iron", "iron"]) for (const [en, ar, icon, price, unit] of CATALOG[slug]) await insProd.run(id, svcId[slug], ar, en, icon, price, unit || "piece", 0);
   }
 
   // ---------- users
   const insU = q("INSERT INTO users(name,phone,email,role,partner_id,wallet,points,created_at,last_seen) VALUES(?,?,?,?,?,?,?,?,?)");
   const insA = q("INSERT INTO addresses(user_id,label,area,street,building,notes,lat,lng,is_default) VALUES(?,?,?,?,?,?,?,?,?)");
-  const addUser = (name: string, phone: string, role: string, partner: number | null, wallet = 0, createdDaysAgo = 90) =>
-    Number(insU.run(name, phone, null, role, partner, wallet, 0, iso(new Date(nowD.getTime() - createdDaysAgo * 86400000)), ts).lastInsertRowid);
+  const addUser = async (name: string, phone: string, role: string, partner: number | null, wallet = 0, createdDaysAgo = 90) =>
+    (await insU.run(name, phone, null, role, partner, wallet, 0, iso(new Date(nowD.getTime() - createdDaysAgo * 86400000)), ts));
 
-  addUser("مدير المنصة", "+9647700000000", "admin", null, 0, 300);
-  const demoCustomer = addUser("علي حسن", "+9647700000001", "customer", null, 25000, 120);
-  insA.run(demoCustomer, "home", "المنصور", "شارع 14 رمضان", "عمارة 12، الطابق 3", "قرب مطعم الساعة", 33.3149, 44.3401, 1);
-  insA.run(demoCustomer, "work", "الكرادة", "شارع العرصات", "برج النخيل، مكتب 7", "", 33.3011, 44.4172, 0);
-  addUser("حسام — مغسلة الندى", "+9647700000002", "partner", partnerIds[0], 0, 200);
+  await addUser("مدير المنصة", "+9647700000000", "admin", null, 0, 300);
+  const demoCustomer = await addUser("علي حسن", "+9647700000001", "customer", null, 25000, 120);
+  await insA.run(demoCustomer, "home", "المنصور", "شارع 14 رمضان", "عمارة 12، الطابق 3", "قرب مطعم الساعة", 33.3149, 44.3401, 1);
+  await insA.run(demoCustomer, "work", "الكرادة", "شارع العرصات", "برج النخيل، مكتب 7", "", 33.3011, 44.4172, 0);
+  await addUser("حسام — مغسلة الندى", "+9647700000002", "partner", partnerIds[0], 0, 200);
 
   const customers: { id: number; lat: number; lng: number; text: string }[] = [{ id: demoCustomer, lat: 33.3149, lng: 44.3401, text: "المنصور، شارع 14 رمضان، عمارة 12" }];
   for (let i = 0; i < 64; i++) {
     const name = `${pick(FIRST)} ${pick(LAST)}`;
     const area = pick(AREAS);
-    const id = addUser(name, `+96478${String(10000000 + i * 7919).slice(0, 8)}`, "customer", null, pick([0, 0, 0, 5000, 10000]), int(1, 100));
+    const id = await addUser(name, `+96478${String(10000000 + i * 7919).slice(0, 8)}`, "customer", null, pick([0, 0, 0, 5000, 10000]), int(1, 100));
     const lat = jitter(area.lat), lng = jitter(area.lng);
     const street = `شارع ${int(1, 60)}`;
-    insA.run(id, "home", area.ar, street, `دار ${int(1, 120)}`, "", lat, lng, 1);
+    await insA.run(id, "home", area.ar, street, `دار ${int(1, 120)}`, "", lat, lng, 1);
     customers.push({ id, lat, lng, text: `${area.ar}، ${street}` });
   }
 
   // ---------- drivers
   const insD = q("INSERT INTO drivers(user_id,vehicle,plate,status,lat,lng,rating,created_at) VALUES(?,?,?,?,?,?,?,?)");
   const driverIds: number[] = [];
-  DRIVERS.forEach((n, i) => {
-    const uid = addUser(n, i === 0 ? "+9647700000003" : `+96479${String(20000000 + i * 104729).slice(0, 8)}`, "driver", null, 0, 150 - i * 10);
+  for (const [i, n] of DRIVERS.entries()) {
+    const uid = await addUser(n, i === 0 ? "+9647700000003" : `+96479${String(20000000 + i * 104729).slice(0, 8)}`, "driver", null, 0, 150 - i * 10);
     const a = AREAS[i % AREAS.length];
-    driverIds.push(Number(insD.run(uid, i % 3 === 2 ? "car" : "motorbike", `${int(10, 99)} ${pick(["أ", "ب", "ج", "د"])} ${int(10000, 99999)}`, i < 6 ? "online" : "offline", jitter(a.lat), jitter(a.lng), Number((4.5 + R() * 0.5).toFixed(1)), ts).lastInsertRowid));
-  });
+    driverIds.push((await insD.run(uid, i % 3 === 2 ? "car" : "motorbike", `${int(10, 99)} ${pick(["أ", "ب", "ج", "د"])} ${int(10000, 99999)}`, i < 6 ? "online" : "offline", jitter(a.lat), jitter(a.lng), Number((4.5 + R() * 0.5).toFixed(1)), ts)));
+  }
 
   // ---------- promos
   const insPromo = q("INSERT INTO promos(code,kind,value,min_order,max_discount,usage_limit,used,first_order_only,active,expires_at,title_ar,title_en,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)");
   const in60 = iso(new Date(nowD.getTime() + 60 * 86400000));
-  insPromo.run("WELCOME50", "percent", 50, 5000, 10000, null, 184, 1, 1, in60, "خصم 50% على أول طلب", "50% off your first order", ts);
-  insPromo.run("NUQA20", "percent", 20, 10000, 8000, 1000, 312, 0, 1, in60, "خصم 20% على كل الخدمات", "20% off all services", ts);
-  insPromo.run("FREEDEL", "delivery", 0, 8000, null, null, 520, 0, 1, in60, "توصيل مجاني", "Free delivery", ts);
-  insPromo.run("SAVE5", "fixed", 5000, 25000, null, 500, 97, 0, 1, in60, "وفر 5,000 على طلبات 25,000+", "Save 5,000 on 25,000+", ts);
-  insPromo.run("SUMMER", "percent", 30, 0, 15000, 300, 300, 0, 0, iso(new Date(nowD.getTime() - 20 * 86400000)), "عرض الصيف", "Summer sale", ts);
+  await insPromo.run("WELCOME50", "percent", 50, 5000, 10000, null, 184, 1, 1, in60, "خصم 50% على أول طلب", "50% off your first order", ts);
+  await insPromo.run("NUQA20", "percent", 20, 10000, 8000, 1000, 312, 0, 1, in60, "خصم 20% على كل الخدمات", "20% off all services", ts);
+  await insPromo.run("FREEDEL", "delivery", 0, 8000, null, null, 520, 0, 1, in60, "توصيل مجاني", "Free delivery", ts);
+  await insPromo.run("SAVE5", "fixed", 5000, 25000, null, 500, 97, 0, 1, in60, "وفر 5,000 على طلبات 25,000+", "Save 5,000 on 25,000+", ts);
+  await insPromo.run("SUMMER", "percent", 30, 0, 15000, 300, 300, 0, 0, iso(new Date(nowD.getTime() - 20 * 86400000)), "عرض الصيف", "Summer sale", ts);
 
   // ---------- orders
   const insO = q(`INSERT INTO orders(code,customer_id,partner_id,driver_id,status,express,address_text,address_lat,address_lng,pickup_slot,delivery_slot,subtotal,delivery_fee,express_fee,service_fee,discount,vat,total,payment_method,payment_status,promo_code,notes,rating,review,items_count,created_at,updated_at,status_at)
@@ -250,7 +289,7 @@ export function seed(db: DatabaseSync) {
   const reviews = ["خدمة ممتازة وسريعة 👌", "الكوي رائع جداً", "التوصيل بالوقت المحدد", "Great service, will order again", "ريحة الملابس حلوة", "Perfect pressing!", "ممتاز", "أفضل مغسلة جربتها", ""];
   let seq = 10420;
 
-  const makeOrder = (createdAt: Date, status: string, cust = pick(customers), partnerIdx?: number) => {
+  const makeOrder = async (createdAt: Date, status: string, cust = pick(customers), partnerIdx?: number) => {
     const pid = partnerIdx !== undefined ? partnerIds[partnerIdx] : partnerIds[Math.min(partnerIds.length - 1, Math.floor(Math.pow(R(), 1.4) * partnerIds.length))];
     const prods = partnerProducts[pid];
     const p = PARTNERS[partnerIds.indexOf(pid)];
@@ -281,24 +320,22 @@ export function seed(db: DatabaseSync) {
     const gaps = [0, 6, 14, 30, 25, 40, express ? 120 : 600, 30, 35];
     const times: Date[] = [];
     let t = createdAt.getTime();
-    steps.forEach((_, i) => {
+    for (const [i, _] of steps.entries()) {
       t += (gaps[i] || 20) * 60000 * (0.6 + R() * 0.8);
       times.push(new Date(i === 0 ? createdAt.getTime() : Math.min(t, nowD.getTime() - 60000 * (steps.length - i))));
-    });
+    }
     if (status === "cancelled") times.push(new Date(createdAt.getTime() + int(3, 30) * 60000));
     const last = times[times.length - 1];
     const pickup = new Date(createdAt.getTime() + 60 * 60000);
     const delivery = new Date(pickup.getTime() + (express ? p.ex : p.eta) * 3600000);
     const code = `NQ-${seq++}`;
-    const oid = Number(
-      insO.run(code, cust.id, pid, drv, status, express, cust.text, cust.lat, cust.lng, iso(pickup), iso(delivery), subtotal, deliveryFee, expressFee, 500, discount, 0, total, pay, payStatus, promo, null, rating, rating ? pick(reviews) : null, [...chosen.values()].reduce((s, l) => s + l.qty, 0), iso(createdAt), iso(last), iso(last)).lastInsertRowid,
-    );
+    const oid = (await insO.run(code, cust.id, pid, drv, status, express, cust.text, cust.lat, cust.lng, iso(pickup), iso(delivery), subtotal, deliveryFee, expressFee, 500, discount, 0, total, pay, payStatus, promo, null, rating, rating ? pick(reviews) : null, [...chosen.values()].reduce((s, l) => s + l.qty, 0), iso(createdAt), iso(last), iso(last)));
     for (const { prod, qty } of chosen.values()) {
       const s = svcBySlug[prod.svc];
-      insI.run(oid, prod.id, svcId[prod.svc], prod.ar, prod.en, s.ar, s.en, prod.icon, qty, prod.price);
+      await insI.run(oid, prod.id, svcId[prod.svc], prod.ar, prod.en, s.ar, s.en, prod.icon, qty, prod.price);
     }
-    steps.forEach((s, i) => insE.run(oid, s, null, i === 0 ? "customer" : ["accepted", "at_laundry", "processing", "ready"].includes(s) ? "partner" : "driver", iso(times[i])));
-    if (status === "cancelled") insE.run(oid, "cancelled", pick(["العميل ألغى الطلب", "المغسلة مشغولة", "Customer request"]), "customer", iso(times[times.length - 1]));
+    for (const [i, s] of steps.entries()) { await insE.run(oid, s, null, i === 0 ? "customer" : ["accepted", "at_laundry", "processing", "ready"].includes(s) ? "partner" : "driver", iso(times[i])); }
+    if (status === "cancelled") await insE.run(oid, "cancelled", pick(["العميل ألغى الطلب", "المغسلة مشغولة", "Customer request"]), "customer", iso(times[times.length - 1]));
     return oid;
   };
 
@@ -311,28 +348,28 @@ export function seed(db: DatabaseSync) {
     for (let k = 0; k < n; k++) {
       const c = new Date(day);
       c.setUTCHours(int(5, 19), int(0, 59), int(0, 59)); // 08:00–22:00 Baghdad (UTC+3)
-      makeOrder(c, R() < 0.065 ? "cancelled" : "delivered");
+      await makeOrder(c, R() < 0.065 ? "cancelled" : "delivered");
     }
   }
   // today: finished + live orders across every stage
   for (let k = 0; k < 9; k++) {
     const c = new Date(nowD.getTime() - int(4, 10) * 3600000);
-    makeOrder(c, "delivered");
+    await makeOrder(c, "delivered");
   }
   const live = ["pending", "pending", "accepted", "driver_assigned", "picked_up", "at_laundry", "processing", "processing", "processing", "ready", "out_for_delivery", "out_for_delivery"];
-  live.forEach((s, i) => makeOrder(new Date(nowD.getTime() - (20 + i * 25) * 60000), s));
+  for (const [i, s] of live.entries()) { await makeOrder(new Date(nowD.getTime() - (20 + i * 25) * 60000), s); }
 
   // demo customer: history + one active order, partner 0 has incoming work
-  makeOrder(new Date(nowD.getTime() - 9 * 86400000), "delivered", customers[0], 0);
-  makeOrder(new Date(nowD.getTime() - 22 * 86400000), "delivered", customers[0], 2);
-  makeOrder(new Date(nowD.getTime() - 3 * 3600000), "processing", customers[0], 0);
-  makeOrder(new Date(nowD.getTime() - 15 * 60000), "pending", pick(customers.slice(1)), 0);
+  await makeOrder(new Date(nowD.getTime() - 9 * 86400000), "delivered", customers[0], 0);
+  await makeOrder(new Date(nowD.getTime() - 22 * 86400000), "delivered", customers[0], 2);
+  await makeOrder(new Date(nowD.getTime() - 3 * 3600000), "processing", customers[0], 0);
+  await makeOrder(new Date(nowD.getTime() - 15 * 60000), "pending", pick(customers.slice(1)), 0);
 
   // ---------- notifications & wallet for demo customer
   const insN = q("INSERT INTO notifications(user_id,title_ar,title_en,body_ar,body_en,order_id,read,created_at) VALUES(?,?,?,?,?,?,?,?)");
-  insN.run(demoCustomer, "🎉 أهلاً بك في نقاء", "🎉 Welcome to Nuqa", "استخدم الكود WELCOME50 لخصم 50% على أول طلب", "Use WELCOME50 for 50% off your first order", null, 1, iso(new Date(nowD.getTime() - 120 * 86400000)));
-  insN.run(demoCustomer, "عرض نهاية الأسبوع", "Weekend deal", "خصم 20% على كل الخدمات بكود NUQA20", "20% off everything with NUQA20", null, 0, iso(new Date(nowD.getTime() - 2 * 3600000)));
-  q("INSERT INTO wallet_tx(user_id,amount,kind,note,created_at) VALUES(?,?,?,?,?)").run(demoCustomer, 25000, "topup", "Card top-up", iso(new Date(nowD.getTime() - 10 * 86400000)));
+  await insN.run(demoCustomer, "🎉 أهلاً بك في نقاء", "🎉 Welcome to Nuqa", "استخدم الكود WELCOME50 لخصم 50% على أول طلب", "Use WELCOME50 for 50% off your first order", null, 1, iso(new Date(nowD.getTime() - 120 * 86400000)));
+  await insN.run(demoCustomer, "عرض نهاية الأسبوع", "Weekend deal", "خصم 20% على كل الخدمات بكود NUQA20", "20% off everything with NUQA20", null, 0, iso(new Date(nowD.getTime() - 2 * 3600000)));
+  await q("INSERT INTO wallet_tx(user_id,amount,kind,note,created_at) VALUES(?,?,?,?,?)").run(demoCustomer, 25000, "topup", "Card top-up", iso(new Date(nowD.getTime() - 10 * 86400000)));
 }
 
 // ---------------------------------------------------------------- subscriptions (Nuqa Plus)
@@ -343,22 +380,24 @@ export const PLANS = [
   { slug: "family", ar: "نقاء العائلة", en: "Nuqa Family", dAr: "للعائلات: توصيل مجاني، خصم 15%، نصف سعر المستعجل ودعم أولوية", dEn: "For families: free delivery, 15% off, half-price express & priority support", price: 19900, free: -1, disc: 15, nosf: 1, exp: 50, prio: 1, color: "#7C3AED", popular: 0 },
 ];
 
-export function seedSubscriptions(db: DatabaseSync) {
+async function seedSubscriptions(demo: boolean) {
   const nowD = new Date();
   const ts = nowD.toISOString();
-  const ins = db.prepare(
+  const ins = stmt(
     "INSERT INTO plans(slug,name_ar,name_en,desc_ar,desc_en,price,interval_days,free_deliveries,discount_pct,no_service_fee,express_discount_pct,priority_support,color,popular,active,sort,created_at) VALUES(?,?,?,?,?,?,30,?,?,?,?,?,?,?,1,?,?)",
   );
-  const planIds = PLANS.map((p, i) => Number(ins.run(p.slug, p.ar, p.en, p.dAr, p.dEn, p.price, p.free, p.disc, p.nosf, p.exp, p.prio, p.color, p.popular, i, ts).lastInsertRowid));
+  const planIds: number[] = [];
+  for (const [i, p] of PLANS.entries()) planIds.push(await ins.run(p.slug, p.ar, p.en, p.dAr, p.dEn, p.price, p.free, p.disc, p.nosf, p.exp, p.prio, p.color, p.popular, i, ts));
+  if (!demo) return;
 
   // demo subscribers: a growing member base over the last ~75 days (skips the demo customer so it can try subscribing)
-  const customers = db.prepare("SELECT id FROM users WHERE role='customer' AND phone!='+9647700000001' ORDER BY id").all() as any[];
+  const customers = await all<any>("SELECT id FROM users WHERE role='customer' AND phone!='+9647700000001' ORDER BY id");
   if (!customers.length) return;
-  const insSub = db.prepare("INSERT INTO subscriptions(user_id,plan_id,status,auto_renew,payment_method,current_period_start,current_period_end,deliveries_used,started_at,cancelled_at,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)");
-  const insPay = db.prepare("INSERT INTO subscription_payments(subscription_id,user_id,plan_id,amount,kind,period_start,period_end,created_at) VALUES(?,?,?,?,?,?,?,?)");
+  const insSub = stmt("INSERT INTO subscriptions(user_id,plan_id,status,auto_renew,payment_method,current_period_start,current_period_end,deliveries_used,started_at,cancelled_at,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)");
+  const insPay = stmt("INSERT INTO subscription_payments(subscription_id,user_id,plan_id,amount,kind,period_start,period_end,created_at) VALUES(?,?,?,?,?,?,?,?)");
   const DAY = 86400000;
-  customers.forEach((c, i) => {
-    if (R() > 0.55) return;
+  for (const [i, c] of customers.entries()) {
+    if (R() > 0.55) continue;
     const pi = R() < 0.55 ? 1 : R() < 0.6 ? 0 : 2;
     const plan = PLANS[pi];
     let start = nowD.getTime() - int(2, 75) * DAY;
@@ -374,21 +413,19 @@ export function seedSubscriptions(db: DatabaseSync) {
     }
     const churned = churnAt !== Infinity && churnAt < nowD.getTime();
     const status = churned && periodEnd < nowD.getTime() ? "expired" : "active"; // cancelled members keep benefits until period end
-    const sid = Number(
-      insSub.run(c.id, planIds[pi], status, churned ? 0 : 1, R() < 0.6 ? "card" : "wallet", new Date(periodStart).toISOString(), new Date(periodEnd).toISOString(), plan.free > 0 ? int(0, plan.free) : int(0, 6), subStart, churned ? new Date(churnAt).toISOString() : null, subStart).lastInsertRowid,
-    );
-    for (const [a, b, kind] of pays) insPay.run(sid, c.id, planIds[pi], plan.price, kind, new Date(a).toISOString(), new Date(b).toISOString(), new Date(a).toISOString());
-    // re-price this member's orders placed while subscribed, so analytics reflect member benefits
+    const sid = (await insSub.run(c.id, planIds[pi], status, churned ? 0 : 1, R() < 0.6 ? "card" : "wallet", new Date(periodStart).toISOString(), new Date(periodEnd).toISOString(), plan.free > 0 ? int(0, plan.free) : int(0, 6), subStart, churned ? new Date(churnAt).toISOString() : null, subStart));
+    for (const [a, b, kind] of pays) await insPay.run(sid, c.id, planIds[pi], plan.price, kind, new Date(a).toISOString(), new Date(b).toISOString(), new Date(a).toISOString());
+    // re-price orders of this member placed while subscribed, so analytics reflect member benefits
     const until = new Date(Math.min(churned ? churnAt : Infinity, nowD.getTime(), periodEnd)).toISOString();
-    const orders = db.prepare("SELECT id,subtotal,delivery_fee,service_fee,total FROM orders WHERE customer_id=? AND created_at>=? AND created_at<=?").all(c.id, subStart, until) as any[];
+    const orders = await all<any>("SELECT id,subtotal,delivery_fee,service_fee,total FROM orders WHERE customer_id=? AND created_at>=? AND created_at<=?", c.id, subStart, until);
     for (const o of orders) {
       const memberDiscount = Math.round((o.subtotal * plan.disc) / 100 / 250) * 250;
       const savings = o.delivery_fee + (plan.nosf ? o.service_fee : 0) + memberDiscount;
-      db.prepare("UPDATE orders SET subscription_id=?,member_discount=?,sub_savings=?,sub_free_delivery=?,delivery_fee=0,service_fee=?,total=? WHERE id=?").run(
+      await run("UPDATE orders SET subscription_id=?,member_discount=?,sub_savings=?,sub_free_delivery=?,delivery_fee=0,service_fee=?,total=? WHERE id=?",
         sid, memberDiscount, savings, plan.free > 0 && o.delivery_fee > 0 ? 1 : 0, plan.nosf ? 0 : o.service_fee, Math.max(0, o.total - savings), o.id,
       );
     }
     void i;
-  });
+  }
   void ts;
 }

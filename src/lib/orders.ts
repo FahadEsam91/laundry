@@ -1,5 +1,5 @@
 import "server-only";
-import { all, get, run, tx, now } from "./db";
+import { all, get, run, tx, now, insert } from "./db";
 import { getSettings } from "./settings";
 import { computeTotals, type Promo } from "./pricing";
 import { HttpError, type SessionUser } from "./auth";
@@ -18,21 +18,21 @@ export function haversineKm(aLat: number, aLng: number, bLat: number, bLng: numb
 }
 
 /** In-app notification + mobile push to all of the user's devices. */
-export function notify(userId: number, titleAr: string, titleEn: string, bodyAr: string, bodyEn: string, orderId?: number, url?: string) {
-  run("INSERT INTO notifications(user_id,title_ar,title_en,body_ar,body_en,order_id,read,created_at) VALUES(?,?,?,?,?,?,0,?)", userId, titleAr, titleEn, bodyAr, bodyEn, orderId ?? null, now());
+export async function notify(userId: number, titleAr: string, titleEn: string, bodyAr: string, bodyEn: string, orderId?: number, url?: string) {
+  await run("INSERT INTO notifications(user_id,title_ar,title_en,body_ar,body_en,order_id,read,created_at) VALUES(?,?,?,?,?,?,0,?)", userId, titleAr, titleEn, bodyAr, bodyEn, orderId ?? null, now());
   queuePush([userId], { title_ar: titleAr, title_en: titleEn, body_ar: bodyAr, body_en: bodyEn, url: url || (orderId ? `/orders/${orderId}` : "/notifications"), tag: orderId ? `order-${orderId}` : undefined });
 }
 
 // ---------------------------------------------------------------- promos
 
-export function validatePromo(code: string, userId: number, subtotal: number): Promo {
-  const p = get<any>("SELECT * FROM promos WHERE code=? COLLATE NOCASE", code.trim());
+export async function validatePromo(code: string, userId: number, subtotal: number): Promise<Promo> {
+  const p = await get<any>("SELECT * FROM promos WHERE UPPER(code)=UPPER(?)", code.trim());
   if (!p || !p.active) throw new HttpError(400, "promo_invalid");
   if (p.expires_at && new Date(p.expires_at) < new Date()) throw new HttpError(400, "promo_expired");
   if (p.usage_limit && p.used >= p.usage_limit) throw new HttpError(400, "promo_exhausted");
   if (subtotal < p.min_order) throw new HttpError(400, `promo_min:${p.min_order}`);
   if (p.first_order_only) {
-    const c = get<any>("SELECT COUNT(*) c FROM orders WHERE customer_id=? AND status!='cancelled'", userId);
+    const c = await get<any>("SELECT COUNT(*) c FROM orders WHERE customer_id=? AND status!='cancelled'", userId);
     if (c.c > 0) throw new HttpError(400, "promo_first_only");
   }
   return p as Promo;
@@ -52,28 +52,28 @@ JOIN users u ON u.id=o.customer_id
 LEFT JOIN drivers d ON d.id=o.driver_id
 LEFT JOIN users du ON du.id=d.user_id`;
 
-export function listOrders(where = "1=1", params: any[] = [], limit = 100, offset = 0) {
-  return all(`${LIST_SQL} WHERE ${where} ORDER BY o.created_at DESC LIMIT ? OFFSET ?`, ...params, limit, offset);
+export async function listOrders(where = "1=1", params: any[] = [], limit = 100, offset = 0) {
+  return await all(`${LIST_SQL} WHERE ${where} ORDER BY o.created_at DESC LIMIT ? OFFSET ?`, ...params, limit, offset);
 }
 
-export function countOrders(where = "1=1", params: any[] = []) {
-  return (get<any>(`SELECT COUNT(*) c FROM orders o JOIN users u ON u.id=o.customer_id WHERE ${where}`, ...params)?.c as number) || 0;
+export async function countOrders(where = "1=1", params: any[] = []) {
+  return ((await get<any>(`SELECT COUNT(*) c FROM orders o JOIN users u ON u.id=o.customer_id WHERE ${where}`, ...params))?.c as number) || 0;
 }
 
 function lerp(a: number, b: number, t: number) {
   return a + (b - a) * t;
 }
 
-export function orderDTO(id: number) {
-  const o = get<any>("SELECT * FROM orders WHERE id=?", id);
+export async function orderDTO(id: number) {
+  const o = await get<any>("SELECT * FROM orders WHERE id=?", id);
   if (!o) return null;
-  const partner = get<any>("SELECT id,name_ar,name_en,area_ar,area_en,lat,lng,phone,color,color2,initials,rating,eta_hours,express_hours FROM partners WHERE id=?", o.partner_id);
-  const customer = get<any>("SELECT id,name,phone FROM users WHERE id=?", o.customer_id);
+  const partner = await get<any>("SELECT id,name_ar,name_en,area_ar,area_en,lat,lng,phone,color,color2,initials,rating,eta_hours,express_hours FROM partners WHERE id=?", o.partner_id);
+  const customer = await get<any>("SELECT id,name,phone FROM users WHERE id=?", o.customer_id);
   const driver = o.driver_id
-    ? get<any>("SELECT d.id,d.vehicle,d.plate,d.rating,d.lat,d.lng,u.name,u.phone FROM drivers d JOIN users u ON u.id=d.user_id WHERE d.id=?", o.driver_id)
+    ? await get<any>("SELECT d.id,d.vehicle,d.plate,d.rating,d.lat,d.lng,u.name,u.phone FROM drivers d JOIN users u ON u.id=d.user_id WHERE d.id=?", o.driver_id)
     : null;
-  const items = all("SELECT * FROM order_items WHERE order_id=? ORDER BY id", id);
-  const events = all("SELECT status,note,actor,created_at FROM order_events WHERE order_id=? ORDER BY id", id);
+  const items = await all("SELECT * FROM order_items WHERE order_id=? ORDER BY id", id);
+  const events = await all("SELECT status,note,actor,created_at FROM order_events WHERE order_id=? ORDER BY id", id);
 
   // live position (simulated trip interpolation for the 3 moving legs)
   let tracking: any = null;
@@ -84,7 +84,7 @@ export function orderDTO(id: number) {
   };
   const leg = legs[o.status];
   if (leg) {
-    const s = getSettings();
+    const s = await getSettings();
     const tripMs = (o.auto && s.autopilot ? s.autopilot_seconds : 240) * 1000;
     const p = Math.min(1, (Date.now() - new Date(o.status_at).getTime()) / tripMs);
     const ease = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
@@ -104,8 +104,8 @@ export function orderDTO(id: number) {
 
 // ---------------------------------------------------------------- transitions
 
-function pickDriver(nearLat: number, nearLng: number): number | null {
-  const ds = all<any>(
+async function pickDriver(nearLat: number, nearLng: number): Promise<number | null> {
+  const ds = await all<any>(
     `SELECT d.id,d.lat,d.lng,(SELECT COUNT(*) FROM orders o WHERE o.driver_id=d.id AND o.status IN ('driver_assigned','picked_up','out_for_delivery')) AS load
      FROM drivers d JOIN users u ON u.id=d.user_id WHERE d.status='online' AND u.status='active'`,
   );
@@ -114,9 +114,9 @@ function pickDriver(nearLat: number, nearLng: number): number | null {
   return ds[0].id;
 }
 
-export function transition(orderId: number, to: OrderStatus, actor: string, opts: { note?: string; driverId?: number | null; force?: boolean } = {}) {
-  return tx(() => {
-    const o = get<any>("SELECT * FROM orders WHERE id=?", orderId);
+export async function transition(orderId: number, to: OrderStatus, actor: string, opts: { note?: string; driverId?: number | null; force?: boolean } = {}) {
+  return await tx(async () => {
+    const o = await get<any>("SELECT * FROM orders WHERE id=?", orderId);
     if (!o) throw new HttpError(404, "order_not_found");
     const from = o.status as OrderStatus;
     if (from === "delivered" || from === "cancelled") throw new HttpError(409, "order_closed");
@@ -129,8 +129,8 @@ export function transition(orderId: number, to: OrderStatus, actor: string, opts
     let driverId = opts.driverId !== undefined ? opts.driverId : o.driver_id;
     let pickupDriverId = o.pickup_driver_id ?? null;
     if ((to === "driver_assigned" || to === "out_for_delivery") && !driverId) {
-      const partner = get<any>("SELECT lat,lng FROM partners WHERE id=?", o.partner_id);
-      driverId = pickDriver(partner.lat, partner.lng);
+      const partner = await get<any>("SELECT lat,lng FROM partners WHERE id=?", o.partner_id);
+      driverId = await pickDriver(partner.lat, partner.lng);
       if (!driverId) throw new HttpError(409, "no_driver_available");
     }
     const prevDriver = driverId;
@@ -143,34 +143,34 @@ export function transition(orderId: number, to: OrderStatus, actor: string, opts
     if (to === "delivered" && o.payment_method === "cash") payStatus = "paid";
     if (to === "cancelled" && o.payment_status === "paid") {
       payStatus = "refunded";
-      run("UPDATE users SET wallet=wallet+? WHERE id=?", o.total, o.customer_id);
-      run("INSERT INTO wallet_tx(user_id,amount,kind,note,created_at) VALUES(?,?,?,?,?)", o.customer_id, o.total, "refund", o.code, ts);
+      await run("UPDATE users SET wallet=wallet+? WHERE id=?", o.total, o.customer_id);
+      await run("INSERT INTO wallet_tx(user_id,amount,kind,note,created_at) VALUES(?,?,?,?,?)", o.customer_id, o.total, "refund", o.code, ts);
     }
-    if (to === "cancelled" && o.sub_free_delivery && o.subscription_id) refundFreeDelivery(o.subscription_id);
-    run("UPDATE orders SET status=?,driver_id=?,pickup_driver_id=?,payment_status=?,updated_at=?,status_at=? WHERE id=?", to, driverId ?? null, pickupDriverId, payStatus, ts, ts, orderId);
-    run("INSERT INTO order_events(order_id,status,note,actor,created_at) VALUES(?,?,?,?,?)", orderId, to, opts.note ?? null, actor, ts);
+    if (to === "cancelled" && o.sub_free_delivery && o.subscription_id) await refundFreeDelivery(o.subscription_id);
+    await run("UPDATE orders SET status=?,driver_id=?,pickup_driver_id=?,payment_status=?,updated_at=?,status_at=? WHERE id=?", to, driverId ?? null, pickupDriverId, payStatus, ts, ts, orderId);
+    await run("INSERT INTO order_events(order_id,status,note,actor,created_at) VALUES(?,?,?,?,?)", orderId, to, opts.note ?? null, actor, ts);
 
     // keep rider position roughly in sync with the leg they just finished
     if (prevDriver) {
-      const p = get<any>("SELECT lat,lng FROM partners WHERE id=?", o.partner_id);
-      if (to === "picked_up" || to === "delivered") run("UPDATE drivers SET lat=?,lng=? WHERE id=?", o.address_lat, o.address_lng, prevDriver);
-      if (to === "at_laundry" || to === "out_for_delivery") run("UPDATE drivers SET lat=?,lng=? WHERE id=?", p.lat, p.lng, prevDriver);
+      const p = await get<any>("SELECT lat,lng FROM partners WHERE id=?", o.partner_id);
+      if (to === "picked_up" || to === "delivered") await run("UPDATE drivers SET lat=?,lng=? WHERE id=?", o.address_lat, o.address_lng, prevDriver);
+      if (to === "at_laundry" || to === "out_for_delivery") await run("UPDATE drivers SET lat=?,lng=? WHERE id=?", p.lat, p.lng, prevDriver);
     }
     if (to === "delivered") {
       const pts = Math.floor(o.total / 1000);
-      run("UPDATE users SET points=points+? WHERE id=?", pts, o.customer_id);
+      await run("UPDATE users SET points=points+? WHERE id=?", pts, o.customer_id);
     }
     if ((to === "accepted" || to === "ready") && !o.auto && !driverId) {
-      const area = get<any>("SELECT name_ar,name_en FROM partners WHERE id=?", o.partner_id);
-      queuePush(onlineDriverUsers(), {
+      const area = await get<any>("SELECT name_ar,name_en FROM partners WHERE id=?", o.partner_id);
+      queuePush(await onlineDriverUsers(), {
         title_ar: to === "accepted" ? "🛵 مهمة استلام جديدة" : "📦 مهمة توصيل جديدة",
         title_en: to === "accepted" ? "🛵 New pickup job" : "📦 New delivery job",
         body_ar: `${o.code} • ${area.name_ar}`, body_en: `${o.code} • ${area.name_en}`, url: "/driver", tag: `job-${orderId}`,
       });
     }
     const m = STATUS_META[to];
-    notify(o.customer_id, `${m.ar} • ${o.code}`, `${m.en} • ${o.code}`, m.descAr, m.descEn, orderId);
-    return get<any>("SELECT * FROM orders WHERE id=?", orderId);
+    await notify(o.customer_id, `${m.ar} • ${o.code}`, `${m.en} • ${o.code}`, m.descAr, m.descEn, orderId);
+    return await get<any>("SELECT * FROM orders WHERE id=?", orderId);
   });
 }
 
@@ -179,22 +179,22 @@ export function transition(orderId: number, to: OrderStatus, actor: string, opts
 const g = globalThis as unknown as { __nuqaTick?: number };
 
 /** Advances demo orders (auto=1) one stage at a time. Called opportunistically from read endpoints. */
-export function autopilotTick() {
+export async function autopilotTick() {
   const t = Date.now();
   if (g.__nuqaTick && t - g.__nuqaTick < 1500) return;
   g.__nuqaTick = t;
-  renewSweep();
-  const s = getSettings();
+  await renewSweep();
+  const s = await getSettings();
   if (!s.autopilot) return;
   const secs = Math.max(5, s.autopilot_seconds);
-  const rows = all<any>(`SELECT id,status,status_at FROM orders WHERE auto=1 AND status NOT IN ('delivered','cancelled')`);
+  const rows = await all<any>(`SELECT id,status,status_at FROM orders WHERE auto=1 AND status NOT IN ('delivered','cancelled')`);
   for (const r of rows) {
     const wait = (r.status === "pending" ? 0.6 : r.status === "processing" ? 1.6 : 1) * secs * 1000;
     if (t - new Date(r.status_at).getTime() < wait) continue;
     const next = NEXT_STATUS[r.status as OrderStatus];
     if (!next) continue;
     try {
-      transition(r.id, next, "system", { note: "autopilot" });
+      await transition(r.id, next, "system", { note: "autopilot" });
     } catch {
       /* e.g. no driver online — try next tick */
     }
@@ -214,85 +214,88 @@ export type CreateOrderInput = {
   promo_code?: string | null;
 };
 
-export function createOrder(user: SessionUser, input: CreateOrderInput) {
-  const s = getSettings();
-  const partner = get<any>("SELECT * FROM partners WHERE id=? AND status='active'", input.partner_id);
+export async function createOrder(user: SessionUser, input: CreateOrderInput) {
+  const s = await getSettings();
+  const partner = await get<any>("SELECT * FROM partners WHERE id=? AND status='active'", input.partner_id);
   if (!partner) throw new HttpError(400, "partner_unavailable");
-  const addr = get<any>("SELECT * FROM addresses WHERE id=? AND user_id=?", input.address_id, user.id);
+  const addr = await get<any>("SELECT * FROM addresses WHERE id=? AND user_id=?", input.address_id, user.id);
   if (!addr) throw new HttpError(400, "address_required");
   if (!Array.isArray(input.items) || !input.items.length) throw new HttpError(400, "empty_basket");
   if (!["cash", "card", "wallet"].includes(input.payment_method)) throw new HttpError(400, "invalid_payment");
 
-  const lines = input.items.map((it) => {
-    const p = get<any>(
+  const lines: { p: any; qty: number }[] = [];
+  for (const it of input.items) {
+    const p = await get<any>(
       "SELECT p.*,s.name_ar AS s_ar,s.name_en AS s_en FROM products p JOIN services s ON s.id=p.service_id WHERE p.id=? AND p.partner_id=? AND p.active=1",
       it.product_id,
       partner.id,
     );
     const qty = Math.max(1, Math.min(99, Number(it.qty) || 1));
     if (!p) throw new HttpError(400, "item_unavailable");
-    return { p, qty };
-  });
+    lines.push({ p, qty });
+  }
   const subtotal = lines.reduce((sum, l) => sum + l.p.price * l.qty, 0);
   if (subtotal < partner.min_order) throw new HttpError(400, `min_order:${partner.min_order}`);
-  const promo = input.promo_code ? validatePromo(input.promo_code, user.id, subtotal) : null;
-  const member = activeSubscription(user.id);
+  const promo = input.promo_code ? await validatePromo(input.promo_code, user.id, subtotal) : null;
+  const member = await activeSubscription(user.id);
   const totals = computeTotals(subtotal, partner.delivery_fee, !!input.express, s, promo, member?.benefits);
 
-  return tx(() => {
+  return await tx(async () => {
     const ts = now();
     let payStatus = "unpaid";
     if (input.payment_method === "wallet") {
-      const w = get<any>("SELECT wallet FROM users WHERE id=?", user.id);
-      if (w.wallet < totals.total) throw new HttpError(400, "wallet_insufficient");
-      run("UPDATE users SET wallet=wallet-? WHERE id=?", totals.total, user.id);
+      // atomic debit: succeeds only if the balance covers the total (no double-spend under concurrency)
+      const { changes } = await run("UPDATE users SET wallet=wallet-? WHERE id=? AND wallet>=?", totals.total, user.id, totals.total);
+      if (!changes) throw new HttpError(400, "wallet_insufficient");
       payStatus = "paid";
     } else if (input.payment_method === "card") {
       payStatus = "paid"; // integrate a real gateway (Stripe / Checkout.com / local PSP) here
     }
     const pickup = !input.pickup_slot || input.pickup_slot === "asap" ? new Date(Date.now() + 45 * 60000) : new Date(input.pickup_slot);
     const delivery = new Date(pickup.getTime() + (input.express ? partner.express_hours : partner.eta_hours) * 3600000);
-    const seq = (get<any>("SELECT COALESCE(MAX(id),0) m FROM orders")!.m as number) + 10421;
-    const code = `NQ-${seq}`;
+    const tmpCode = `tmp-${user.id}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const addrText = [addr.area, addr.street, addr.building].filter(Boolean).join("، ");
-    const { id } = run(
+    const id = await insert(
       `INSERT INTO orders(code,customer_id,partner_id,driver_id,status,express,address_text,address_lat,address_lng,pickup_slot,delivery_slot,subtotal,delivery_fee,express_fee,service_fee,discount,vat,total,payment_method,payment_status,promo_code,notes,items_count,auto,subscription_id,member_discount,sub_savings,sub_free_delivery,created_at,updated_at,status_at)
        VALUES(?,?,?,NULL,'pending',?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-      code, user.id, partner.id, input.express ? 1 : 0, addrText, addr.lat, addr.lng, pickup.toISOString(), delivery.toISOString(),
+      tmpCode, user.id, partner.id, input.express ? 1 : 0, addrText, addr.lat, addr.lng, pickup.toISOString(), delivery.toISOString(),
       totals.subtotal, totals.deliveryFee, totals.expressFee, totals.serviceFee, totals.discount, totals.vat, totals.total,
       input.payment_method, payStatus, promo?.code ?? null, input.notes?.slice(0, 500) || null,
       lines.reduce((a, l) => a + l.qty, 0), s.autopilot ? 1 : 0,
       member && totals.subSavings > 0 ? member.sub.id : null, totals.memberDiscount, totals.subSavings, totals.subFreeDelivery && member!.plan.free_deliveries > 0 ? 1 : 0,
       ts, ts, ts,
     );
+    // human-friendly, collision-free order number derived from the primary key
+    const code = `NQ-${10420 + id}`;
+    await run("UPDATE orders SET code=? WHERE id=?", code, id);
     for (const { p, qty } of lines) {
-      run("INSERT INTO order_items(order_id,product_id,service_id,name_ar,name_en,service_ar,service_en,icon,qty,unit_price) VALUES(?,?,?,?,?,?,?,?,?,?)", id, p.id, p.service_id, p.name_ar, p.name_en, p.s_ar, p.s_en, p.icon, qty, p.price);
+      await run("INSERT INTO order_items(order_id,product_id,service_id,name_ar,name_en,service_ar,service_en,icon,qty,unit_price) VALUES(?,?,?,?,?,?,?,?,?,?)", id, p.id, p.service_id, p.name_ar, p.name_en, p.s_ar, p.s_en, p.icon, qty, p.price);
     }
-    run("INSERT INTO order_events(order_id,status,note,actor,created_at) VALUES(?,?,?,?,?)", id, "pending", null, "customer", ts);
-    if (input.payment_method === "wallet") run("INSERT INTO wallet_tx(user_id,amount,kind,note,created_at) VALUES(?,?,?,?,?)", user.id, -totals.total, "payment", code, ts);
-    if (promo) run("UPDATE promos SET used=used+1 WHERE code=?", promo.code);
-    if (member && totals.subFreeDelivery && member.plan.free_deliveries > 0) run("UPDATE subscriptions SET deliveries_used=deliveries_used+1 WHERE id=?", member.sub.id);
-    queuePush(partnerStaff(partner.id), {
+    await run("INSERT INTO order_events(order_id,status,note,actor,created_at) VALUES(?,?,?,?,?)", id, "pending", null, "customer", ts);
+    if (input.payment_method === "wallet") await run("INSERT INTO wallet_tx(user_id,amount,kind,note,created_at) VALUES(?,?,?,?,?)", user.id, -totals.total, "payment", code, ts);
+    if (promo) await run("UPDATE promos SET used=used+1 WHERE code=?", promo.code);
+    if (member && totals.subFreeDelivery && member.plan.free_deliveries > 0) await run("UPDATE subscriptions SET deliveries_used=deliveries_used+1 WHERE id=?", member.sub.id);
+    queuePush(await partnerStaff(partner.id), {
       title_ar: `🔔 طلب جديد ${code}`, title_en: `🔔 New order ${code}`,
       body_ar: `${lines.reduce((a, l) => a + l.qty, 0)} قطعة${input.express ? " • مستعجل ⚡" : ""}`, body_en: `${lines.reduce((a, l) => a + l.qty, 0)} items${input.express ? " • Express ⚡" : ""}`,
       url: "/partner", tag: `new-${code}`,
     });
-    notify(user.id, `تم استلام طلبك • ${code}`, `Order received • ${code}`, `أرسلنا طلبك إلى ${partner.name_ar}`, `We sent your order to ${partner.name_en}`, id);
+    await notify(user.id, `تم استلام طلبك • ${code}`, `Order received • ${code}`, `أرسلنا طلبك إلى ${partner.name_ar}`, `We sent your order to ${partner.name_en}`, id);
     return { id, code };
   });
 }
 
-export function rateOrder(user: SessionUser, id: number, rating: number, review?: string) {
-  const o = get<any>("SELECT * FROM orders WHERE id=? AND customer_id=?", id, user.id);
+export async function rateOrder(user: SessionUser, id: number, rating: number, review?: string) {
+  const o = await get<any>("SELECT * FROM orders WHERE id=? AND customer_id=?", id, user.id);
   if (!o) throw new HttpError(404, "order_not_found");
   if (o.status !== "delivered") throw new HttpError(409, "not_delivered");
   if (o.rating) throw new HttpError(409, "already_rated");
   const r = Math.max(1, Math.min(5, Math.round(rating)));
-  tx(() => {
-    run("UPDATE orders SET rating=?,review=? WHERE id=?", r, review?.slice(0, 500) || null, id);
-    const p = get<any>("SELECT rating,rating_count FROM partners WHERE id=?", o.partner_id);
+  await tx(async () => {
+    await run("UPDATE orders SET rating=?,review=? WHERE id=?", r, review?.slice(0, 500) || null, id);
+    const p = await get<any>("SELECT rating,rating_count FROM partners WHERE id=?", o.partner_id);
     const nr = (p.rating * p.rating_count + r) / (p.rating_count + 1);
-    run("UPDATE partners SET rating=?,rating_count=rating_count+1 WHERE id=?", Math.round(nr * 100) / 100, o.partner_id);
+    await run("UPDATE partners SET rating=?,rating_count=rating_count+1 WHERE id=?", Math.round(nr * 100) / 100, o.partner_id);
   });
 }
 

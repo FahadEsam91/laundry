@@ -38,6 +38,12 @@ const ERR: Record<string, [string, string]> = {
   code_exists: ["الكود موجود مسبقاً", "Code already exists"],
   unauthorized: ["يرجى تسجيل الدخول", "Please sign in"],
   account_suspended: ["الحساب موقوف", "Account suspended"],
+  too_many_requests: ["طلبات كثيرة، حاول بعد قليل", "Too many requests, please try again shortly"],
+  too_many_attempts: ["محاولات كثيرة، اطلب رمزاً جديداً", "Too many attempts, request a new code"],
+  code_expired: ["انتهت صلاحية الرمز، اطلب رمزاً جديداً", "Code expired, request a new one"],
+  sms_not_configured: ["خدمة الرسائل غير مفعلة بعد", "SMS service is not configured yet"],
+  sms_failed: ["تعذر إرسال الرسالة، حاول مرة أخرى", "Couldn't send the SMS, please try again"],
+  active_orders_exist: ["لديك طلبات قيد التنفيذ، انتظر اكتمالها أو ألغها أولاً", "You have orders in progress. Wait for them to finish or cancel them first"],
 };
 
 export function errText(e: any, lang: "ar" | "en", money?: (n: number) => string) {

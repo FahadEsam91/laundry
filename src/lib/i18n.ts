@@ -471,6 +471,15 @@ const D = {
   delivered_push: ["إشعارات أُرسلت", "Push sent"],
   campaign_sent: ["تم الإرسال إلى {n} مستخدم", "Sent to {n} users"],
   preview: ["معاينة", "Preview"],
+  // account & legal
+  delete_account: ["حذف الحساب", "Delete account"],
+  delete_account_d: ["سيتم حذف بياناتك الشخصية وعناوينك وإشعاراتك نهائياً، وإلغاء اشتراكك. سجلات الطلبات تبقى مجهولة الهوية لأغراض محاسبية. لا يمكن التراجع عن هذا الإجراء.", "Your personal data, addresses and notifications will be permanently deleted and your membership cancelled. Order records are kept anonymized for accounting. This can't be undone."],
+  delete_wallet_warn: ["رصيد محفظتك ({x}) سيُفقد. تواصل مع الدعم لاسترداده قبل الحذف.", "Your wallet balance ({x}) will be forfeited. Contact support to get it refunded before deleting."],
+  delete_forever: ["نعم، احذف حسابي نهائياً", "Yes, delete my account"],
+  account_deleted: ["تم حذف حسابك", "Your account was deleted"],
+  download_data: ["تنزيل بياناتي", "Download my data"],
+  privacy: ["سياسة الخصوصية", "Privacy policy"],
+  terms: ["الشروط والأحكام", "Terms of service"],
 } as const;
 
 export type TKey = keyof typeof D;

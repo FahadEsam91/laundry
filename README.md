@@ -68,7 +68,8 @@ Turn it off to drive orders manually from the partner and rider apps.
 
 ## Run it
 
-Requires **Node.js 22.5+** (uses the built‑in SQLite — no database server needed).
+Requires **Node.js 22.5+**. Uses **PostgreSQL** when `DATABASE_URL` is set, otherwise a zero‑setup SQLite file
+(handy for development). **Going live? Read [DEPLOYMENT.md](DEPLOYMENT.md)** (Docker + PostgreSQL + automatic HTTPS).
 
 ```bash
 npm install
@@ -78,22 +79,23 @@ npm start          # http://localhost:3000
 Dev mode: `npm run dev`. The database (`data/nuqa.db`) is created and seeded with ~75 days of realistic data on first start.
 Reset it with `npm run reset-db`.
 
-**Demo logins**: on `/login` use the demo buttons, or any phone number with OTP `1234`.
+**Demo logins** (demo mode only): on `/login` use the demo buttons, or any phone number with OTP `1234`.
+In production (`NUQA_DEMO=0`) codes are random 6‑digit SMS/WhatsApp codes, and the first admin is created from `ADMIN_PHONE`.
 
-## Going to production — checklist
-| Area | Where | What to do |
-|---|---|---|
-| SMS OTP | `src/app/api/auth/otp`, `verify` | Plug in an SMS/WhatsApp provider; set `NUQA_DEMO=0` to disable demo logins |
-| Payments | `createOrder` in `src/lib/orders.ts`, `api/wallet` | Integrate a gateway (Stripe, Checkout.com, or local e.g. ZainCash/FIB) |
-| Database | `src/lib/db.ts` | Swap to PostgreSQL for multi‑instance scale (all SQL is isolated there) |
-| Secrets | env | Set `SESSION_SECRET` |
-| Push notifications | `src/lib/push.ts` | Set `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` (generate once with `npx web-push generate-vapid-keys`). Without them keys are auto‑generated and stored in the DB. HTTPS is required in production |
-| Subscription renewals | `renewDue()` in `src/lib/subscriptions.ts` | Runs lazily + every minute of traffic; also call it from a daily cron. Plug saved‑card charging into `charge()` |
-| Native apps | — | Wrap the PWA with Capacitor (add FCM/APNs native push alongside Web Push), or reuse the API from React Native |
-| Rider GPS | `api/driver/status` | Send real coordinates from the rider device instead of simulated legs |
+**Where is the super admin?** → `/admin` (role `admin`, full access).
 
-Currency, fees, VAT, express surcharge, free‑delivery threshold, city & timezone are all editable in Admin → Settings,
-so the platform can launch in any country.
+Tests: `scripts/smoke-test.sh` runs 22 end‑to‑end API checks against a running demo instance.
+
+## Production readiness
+- PostgreSQL (or SQLite) behind one async data layer; additive automatic migrations; atomic wallet debits;
+  collision‑free order numbers
+- Real OTP: random 6‑digit codes, hashed, 5‑minute expiry, 5 attempts, per‑phone and per‑IP rate limits, Twilio SMS/WhatsApp
+- In‑app **account deletion** (App Store / Google Play requirement) + personal **data export**; `/privacy` & `/terms`
+- Cookie sessions for web, **Bearer tokens** for the native apps
+- Security headers, no internal errors leaked to clients, required `SESSION_SECRET`, `/api/health`
+- Docker image (non‑root, healthcheck) + docker‑compose with PostgreSQL and Caddy (auto HTTPS), backup script
+
+See **[DEPLOYMENT.md](DEPLOYMENT.md)** for the full checklist (payments gateway, SMS, VAPID keys, backups).
 
 ## Tech
 Next.js 15 (App Router, route handlers) · React 19 · TypeScript · Tailwind CSS · SWR · Recharts · Leaflet (OSM/CARTO tiles) · node:sqlite

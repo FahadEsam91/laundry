@@ -1,6 +1,7 @@
 import "server-only";
 import crypto from "node:crypto";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
+import { sessionSecret } from "./env";
 import { get, run, now } from "./db";
 
 export type Role = "customer" | "admin" | "partner" | "driver";
@@ -17,10 +18,9 @@ export type SessionUser = {
 };
 
 const COOKIE = "nuqa_session";
-const SECRET = process.env.SESSION_SECRET || "nuqa-dev-secret-change-me-in-production";
 const MAX_AGE = 60 * 60 * 24 * 30;
 
-const sign = (payload: string) => crypto.createHmac("sha256", SECRET).update(payload).digest("base64url");
+const sign = (payload: string) => crypto.createHmac("sha256", sessionSecret()).update(payload).digest("base64url");
 
 export function makeToken(uid: number) {
   const payload = Buffer.from(JSON.stringify({ uid, exp: Date.now() + MAX_AGE * 1000 })).toString("base64url");
@@ -55,14 +55,23 @@ export async function clearSession() {
   (await cookies()).delete(COOKIE);
 }
 
+const lastSeen = new Set<number>();
+
 export async function currentUser(): Promise<SessionUser | null> {
-  const uid = readToken((await cookies()).get(COOKIE)?.value);
+  // native apps send "Authorization: Bearer <token>"; browsers use the httpOnly cookie
+  const bearer = (await headers()).get("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1];
+  const uid = readToken(bearer || (await cookies()).get(COOKIE)?.value);
   if (!uid) return null;
-  const u = get<SessionUser>(
+  const u = await get<SessionUser>(
     "SELECT u.id,u.name,u.phone,u.role,u.partner_id,u.wallet,u.points,u.created_at,d.id AS driver_id FROM users u LEFT JOIN drivers d ON d.user_id=u.id WHERE u.id=? AND u.status='active'",
     uid,
   );
-  if (u) run("UPDATE users SET last_seen=? WHERE id=?", now(), uid);
+  // throttle last_seen writes to once a minute per user
+  if (u && !lastSeen.has(uid)) {
+    lastSeen.add(uid);
+    setTimeout(() => lastSeen.delete(uid), 60000).unref?.();
+    await run("UPDATE users SET last_seen=? WHERE id=?", now(), uid);
+  }
   return u || null;
 }
 

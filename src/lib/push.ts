@@ -11,19 +11,19 @@ import { all, get, run, now } from "./db";
 type Vapid = { publicKey: string; privateKey: string };
 const g = globalThis as unknown as { __nuqaVapid?: Vapid };
 
-export function vapid(): Vapid {
+export async function vapid(): Promise<Vapid> {
   if (g.__nuqaVapid) return g.__nuqaVapid;
   let keys: Vapid;
   if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
     keys = { publicKey: process.env.VAPID_PUBLIC_KEY, privateKey: process.env.VAPID_PRIVATE_KEY };
   } else {
-    const pub = get<any>("SELECT value FROM settings WHERE key='vapid_public'");
-    const priv = get<any>("SELECT value FROM settings WHERE key='vapid_private'");
+    const pub = await get<any>("SELECT value FROM settings WHERE key='vapid_public'");
+    const priv = await get<any>("SELECT value FROM settings WHERE key='vapid_private'");
     if (pub && priv) keys = { publicKey: pub.value, privateKey: priv.value };
     else {
       keys = webpush.generateVAPIDKeys();
-      run("INSERT OR REPLACE INTO settings(key,value) VALUES('vapid_public',?)", keys.publicKey);
-      run("INSERT OR REPLACE INTO settings(key,value) VALUES('vapid_private',?)", keys.privateKey);
+      await run("INSERT INTO settings(key,value) VALUES('vapid_public',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", keys.publicKey);
+      await run("INSERT INTO settings(key,value) VALUES('vapid_private',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", keys.privateKey);
     }
   }
   webpush.setVapidDetails(process.env.VAPID_SUBJECT || "mailto:push@nuqa.app", keys.publicKey, keys.privateKey);
@@ -44,9 +44,9 @@ export type PushMessage = {
 export async function sendPush(userIds: number[], msg: PushMessage): Promise<number> {
   const ids = [...new Set(userIds)].filter(Boolean);
   if (!ids.length) return 0;
-  const subs = all<any>(`SELECT * FROM push_subscriptions WHERE user_id IN (${ids.map(() => "?").join(",")})`, ...ids);
+  const subs = await all<any>(`SELECT * FROM push_subscriptions WHERE user_id IN (${ids.map(() => "?").join(",")})`, ...ids);
   if (!subs.length) return 0;
-  vapid();
+  await vapid();
   const results = await Promise.all(
     subs.map(async (s) => {
       const ar = s.lang === "ar";
@@ -60,14 +60,14 @@ export async function sendPush(userIds: number[], msg: PushMessage): Promise<num
       });
       try {
         await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload, { TTL: 3600, urgency: "high" });
-        run("UPDATE push_subscriptions SET last_success_at=?, fail_count=0 WHERE id=?", now(), s.id);
+        await run("UPDATE push_subscriptions SET last_success_at=?, fail_count=0 WHERE id=?", now(), s.id);
         return 1;
       } catch (e: any) {
         // 404/410 = the browser revoked this subscription → forget it
-        if (e?.statusCode === 404 || e?.statusCode === 410) run("DELETE FROM push_subscriptions WHERE id=?", s.id);
+        if (e?.statusCode === 404 || e?.statusCode === 410) await run("DELETE FROM push_subscriptions WHERE id=?", s.id);
         else {
-          run("UPDATE push_subscriptions SET fail_count=fail_count+1 WHERE id=?", s.id);
-          run("DELETE FROM push_subscriptions WHERE id=? AND fail_count>=8", s.id);
+          await run("UPDATE push_subscriptions SET fail_count=fail_count+1 WHERE id=?", s.id);
+          await run("DELETE FROM push_subscriptions WHERE id=? AND fail_count>=8", s.id);
           if (process.env.NODE_ENV !== "production") console.warn("[push] delivery failed:", e?.statusCode || e?.code || e?.message);
         }
         return 0;
@@ -84,6 +84,6 @@ export function queuePush(userIds: number[], msg: PushMessage) {
   });
 }
 
-export const partnerStaff = (partnerId: number) => all<any>("SELECT id FROM users WHERE role='partner' AND partner_id=? AND status='active'", partnerId).map((u) => u.id);
-export const onlineDriverUsers = () => all<any>("SELECT d.user_id id FROM drivers d JOIN users u ON u.id=d.user_id WHERE d.status='online' AND u.status='active'").map((u) => u.id);
-export const driverUser = (driverId: number) => get<any>("SELECT user_id FROM drivers WHERE id=?", driverId)?.user_id as number | undefined;
+export const partnerStaff = async (partnerId: number) => (await all<any>("SELECT id FROM users WHERE role='partner' AND partner_id=? AND status='active'", partnerId)).map((u) => u.id);
+export const onlineDriverUsers = async () => (await all<any>("SELECT d.user_id id FROM drivers d JOIN users u ON u.id=d.user_id WHERE d.status='online' AND u.status='active'")).map((u) => u.id);
+export const driverUser = async (driverId: number) => (await get<any>("SELECT user_id FROM drivers WHERE id=?", driverId))?.user_id as number | undefined;

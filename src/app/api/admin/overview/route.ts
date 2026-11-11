@@ -8,8 +8,8 @@ const pct = (a: number, b: number) => (b ? ((a - b) / b) * 100 : a ? 100 : 0);
 
 export const GET = handler(async (req: Request) => {
   await requireUser("admin");
-  autopilotTick();
-  const s = getSettings();
+  await autopilotTick();
+  const s = await getSettings();
   const days = Math.min(365, Math.max(1, Number(new URL(req.url).searchParams.get("days")) || 30));
   const nowT = Date.now();
   const start = new Date(nowT - days * 86400000).toISOString();
@@ -18,7 +18,7 @@ export const GET = handler(async (req: Request) => {
   const dayKey = new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" });
   const hourKey = new Intl.DateTimeFormat("en-GB", { timeZone: tz, hour: "2-digit", hourCycle: "h23" });
 
-  const rows = all<any>(
+  const rows = await all<any>(
     `SELECT o.id,o.status,o.total,o.subtotal,o.delivery_fee,o.service_fee,o.express_fee,o.discount,o.payment_method,o.created_at,o.rating,o.partner_id,p.commission
      FROM orders o JOIN partners p ON p.id=o.partner_id WHERE o.created_at>=?`,
     prevStart,
@@ -41,9 +41,9 @@ export const GET = handler(async (req: Request) => {
     };
   };
   const A = agg(cur), B = agg(prev);
-  const newCust = get<any>("SELECT COUNT(*) c FROM users WHERE role='customer' AND created_at>=?", start)!.c;
-  const newCustPrev = get<any>("SELECT COUNT(*) c FROM users WHERE role='customer' AND created_at>=? AND created_at<?", prevStart, start)!.c;
-  const activeNow = get<any>("SELECT COUNT(*) c FROM orders WHERE status NOT IN ('delivered','cancelled')")!.c;
+  const newCust = (await get<any>("SELECT COUNT(*) c FROM users WHERE role='customer' AND created_at>=?", start))!.c;
+  const newCustPrev = (await get<any>("SELECT COUNT(*) c FROM users WHERE role='customer' AND created_at>=? AND created_at<?", prevStart, start))!.c;
+  const activeNow = (await get<any>("SELECT COUNT(*) c FROM orders WHERE status NOT IN ('delivered','cancelled')"))!.c;
 
   // daily series
   const series: Record<string, { date: string; gmv: number; orders: number; revenue: number }> = {};
@@ -65,23 +65,23 @@ export const GET = handler(async (req: Request) => {
     payment[r.payment_method] = (payment[r.payment_method] || 0) + 1;
   }
 
-  const statusCounts = all<any>("SELECT status, COUNT(*) c FROM orders WHERE created_at>=? OR status NOT IN ('delivered','cancelled') GROUP BY status", start);
-  const byService = all<any>(
+  const statusCounts = await all<any>("SELECT status, COUNT(*) c FROM orders WHERE created_at>=? OR status NOT IN ('delivered','cancelled') GROUP BY status", start);
+  const byService = await all<any>(
     `SELECT s.slug,s.name_ar,s.name_en,s.color,SUM(i.qty*i.unit_price) sales,SUM(i.qty) qty FROM order_items i JOIN orders o ON o.id=i.order_id JOIN services s ON s.id=i.service_id
      WHERE o.created_at>=? AND o.status!='cancelled' GROUP BY s.id ORDER BY sales DESC`,
     start,
   );
-  const topPartners = all<any>(
+  const topPartners = await all<any>(
     `SELECT p.id,p.name_ar,p.name_en,p.color,p.color2,p.initials,p.rating,COUNT(o.id) orders,SUM(o.total) gmv
      FROM orders o JOIN partners p ON p.id=o.partner_id WHERE o.created_at>=? AND o.status!='cancelled' GROUP BY p.id ORDER BY gmv DESC LIMIT 6`,
     start,
   );
-  const live = all<any>(
+  const live = await all<any>(
     `SELECT o.id,o.code,o.status,o.address_lat lat,o.address_lng lng,p.lat p_lat,p.lng p_lng,p.name_ar partner_ar,p.name_en partner_en,u.name customer_name
      FROM orders o JOIN partners p ON p.id=o.partner_id JOIN users u ON u.id=o.customer_id WHERE o.status NOT IN ('delivered','cancelled')`,
   );
-  const drivers = all<any>("SELECT d.id,d.lat,d.lng,d.status,u.name FROM drivers d JOIN users u ON u.id=d.user_id WHERE d.status='online'");
-  const partners = all<any>("SELECT id,name_ar,name_en,lat,lng,color,is_open FROM partners WHERE status='active'");
+  const drivers = await all<any>("SELECT d.id,d.lat,d.lng,d.status,u.name FROM drivers d JOIN users u ON u.id=d.user_id WHERE d.status='online'");
+  const partners = await all<any>("SELECT id,name_ar,name_en,lat,lng,color,is_open FROM partners WHERE status='active'");
 
   return ok({
     kpis: {
@@ -100,7 +100,7 @@ export const GET = handler(async (req: Request) => {
     statusCounts,
     byService,
     topPartners,
-    recent: listOrders("1=1", [], 8),
+    recent: await listOrders("1=1", [], 8),
     live,
     drivers,
     partners,

@@ -2,10 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Wallet, MapPin, Bell, Languages, Headphones, LogOut, ChevronLeft, ChevronRight, Award, Crown, LayoutDashboard, Store, Truck, Heart, ReceiptText, Info, UserRound } from "lucide-react";
+import { Wallet, MapPin, Bell, Languages, Headphones, LogOut, ChevronLeft, ChevronRight, Award, Crown, LayoutDashboard, Store, Truck, Heart, ReceiptText, Info, UserRound, Shield, FileText, Download, Trash2 } from "lucide-react";
 import { useApp, useCart } from "@/components/providers";
 import { BottomNav } from "@/components/customer";
-import { Button, Empty, LogoMark } from "@/components/ui";
+import { Button, Empty, LogoMark, Sheet } from "@/components/ui";
+import { useState } from "react";
+import { errText } from "@/lib/client";
+import { useToast } from "@/components/providers";
 import { api } from "@/lib/client";
 import { PushCard } from "@/components/push";
 import { PlusBadge } from "@/components/plus";
@@ -16,6 +19,24 @@ export default function AccountPage() {
   const cart = useCart();
   const Chevron = dir === "rtl" ? ChevronLeft : ChevronRight;
   const u = me?.user;
+  const toast = useToast();
+  const [delOpen, setDelOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const deleteAccount = async () => {
+    setDeleting(true);
+    try {
+      await api("/api/me", { method: "DELETE" });
+      cart.clear();
+      toast(t("account_deleted"));
+      refreshMe();
+      router.push("/");
+    } catch (e) {
+      toast(errText(e, lang), "error");
+    } finally {
+      setDeleting(false);
+      setDelOpen(false);
+    }
+  };
 
   const logout = async () => {
     await api("/api/auth/logout", { body: {} });
@@ -90,6 +111,9 @@ export default function AccountPage() {
       <div className="mt-2 divide-y divide-ink-100 bg-white">
         <Row icon={Languages} label={t("language")} onClick={() => setLang(lang === "ar" ? "en" : "ar")} right={<span className="text-xs font-bold text-brand-600">{lang === "ar" ? "العربية" : "English"}</span>} />
         <Row icon={Headphones} label={t("support")} onClick={() => (location.href = `tel:${settings.support_phone}`)} right={<span className="text-xs text-ink-400" dir="ltr">{settings.support_phone}</span>} />
+        <Row icon={Shield} label={t("privacy")} href="/privacy" />
+        <Row icon={FileText} label={t("terms")} href="/terms" />
+        {u && <Row icon={Download} label={t("download_data")} onClick={() => (location.href = "/api/me/export")} />}
         <Row icon={Info} label={t("about")} onClick={() => {}} right={<span className="text-xs text-ink-400">v1.0</span>} />
       </div>
 
@@ -111,8 +135,19 @@ export default function AccountPage() {
       {u && (
         <div className="p-4">
           <Button variant="danger" block onClick={logout}><LogOut className="h-4 w-4" /> {t("logout")}</Button>
+          <button onClick={() => setDelOpen(true)} className="mx-auto mt-4 flex items-center gap-1.5 text-xs font-semibold text-ink-400 hover:text-red-600">
+            <Trash2 className="h-3.5 w-3.5" /> {t("delete_account")}
+          </button>
         </div>
       )}
+      <Sheet open={delOpen} onClose={() => setDelOpen(false)} title={t("delete_account")}>
+        <p className="text-sm leading-6 text-ink-600">{t("delete_account_d")}</p>
+        {u?.wallet > 0 && <p className="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">{t("delete_wallet_warn", { x: money(u.wallet) })}</p>}
+        <div className="mt-5 grid gap-2">
+          <Button variant="danger" block loading={deleting} onClick={deleteAccount}><Trash2 className="h-4 w-4" /> {t("delete_forever")}</Button>
+          <Button variant="outline" block onClick={() => setDelOpen(false)}>{t("cancel")}</Button>
+        </div>
+      </Sheet>
       <div className="flex items-center justify-center gap-2 pb-6 pt-2 text-xs text-ink-400">
         <LogoMark className="h-5 w-5" /> Nuqa © {new Date().getFullYear()}
       </div>

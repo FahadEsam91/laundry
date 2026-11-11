@@ -7,8 +7,8 @@ export const PATCH = handler(async (req: Request, { params }: { params: Promise<
   await requireUser("admin");
   const id = Number((await params).id);
   const b = await body(req);
-  for (const k of FIELDS) if (b[k] !== undefined) run(`UPDATE plans SET ${k}=? WHERE id=?`, b[k], id);
-  for (const k of BOOLS) if (b[k] !== undefined) run(`UPDATE plans SET ${k}=? WHERE id=?`, b[k] ? 1 : 0, id);
-  if (b.popular) run("UPDATE plans SET popular=0 WHERE id!=?", id);
+  for (const k of FIELDS) if (b[k] !== undefined) await run(`UPDATE plans SET ${k}=? WHERE id=?`, b[k], id);
+  for (const k of BOOLS) if (b[k] !== undefined) await run(`UPDATE plans SET ${k}=? WHERE id=?`, b[k] ? 1 : 0, id);
+  if (b.popular) await run("UPDATE plans SET popular=0 WHERE id!=?", id);
   return ok({ ok: true });
 });

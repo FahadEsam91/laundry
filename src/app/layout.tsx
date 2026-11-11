@@ -5,6 +5,7 @@ import { Providers } from "@/components/providers";
 import { getSettings } from "@/lib/settings";
 import { all } from "@/lib/db";
 import type { Lang } from "@/lib/i18n";
+import { DEMO } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
@@ -25,8 +26,8 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const lang = ((await cookies()).get("nuqa_lang")?.value === "en" ? "en" : "ar") as Lang;
-  const settings = getSettings();
-  const services = all("SELECT * FROM services WHERE active=1 ORDER BY sort");
+  const settings = await getSettings();
+  const services = await all("SELECT * FROM services WHERE active=1 ORDER BY sort");
   return (
     <html lang={lang} dir={lang === "ar" ? "rtl" : "ltr"}>
       <head>
@@ -35,7 +36,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
       </head>
       <body>
-        <Providers lang={lang} settings={settings} services={services as any}>
+        <Providers lang={lang} settings={{ ...settings, demo: DEMO }} services={services as any}>
           {children}
         </Providers>
       </body>

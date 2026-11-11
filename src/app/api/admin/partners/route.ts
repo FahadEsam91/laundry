@@ -1,11 +1,11 @@
-import { all, get, run, tx, now } from "@/lib/db";
+import { all, get, run, tx, now, insert } from "@/lib/db";
 import { handler, ok, body, fail } from "@/lib/api";
 import { requireUser } from "@/lib/auth";
 
 export const GET = handler(async () => {
   await requireUser("admin");
   const since = new Date(Date.now() - 30 * 86400000).toISOString();
-  const partners = all(
+  const partners = await all(
     `SELECT p.*,
       (SELECT COUNT(*) FROM orders o WHERE o.partner_id=p.id AND o.status!='cancelled' AND o.created_at>=?) orders_30,
       (SELECT COALESCE(SUM(o.total),0) FROM orders o WHERE o.partner_id=p.id AND o.status!='cancelled' AND o.created_at>=?) gmv_30,
@@ -26,21 +26,21 @@ export const POST = handler(async (req: Request) => {
   const services: string[] = Array.isArray(b.services) && b.services.length ? b.services : ["wash_iron", "iron"];
   const c = PALETTE[Math.floor(Math.random() * PALETTE.length)];
   const initials = String(b.name_en).split(/\s+/).map((w: string) => w[0]).join("").slice(0, 2).toUpperCase();
-  const id = tx(() => {
-    const { id } = run(
+  const id = await tx(async () => {
+    const id = await insert(
       `INSERT INTO partners(name_ar,name_en,desc_ar,desc_en,area_ar,area_en,lat,lng,rating,rating_count,eta_hours,express_hours,delivery_fee,min_order,commission,color,color2,initials,is_open,status,featured,tags,phone,created_at)
        VALUES(?,?,?,?,?,?,?,?,5,0,?,?,?,?,?,?,?,?,1,'active',0,'',?,?)`,
       b.name_ar, b.name_en, b.desc_ar || "", b.desc_en || "", b.area_ar || "", b.area_en || "", Number(b.lat) || 33.315, Number(b.lng) || 44.38,
       Number(b.eta_hours) || 24, Number(b.express_hours) || 6, Number(b.delivery_fee) || 0, Number(b.min_order) || 0, Number(b.commission) || 15, c[0], c[1], initials || "NQ", b.phone || null, now(),
     );
     // seed the price list from the platform's reference catalog (cheapest active offer per item)
-    const template = all<any>(
-      `SELECT p.service_id,p.name_ar,p.name_en,p.icon,MIN(p.price) price,p.unit,MAX(p.popular) popular FROM products p JOIN services s ON s.id=p.service_id
+    const template = await all<any>(
+      `SELECT p.service_id,MIN(p.name_ar) name_ar,p.name_en,MIN(p.icon) icon,MIN(p.price) price,MIN(p.unit) unit,MAX(p.popular) popular FROM products p JOIN services s ON s.id=p.service_id
        WHERE s.slug IN (${services.map(() => "?").join(",")}) GROUP BY p.service_id,p.name_en`,
       ...services,
     );
-    for (const t of template) run("INSERT INTO products(partner_id,service_id,name_ar,name_en,icon,price,unit,popular) VALUES(?,?,?,?,?,?,?,?)", id, t.service_id, t.name_ar, t.name_en, t.icon, t.price, t.unit, t.popular);
+    for (const t of template) await insert("INSERT INTO products(partner_id,service_id,name_ar,name_en,icon,price,unit,popular) VALUES(?,?,?,?,?,?,?,?)", id, t.service_id, t.name_ar, t.name_en, t.icon, t.price, t.unit, t.popular);
     return id;
   });
-  return ok({ id: get<any>("SELECT id FROM partners WHERE id=?", id)!.id }, 201);
+  return ok({ id: (await get<any>("SELECT id FROM partners WHERE id=?", id))!.id }, 201);
 });

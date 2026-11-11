@@ -15,11 +15,11 @@ const ACTIONS: Record<string, { from: OrderStatus; to: OrderStatus }> = {
 export const POST = handler(async (req: Request, { params }: { params: Promise<{ id: string }> }) => {
   const u = await requireUser("partner");
   const id = Number((await params).id);
-  const o = get<any>("SELECT partner_id,status FROM orders WHERE id=?", id);
+  const o = await get<any>("SELECT partner_id,status FROM orders WHERE id=?", id);
   if (!o || (u.role !== "admin" && o.partner_id !== u.partner_id)) return fail(404, "not_found");
   const { action, note } = await body(req);
   const a = ACTIONS[action];
   if (!a || o.status !== a.from) return fail(409, "invalid_action");
-  transition(id, a.to, "partner", { note, force: a.to === "cancelled" });
+  await transition(id, a.to, "partner", { note, force: a.to === "cancelled" });
   return ok({ ok: true });
 });
