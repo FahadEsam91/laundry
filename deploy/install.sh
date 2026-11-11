@@ -44,13 +44,27 @@ write_env() {
   echo
   echo "No domain yet? Press Enter to use a free automatic address for this server: $default_domain"
   ask DOMAIN "Domain" "$default_domain"
-  ask ADMIN_PHONE "Super-admin phone number (international, e.g. +9647701234567)" ""
-  [ -n "$ADMIN_PHONE" ] || die "An admin phone number is required"
+  # tolerate pasted prompts / URLs: keep only a valid host name
+  DOMAIN=$(printf '%s' "$DOMAIN" | tr 'A-Z' 'a-z' | grep -oE '[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+' | grep -E '\.[a-z]{2,}$' | tail -1 || true)
+  [ -n "$DOMAIN" ] || { warn "Invalid domain — using $default_domain"; DOMAIN=$default_domain; }
+  ok "Domain: $DOMAIN"
+  while :; do
+    ask ADMIN_PHONE "Super-admin phone number (international, e.g. +9647701234567)" ""
+    digits=$(printf '%s' "$ADMIN_PHONE" | tr -cd '0-9')
+    case "$digits" in 00*) digits=${digits#00} ;; 07*) digits="964${digits#0}" ;; esac
+    if [ ${#digits} -ge 10 ] && [ ${#digits} -le 15 ]; then ADMIN_PHONE="+$digits"; break; fi
+    warn "That doesn't look like a phone number, try again"; ADMIN_PHONE=""
+    (exec </dev/tty) 2>/dev/null || die "A valid admin phone number is required"
+  done
+  ok "Admin phone: $ADMIN_PHONE"
   ask ADMIN_NAME "Super-admin name" "Admin"
+  ADMIN_NAME=$(printf '%s' "$ADMIN_NAME" | tr -d '"$`\\' | cut -c1-60); ADMIN_NAME=${ADMIN_NAME:-Admin}
   ask MODE "Mode: 1 = production (empty, real customers)  2 = demo (sample data)" "1"
+  MODE=$(printf '%s' "$MODE" | tr -cd '12' | cut -c1); MODE=${MODE:-1}
   echo
   echo "SMS for login codes (Twilio). Press Enter to skip for now — codes will then only appear in the server log."
   ask TWILIO_ACCOUNT_SID "Twilio Account SID" ""
+  TWILIO_ACCOUNT_SID=$(printf '%s' "$TWILIO_ACCOUNT_SID" | grep -oE 'AC[0-9a-fA-F]{32}' || true)
   if [ -n "$TWILIO_ACCOUNT_SID" ]; then
     ask TWILIO_AUTH_TOKEN "Twilio Auth Token" ""
     ask TWILIO_FROM "Twilio sender (+1… number or MG… messaging service)" ""
@@ -64,7 +78,7 @@ SESSION_SECRET=$(openssl rand -base64 48 | tr -d '\n')
 POSTGRES_PASSWORD=$(openssl rand -hex 24)
 NUQA_DEMO=$([ "$MODE" = "2" ] && echo 1 || echo 0)
 ADMIN_PHONE=$ADMIN_PHONE
-ADMIN_NAME=$ADMIN_NAME
+ADMIN_NAME="$ADMIN_NAME"
 SMS_PROVIDER=$([ -n "$TWILIO_ACCOUNT_SID" ] && echo twilio || echo console)
 TWILIO_ACCOUNT_SID=$TWILIO_ACCOUNT_SID
 TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN:-}
@@ -105,6 +119,7 @@ else git clone -q -b "$BRANCH" "$REPO" "$DIR"; fi
 cd "$DIR"
 ok "Code at $(git rev-parse --short HEAD)"
 
+if [ -f .env ] && ! (set -a; . ./.env) >/dev/null 2>&1; then warn "Existing .env is invalid — recreating it"; mv .env ".env.broken.$(date +%s)"; fi
 if [ -f .env ]; then ok "Keeping existing .env"; else say "Configuration"; write_env; fi
 set -a; . ./.env; set +a
 
