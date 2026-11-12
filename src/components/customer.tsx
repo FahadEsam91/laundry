@@ -36,7 +36,7 @@ export function CustomerShell({ children, narrow }: { children: React.ReactNode;
 
 /** Desktop-only top navigation (phones use the bottom tab bar). */
 function DesktopHeader() {
-  const { t, lang, setLang, me } = useApp();
+  const { t, lang, setLang, me, settings } = useApp();
   const { count, subtotal } = useCart();
   const { money } = useApp();
   const path = usePathname();
@@ -49,7 +49,7 @@ function DesktopHeader() {
     { href: "/orders", label: t("nav_orders") },
     { href: "/plus", label: t("plus_title") },
     { href: "/offers", label: t("nav_offers") },
-  ];
+  ].filter((l) => l.href !== "/plus" || settings.memberships || me?.member);
   return (
     <header className="sticky top-0 z-40 hidden border-b border-ink-100 bg-white/95 backdrop-blur lg:block">
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-5 px-8">
@@ -120,7 +120,7 @@ function DesktopFooter() {
         <div>
           <div className="mb-3 text-sm font-bold">{t("app_name")}</div>
           <div className="space-y-2 text-sm text-white/60">
-            <Link href="/plus" className="block hover:text-white">{t("plus_title")}</Link>
+            {settings.memberships && <Link href="/plus" className="block hover:text-white">{t("plus_title")}</Link>}
             <Link href="/offers" className="block hover:text-white">{t("nav_offers")}</Link>
             <Link href="/orders" className="block hover:text-white">{t("nav_orders")}</Link>
           </div>

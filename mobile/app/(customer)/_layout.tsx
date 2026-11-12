@@ -1,10 +1,13 @@
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useI18n } from "@/i18n";
+import { useAuth } from "@/auth";
 import { C, F } from "@/theme";
 
 export default function CustomerTabs() {
-  const { t } = useI18n();
+  const { t, settings } = useI18n();
+  const { me } = useAuth();
+  const showPlus = !!settings.memberships || !!me?.member;
   const icon = (name: keyof typeof Ionicons.glyphMap) => ({ color, focused }: { color: any; focused: boolean }) => (
     <Ionicons name={(focused ? name : `${name}-outline`) as any} size={23} color={color} />
   );
@@ -20,7 +23,7 @@ export default function CustomerTabs() {
     >
       <Tabs.Screen name="home" options={{ title: t("nav_home"), tabBarIcon: icon("home") }} />
       <Tabs.Screen name="orders" options={{ title: t("nav_orders"), tabBarIcon: icon("receipt") }} />
-      <Tabs.Screen name="plus" options={{ title: t("plus_title"), tabBarIcon: icon("diamond") }} />
+      <Tabs.Screen name="plus" options={{ title: t("plus_title"), tabBarIcon: icon("diamond"), href: showPlus ? undefined : null }} />
       <Tabs.Screen name="account" options={{ title: t("nav_account"), tabBarIcon: icon("person") }} />
     </Tabs>
   );

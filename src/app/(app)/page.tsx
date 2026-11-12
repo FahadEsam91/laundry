@@ -217,17 +217,23 @@ export default function HomePage() {
 
       {/* membership */}
       <section className="px-4 pt-6 lg:px-0 lg:pt-10">
-        <PlusBanner />
+        {settings.memberships && <PlusBanner />}
       </section>
 
+      {data && partners.length === 0 && (
+        <section className="px-4 pt-6 lg:px-0 lg:pt-12">
+          <div className="rounded-3xl border border-dashed border-ink-200 bg-white p-8 text-center text-sm font-semibold text-ink-500">{t("no_laundries_yet")}</div>
+        </section>
+      )}
+
       {/* featured */}
-      <section className="pt-6 lg:pt-12">
+      {(!data || partners.some((p) => p.featured)) && <section className="pt-6 lg:pt-12">
         <SectionTitle title={t("featured_laundries")} href="/search" />
         <div className="no-scrollbar flex gap-3 overflow-x-auto px-4 pb-2 lg:grid lg:grid-cols-4 lg:gap-5 lg:overflow-visible lg:px-0">
           {!data && [1, 2].map((i) => <Skeleton key={i} className="h-48 w-[270px] shrink-0" />)}
           {partners.filter((p) => p.featured).map((p) => <PartnerCard key={p.id} p={p} variant="wide" />)}
         </div>
-      </section>
+      </section>}
 
       {/* how it works */}
       <section className="px-4 pt-6 lg:px-0 lg:pt-12">
@@ -259,6 +265,7 @@ export default function HomePage() {
       </section>
 
       {/* all */}
+      {partners.length > 0 && (
       <section className="pt-7 lg:pt-12">
         <SectionTitle title={t("all_laundries")} sub={`${partners.length} ${lang === "ar" ? "مغسلة متاحة" : "laundries available"}`} />
         <div className="no-scrollbar flex gap-2 overflow-x-auto px-4 pb-2 lg:px-0">
@@ -288,6 +295,7 @@ export default function HomePage() {
           {list.map((p) => <PartnerCard key={p.id} p={p} variant="grid" />)}
         </div>
       </section>
+      )}
 
       {/* free delivery strip */}
       {settings.free_delivery_over > 0 && <div className="mx-4 mb-4 mt-2 flex items-center lg:mx-0 lg:mt-10 gap-3 rounded-2xl bg-emerald-50 p-4 text-sm text-emerald-800">

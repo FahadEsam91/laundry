@@ -89,7 +89,7 @@ export default function AccountPage() {
             </div>
           </header>
           <div className="mt-2 divide-y divide-ink-100 bg-white">
-            <Row icon={Crown} label={t("plus_title")} href="/plus" right={me.member ? <PlusBadge /> : <span className="rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-extrabold text-amber-950">{t("plus_cta")}</span>} />
+            {(settings.memberships || me.member) && <Row icon={Crown} label={t("plus_title")} href="/plus" right={me.member ? <PlusBadge /> : <span className="rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-extrabold text-amber-950">{t("plus_cta")}</span>} />}
             <Row icon={MapPin} label={t("addresses")} href="/account/addresses" right={<span className="text-xs text-ink-400">{me.addresses.length}</span>} />
             <Row icon={Wallet} label={t("wallet")} href="/account/wallet" />
             <Row icon={Bell} label={t("notifications")} href="/notifications" right={me.unread ? <span className="rounded-full bg-red-500 px-2 text-[11px] font-bold text-white">{me.unread}</span> : null} />

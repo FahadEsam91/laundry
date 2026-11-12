@@ -221,6 +221,7 @@ async function seedCore() {
     free_delivery_over: "30000",
     autopilot: "1",
     online_payments: "0",
+    memberships: DEMO ? "1" : "0",
     autopilot_seconds: "15",
     support_phone: "+964 770 000 0000",
     city_ar: "بغداد",

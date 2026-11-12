@@ -89,6 +89,7 @@ export default function Home() {
         ))}
       </View>
 
+      {(settings.memberships || me?.member) && (
       <Pressable onPress={() => router.push("/plus")} style={{ marginHorizontal: 16, marginTop: 20 }}>
         <LinearGradient colors={["#0B0E14", "#19398A"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ borderRadius: 24, padding: 18, flexDirection: "row", alignItems: "center", gap: 14 }}>
           <View style={{ width: 48, height: 48, borderRadius: 16, backgroundColor: C.gold, alignItems: "center", justifyContent: "center" }}><Icon name="diamond" size={24} color="#422006" /></View>
@@ -99,6 +100,7 @@ export default function Home() {
           <View style={{ backgroundColor: C.gold, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6 }}><Txt w="bold" size={12} color="#422006">{me?.member ? (lang === "ar" ? "مزاياك" : "Benefits") : t("plus_cta")}</Txt></View>
         </LinearGradient>
       </Pressable>
+      )}
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 12, paddingVertical: 20 }}>
         {(promos?.promos || []).map((p: any, i: number) => (
@@ -113,14 +115,27 @@ export default function Home() {
         ))}
       </ScrollView>
 
-      <Txt w="bold" size={18} style={{ marginHorizontal: 16, marginBottom: 12 }}>{t("featured_laundries")}</Txt>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 12, paddingBottom: 8 }}>
-        {partners.filter((p) => p.featured).map((p) => <PartnerCard key={p.id} p={p} wide />)}
-      </ScrollView>
+      {data && partners.length === 0 ? (
+        <View style={{ margin: 16, padding: 28, borderRadius: 24, borderWidth: 1, borderStyle: "dashed", borderColor: C.ink200, backgroundColor: "#fff" }}>
+          <Txt w="semibold" size={14} color={C.ink500} style={{ textAlign: "center" }}>{t("no_laundries_yet")}</Txt>
+        </View>
+      ) : null}
+      {partners.some((p) => p.featured) ? (
+        <>
+          <Txt w="bold" size={18} style={{ marginHorizontal: 16, marginBottom: 12 }}>{t("featured_laundries")}</Txt>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 12, paddingBottom: 8 }}>
+            {partners.filter((p) => p.featured).map((p) => <PartnerCard key={p.id} p={p} wide />)}
+          </ScrollView>
+        </>
+      ) : null}
 
-      <Txt w="bold" size={18} style={{ marginHorizontal: 16, marginTop: 20 }}>{t("all_laundries")}</Txt>
-      <Txt size={12} color={C.ink500} style={{ marginHorizontal: 16, marginBottom: 4 }}>{partners.length} {lang === "ar" ? "مغسلة متاحة" : "laundries available"}</Txt>
-      {partners.map((p) => <PartnerCard key={p.id} p={p} />)}
+      {partners.length > 0 ? (
+        <>
+          <Txt w="bold" size={18} style={{ marginHorizontal: 16, marginTop: 20 }}>{t("all_laundries")}</Txt>
+          <Txt size={12} color={C.ink500} style={{ marginHorizontal: 16, marginBottom: 4 }}>{partners.length} {lang === "ar" ? "مغسلة متاحة" : "laundries available"}</Txt>
+          {partners.map((p) => <PartnerCard key={p.id} p={p} />)}
+        </>
+      ) : null}
       <View style={{ height: 24 }} />
     </ScrollView>
   );

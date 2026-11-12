@@ -1,8 +1,12 @@
-import { View } from "react-native";
+import { Linking, Platform, Pressable, View } from "react-native";
+import Constants from "expo-constants";
 import MapView, { Marker, Polyline, PROVIDER_DEFAULT } from "react-native-maps";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useEffect, useRef } from "react";
 import { C } from "./theme";
+import { Txt } from "./ui";
+
+const MAPS_OK = Platform.OS !== "android" || !!(Constants.expoConfig?.extra as any)?.androidMaps;
 
 export type Pin = { id: string; lat: number; lng: number; kind: "home" | "laundry" | "rider"; color?: string };
 
@@ -25,6 +29,20 @@ export function LiveMap({ pins, route, height = 300, onPick, center }: { pins: P
     setTimeout(() => ref.current?.fitToCoordinates(pins.map((p) => ({ latitude: p.lat, longitude: p.lng })), { edgePadding: { top: 80, bottom: 80, left: 60, right: 60 }, animated: false }), 300);
   }, [pins]);
   const c = center || (pins[0] ? [pins[0].lat, pins[0].lng] : [33.315, 44.38]);
+  if (!MAPS_OK) {
+    // Google Maps SDK crashes without an API key: show a placeholder that opens the location in the Maps app.
+    const target = pins.find((p) => p.kind === "rider") || pins[0];
+    return (
+      <View style={{ height, width: "100%", backgroundColor: "#E8EEF9", alignItems: "center", justifyContent: "center", gap: 10 }}>
+        <Ionicons name="map" size={36} color={C.brand} />
+        {target ? (
+          <Pressable onPress={() => Linking.openURL(`geo:${target.lat},${target.lng}?q=${target.lat},${target.lng}`)} style={{ backgroundColor: "#fff", borderRadius: 999, paddingHorizontal: 16, paddingVertical: 8 }}>
+            <Txt w="bold" size={13} color={C.brand}>Google Maps ↗</Txt>
+          </Pressable>
+        ) : null}
+      </View>
+    );
+  }
   return (
     <MapView
       ref={ref}

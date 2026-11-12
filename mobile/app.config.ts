@@ -2,9 +2,9 @@ import type { ExpoConfig } from "expo/config";
 
 /**
  * One codebase → two store apps.
- *   APP_VARIANT=customer (default) → "Nuqa"        com.nuqa.app
- *   APP_VARIANT=rider              → "Nuqa Rider"  com.nuqa.rider
- * Change the bundle identifiers to your own reverse-domain before the first store submission.
+ *   APP_VARIANT=customer (default) → "Nuqa"        com.fahadesam.nuqa
+ *   APP_VARIANT=rider              → "Nuqa Rider"  com.fahadesam.nuqarider
+ * Bundle identifiers are permanent once an app is published in a store.
  */
 const VARIANT = process.env.APP_VARIANT === "rider" ? "rider" : "customer";
 const isRider = VARIANT === "rider";
@@ -24,7 +24,7 @@ const config: ExpoConfig = {
   icon: isRider ? "./assets/rider-icon.png" : "./assets/icon.png",
   userInterfaceStyle: "light",
   ios: {
-    bundleIdentifier: isRider ? "com.nuqa.rider" : "com.nuqa.app",
+    bundleIdentifier: isRider ? "com.fahadesam.nuqarider" : "com.fahadesam.nuqa",
     buildNumber: "1",
     supportsTablet: false,
     config: { usesNonExemptEncryption: false },
@@ -37,7 +37,7 @@ const config: ExpoConfig = {
     },
   },
   android: {
-    package: isRider ? "com.nuqa.rider" : "com.nuqa.app",
+    package: isRider ? "com.fahadesam.nuqarider" : "com.fahadesam.nuqa",
     versionCode: 1,
     adaptiveIcon: {
       foregroundImage: isRider ? "./assets/rider-adaptive-icon.png" : "./assets/adaptive-icon.png",
@@ -60,6 +60,8 @@ const config: ExpoConfig = {
   extra: {
     variant: VARIANT,
     apiUrl: API_URL,
+    // Android maps need a Google Maps key; without one the app shows a map placeholder instead of crashing.
+    androidMaps: !!process.env.GOOGLE_MAPS_ANDROID_KEY,
     supportsRTL: true,
     router: {},
     ...(EAS_PROJECT_ID ? { eas: { projectId: EAS_PROJECT_ID } } : {}),

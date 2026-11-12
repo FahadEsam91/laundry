@@ -110,6 +110,7 @@ export async function subscriptionSummary(userId: number) {
 export async function subscribe(user: SessionUser, planId: number, method: "wallet" | "card") {
   const plan = await get<Plan>("SELECT * FROM plans WHERE id=? AND active=1", planId);
   if (!plan) throw new HttpError(400, "plan_unavailable");
+  if (!(await getSettings()).memberships) throw new HttpError(403, "memberships_disabled");
   if (!["wallet", "card"].includes(method)) throw new HttpError(400, "invalid_payment");
   if (method === "card" && !(await getSettings()).online_payments) throw new HttpError(400, "online_payments_disabled");
   const current = await activeSubscription(user.id);

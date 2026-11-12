@@ -1,7 +1,7 @@
 {
   "cli": {
     "version": ">= 16.0.0",
-    "appVersionSource": "local"
+    "appVersionSource": "remote"
   },
   "build": {
     "base": {
@@ -65,18 +65,12 @@
   },
   "submit": {
     "customer-production": {
-      "ios": {
-        "ascAppId": "REPLACE_WITH_APP_STORE_CONNECT_APP_ID"
-      },
       "android": {
         "serviceAccountKeyPath": "./google-play-key.json",
         "track": "internal"
       }
     },
     "rider-production": {
-      "ios": {
-        "ascAppId": "REPLACE_WITH_RIDER_APP_STORE_CONNECT_APP_ID"
-      },
       "android": {
         "serviceAccountKeyPath": "./google-play-key.json",
         "track": "internal"

@@ -73,10 +73,10 @@ export function MapView({
         doubleClickZoom: interactive,
         touchZoom: interactive,
       }).setView(center || [33.315, 44.38], zoom);
-      L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+      // OpenStreetMap tiles (no key). For heavy traffic switch NEXT_PUBLIC_MAP_TILES to a keyed provider (MapTiler, Stadia…).
+      L.tileLayer(process.env.NEXT_PUBLIC_MAP_TILES || "https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom: 19,
-        subdomains: "abcd",
-        attribution: '&copy; OpenStreetMap &copy; CARTO',
+        attribution: process.env.NEXT_PUBLIC_MAP_ATTRIBUTION || '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>',
       }).addTo(map);
       if (interactive) L.control.zoom({ position: "bottomright" }).addTo(map);
       map.on("click", (e: any) => pickRef.current?.(e.latlng.lat, e.latlng.lng));

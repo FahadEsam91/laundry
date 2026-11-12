@@ -128,7 +128,7 @@ export default function Cart() {
 
         {member ? (
           totals.subSavings > 0 && <View style={{ margin: 16, marginBottom: 0, backgroundColor: "#FEF3C7", borderRadius: 16, padding: 12, flexDirection: "row", gap: 8, alignItems: "center" }}><Icon name="diamond" size={18} color="#B45309" /><Txt w="bold" size={13} color="#78350F" style={{ flex: 1 }}>{t("member_savings_line", { x: money(totals.subSavings), p: L(member.plan, "name") })}</Txt></View>
-        ) : upSave > 0 ? (
+        ) : upSave > 0 && settings.memberships ? (
           <Pressable onPress={() => router.push("/plus")} style={{ margin: 16, marginBottom: 0, backgroundColor: C.ink900, borderRadius: 16, padding: 12, flexDirection: "row", gap: 10, alignItems: "center" }}>
             <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: C.gold, alignItems: "center", justifyContent: "center" }}><Icon name="diamond" size={18} color="#422006" /></View>
             <Txt w="semibold" size={13} color="#fff" style={{ flex: 1 }}>{t("upsell_plus", { x: money(upSave) })}</Txt>

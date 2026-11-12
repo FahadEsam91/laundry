@@ -59,6 +59,19 @@ export default function PlusPage() {
 
   const left = cur ? (cur.free_deliveries === -1 ? t("unlimited") : String(Math.max(0, cur.free_deliveries - sub.deliveries_used))) : "";
 
+  if (!settings.memberships && !me?.member) {
+    return (
+      <div className="min-h-screen bg-ink-50">
+        <TopBar title={t("plus_title")} back="/" />
+        <div className="mx-auto max-w-md px-6 py-20 text-center">
+          <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-amber-100 text-amber-600"><Crown className="h-8 w-8" /></span>
+          <p className="mt-4 text-base font-bold text-ink-800">{t("plus_unavailable")}</p>
+          <Button className="mt-6" onClick={() => router.push("/")}>{t("nav_home")}</Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-ink-50 pb-32 lg:pb-16">
       <div className="bg-gradient-to-b from-ink-950 via-ink-900 to-brand-900 text-white">

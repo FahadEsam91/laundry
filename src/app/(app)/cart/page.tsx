@@ -167,7 +167,7 @@ export default function CartPage() {
           </div>
         )
       ) : (
-        upSave > 0 && (
+        upSave > 0 && settings.memberships && (
           <Link href="/plus" className="mx-4 mt-2 flex items-center gap-3 rounded-2xl bg-ink-900 lg:mx-0 lg:mt-4 p-3 text-sm font-semibold text-white">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-400 text-amber-950"><Crown className="h-5 w-5" /></span>
             <span className="flex-1">{t("upsell_plus", { x: money(upSave) })}</span>

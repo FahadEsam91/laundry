@@ -64,6 +64,16 @@ export default function Plus() {
     refreshMe();
   };
 
+  if (!settings.memberships && !me?.member) {
+    return (
+      <View style={{ flex: 1, backgroundColor: C.ink50, alignItems: "center", justifyContent: "center", padding: 32, gap: 16 }}>
+        <View style={{ width: 64, height: 64, borderRadius: 22, backgroundColor: "#FEF3C7", alignItems: "center", justifyContent: "center" }}><Icon name="diamond" size={30} color="#B45309" /></View>
+        <Txt w="bold" size={16} style={{ textAlign: "center" }}>{t("plus_unavailable")}</Txt>
+        <Btn title={t("nav_home")} onPress={() => router.replace("/home")} />
+      </View>
+    );
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: C.ink50 }}>
       <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>

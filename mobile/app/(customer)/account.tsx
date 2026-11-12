@@ -80,7 +80,7 @@ export default function Account() {
 
       {u && (
         <View style={{ marginTop: 8 }}>
-          <Row icon="diamond-outline" label={t("plus_title")} onPress={() => router.push("/plus")} right={me?.member ? <Txt w="bold" size={12} color={C.amber}>👑 {L(me.member.plan, "name")}</Txt> : null} />
+          {(settings.memberships || me?.member) && <Row icon="diamond-outline" label={t("plus_title")} onPress={() => router.push("/plus")} right={me?.member ? <Txt w="bold" size={12} color={C.amber}>👑 {L(me.member.plan, "name")}</Txt> : null} />}
           <Row icon="location-outline" label={t("addresses")} onPress={() => router.push("/addresses")} right={<Txt size={12} color={C.ink400}>{me.addresses.length}</Txt>} />
           <Row icon="wallet-outline" label={t("wallet")} onPress={() => router.push("/wallet")} />
           <Row icon="notifications-outline" label={t("notifications")} onPress={() => router.push("/notifications")} right={me.unread ? <View style={{ backgroundColor: C.red, borderRadius: 999, paddingHorizontal: 7 }}><Txt w="bold" size={11} color="#fff">{me.unread}</Txt></View> : null} />

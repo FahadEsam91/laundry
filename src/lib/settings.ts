@@ -1,5 +1,6 @@
 import "server-only";
 import { all, run } from "./db";
+import { DEMO } from "./env";
 
 export type Settings = {
   app_name: string;
@@ -12,6 +13,8 @@ export type Settings = {
   free_delivery_over: number;
   autopilot: boolean;
   online_payments: boolean;
+  /** Nuqa Plus memberships offered to customers (needs a way to pay: online payments or wallet balance). */
+  memberships: boolean;
   autopilot_seconds: number;
   support_phone: string;
   city_ar: string;
@@ -32,10 +35,12 @@ export async function getSettings(): Promise<Settings> {
   for (const r of rows) {
     if (r.key.startsWith("vapid_")) continue; // server-only secrets
     if (NUM.includes(r.key)) o[r.key] = Number(r.value);
-    else if (r.key === "autopilot" || r.key === "online_payments") o[r.key] = r.value === "1";
+    else if (r.key === "autopilot" || r.key === "online_payments" || r.key === "memberships") o[r.key] = r.value === "1";
     else o[r.key] = r.value;
   }
   o.online_payments = !!o.online_payments; // off until a payment gateway is connected
+  // Not set yet: on in the demo, off in production until customers have a way to pay for a membership.
+  o.memberships = o.memberships === undefined ? DEMO : !!o.memberships;
   cache = { at: Date.now(), v: o as Settings };
   return o as Settings;
 }

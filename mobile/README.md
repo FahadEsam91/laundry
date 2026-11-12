@@ -4,8 +4,8 @@ One Expo / React Native codebase that produces **two store apps**:
 
 | App | Who | Bundle ID (change before first release) | Build variant |
 |---|---|---|---|
-| **Nuqa** | Customers | `com.nuqa.app` | `APP_VARIANT=customer` |
-| **Nuqa Rider** | Delivery riders | `com.nuqa.rider` | `APP_VARIANT=rider` |
+| **Nuqa** | Customers | `com.fahadesam.nuqa` | `APP_VARIANT=customer` |
+| **Nuqa Rider** | Delivery riders | `com.fahadesam.nuqarider` | `APP_VARIANT=rider` |
 
 Laundry partners and admins use the web dashboards (`/partner`, `/admin`) — like Talabat's vendor and ops tools.
 
@@ -32,7 +32,7 @@ Rider app: go online/offline, live GPS sharing, job pipeline, turn-by-turn navig
 cd mobile
 npm install
 ```
-- `app.config.ts` → change `com.nuqa.app` / `com.nuqa.rider` to your own reverse domain (e.g. `com.yourbrand.laundry`).
+- `app.config.ts` → change `com.fahadesam.nuqa` / `com.fahadesam.nuqarider` to your own reverse domain (e.g. `com.yourbrand.laundry`).
 - `eas.json` → set `EXPO_PUBLIC_API_URL` in `build.base.env` to your server, e.g. `https://app.yourbrand.com`.
 - Create one EAS project per app and save the IDs:
   ```bash
@@ -45,7 +45,7 @@ npm install
 
 ## 2. Push notifications
 - **iOS:** nothing to do — `eas build` creates the APNs key for you (answer "yes" when asked).
-- **Android:** create a Firebase project → add Android apps `com.nuqa.app` and `com.nuqa.rider` →
+- **Android:** create a Firebase project → add Android apps `com.fahadesam.nuqa` and `com.fahadesam.nuqarider` →
   Project settings → Service accounts → *Generate new private key* → upload it in
   expo.dev → your project → Credentials → Android → **FCM V1 service account key**.
 - The server already sends to Expo's push service (`src/lib/push.ts`); optional `EXPO_ACCESS_TOKEN` env for enhanced security.
