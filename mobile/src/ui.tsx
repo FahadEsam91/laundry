@@ -1,6 +1,6 @@
 import { forwardRef } from "react";
 import {
-  ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
+  ActivityIndicator, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
   type PressableProps, type StyleProp, type TextInputProps, type TextProps, type TextStyle, type ViewStyle,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -9,6 +9,7 @@ import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { C, F, R, shadow } from "./theme";
 import { useI18n } from "./i18n";
+import { mediaUrl } from "./config";
 
 // ------------------------------------------------------------------ text
 type TxtProps = TextProps & { w?: "regular" | "medium" | "semibold" | "bold"; size?: number; color?: string; center?: boolean };
@@ -119,7 +120,9 @@ export function StatusBadge({ status }: { status: string }) {
   );
 }
 
-export function PartnerLogo({ p, size = 48 }: { p: { color: string; color2: string; initials: string }; size?: number }) {
+export function PartnerLogo({ p, size = 48 }: { p: { color: string; color2: string; initials: string; logo_url?: string | null }; size?: number }) {
+  const uri = mediaUrl(p.logo_url);
+  if (uri) return <Image source={{ uri }} style={{ width: size, height: size, borderRadius: size * 0.3, backgroundColor: "#fff" }} />;
   return (
     <LinearGradient colors={[p.color, p.color2 || p.color]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ width: size, height: size, borderRadius: size * 0.3, alignItems: "center", justifyContent: "center" }}>
       <Text style={{ color: "#fff", fontFamily: F.bold, fontSize: size * 0.34, writingDirection: "ltr" }}>{p.initials}</Text>

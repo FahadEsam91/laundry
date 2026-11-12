@@ -50,7 +50,7 @@ export default function OrdersPage() {
       )}
       <div className="space-y-3 p-4 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0 lg:px-0">
         {list.map((o) => {
-          const p = { color: o.partner_color, color2: o.partner_color2, initials: o.partner_initials };
+          const p = { color: o.partner_color, color2: o.partner_color2, initials: o.partner_initials, logo_url: o.partner_logo };
           return (
             <div key={o.id} className="rounded-2xl border border-ink-100 bg-white p-4 shadow-soft">
               <Link href={`/orders/${o.id}`} className="flex gap-3">

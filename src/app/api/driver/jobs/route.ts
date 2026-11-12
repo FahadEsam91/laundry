@@ -4,7 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { autopilotTick, haversineKm } from "@/lib/orders";
 
 const JOB_SQL = `SELECT o.id,o.code,o.status,o.total,o.payment_method,o.payment_status,o.items_count,o.express,o.address_text,o.address_lat,o.address_lng,o.notes,o.delivery_fee,o.status_at,
-  p.name_ar partner_ar,p.name_en partner_en,p.area_ar,p.area_en,p.lat p_lat,p.lng p_lng,p.color partner_color,p.initials partner_initials,p.phone partner_phone,
+  p.name_ar partner_ar,p.name_en partner_en,p.area_ar,p.area_en,p.lat p_lat,p.lng p_lng,p.color partner_color,p.initials partner_initials,p.logo_url partner_logo,p.phone partner_phone,
   u.name customer_name,u.phone customer_phone
   FROM orders o JOIN partners p ON p.id=o.partner_id JOIN users u ON u.id=o.customer_id`;
 

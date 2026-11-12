@@ -133,7 +133,7 @@ function JobCard({ j, action, onAct, busy, mapsUrl }: { j: any; action?: { actio
     <div className="rounded-2xl bg-white p-4 shadow-soft">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <PartnerLogo p={{ color: j.partner_color, color2: j.partner_color, initials: j.partner_initials }} size={32} className="rounded-lg" />
+          <PartnerLogo p={{ color: j.partner_color, color2: j.partner_color, initials: j.partner_initials, logo_url: j.partner_logo }} size={32} className="rounded-lg" />
           <div>
             <div className="text-sm font-extrabold">{j.code} {j.express ? <Zap className="inline h-3.5 w-3.5 fill-amber-400 text-amber-500" /> : null}</div>
             <div className="text-[11px] font-bold text-brand-700">{isPickupLeg ? t("job_pickup") : t("job_delivery")}</div>

@@ -6,6 +6,7 @@ import { Plus, Star, Pencil, CheckCircle2, Ban, Tags, MapPin } from "lucide-reac
 import { useApp, useCan, useToast } from "@/components/providers";
 import { PageHead, Panel, Table, Td } from "@/components/admin";
 import { Badge, Button, Input, PartnerLogo, Sheet, Skeleton, Toggle, cx } from "@/components/ui";
+import { ImageUpload } from "@/components/image-upload";
 import { MapView } from "@/components/map-view";
 import { api, errText } from "@/lib/client";
 
@@ -31,7 +32,7 @@ export default function PartnersPage() {
     try {
       if (edit.id) {
         const { id, services: _s, ...rest } = edit;
-        const allowed = ["name_ar", "name_en", "area_ar", "area_en", "desc_ar", "desc_en", "phone", "delivery_fee", "min_order", "commission", "eta_hours", "express_hours", "lat", "lng", "tags"];
+        const allowed = ["name_ar", "name_en", "area_ar", "area_en", "desc_ar", "desc_en", "phone", "delivery_fee", "min_order", "commission", "eta_hours", "express_hours", "lat", "lng", "tags", "logo_url", "cover_url"];
         await api(`/api/admin/partners/${id}`, { method: "PATCH", body: Object.fromEntries(Object.entries(rest).filter(([k]) => allowed.includes(k))) });
       } else await api("/api/admin/partners", { body: edit });
       toast(t("saved"));
@@ -94,6 +95,14 @@ export default function PartnersPage() {
       <Sheet open={!!edit} onClose={() => setEdit(null)} wide title={edit?.id ? `${t("edit")} • ${L(edit, "name")}` : t("add_partner")}>
         {edit && (
           <div className="grid gap-4 md:grid-cols-2">
+            <div className="md:col-span-2 rounded-2xl border border-ink-100 p-4">
+              <div className="text-sm font-bold text-ink-900">{t("laundry_photos")}</div>
+              <p className="mb-3 mt-0.5 text-xs text-ink-500">{t("laundry_photos_d")}</p>
+              <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto]">
+                <ImageUpload kind="cover" label={t("cover_photo")} value={edit.cover_url} onChange={(v) => setEdit({ ...edit, cover_url: v })} />
+                <ImageUpload kind="logo" label={t("logo")} value={edit.logo_url} onChange={(v) => setEdit({ ...edit, logo_url: v })} />
+              </div>
+            </div>
             {F("name_ar", t("name_ar"))}
             {F("name_en", t("name_en"))}
             {F("area_ar", `${t("area")} (AR)`)}

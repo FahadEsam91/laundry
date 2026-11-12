@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { Pressable, ScrollView, View } from "react-native";
+import { Image, Pressable, ScrollView, View } from "react-native";
+import { mediaUrl } from "@/config";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -40,6 +41,7 @@ export default function Laundry() {
       <ScrollView stickyHeaderIndices={[2]} contentContainerStyle={{ paddingBottom: 120 }}>
         <LinearGradient colors={[p.color, p.color2]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ height: 190 }}>
           <View style={{ position: "absolute", width: 200, height: 200, borderRadius: 100, backgroundColor: "rgba(255,255,255,.12)", top: -60, end: -40 }} />
+          {p.cover_url ? <Image source={{ uri: mediaUrl(p.cover_url)! }} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} resizeMode="cover" /> : null}
           <Header transparent />
         </LinearGradient>
         <View style={{ marginTop: -40, marginHorizontal: 16, backgroundColor: C.white, borderRadius: 24, padding: 16, ...shadow, shadowOpacity: 0.12 }}>

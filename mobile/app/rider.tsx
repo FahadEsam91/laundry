@@ -100,7 +100,7 @@ export default function Rider() {
     return (
       <View style={{ backgroundColor: C.white, borderRadius: 22, padding: 16, ...shadow }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-          <PartnerLogo p={{ color: j.partner_color, color2: j.partner_color, initials: j.partner_initials }} size={34} />
+          <PartnerLogo p={{ color: j.partner_color, color2: j.partner_color, initials: j.partner_initials, logo_url: j.partner_logo }} size={34} />
           <View style={{ flex: 1 }}>
             <Txt w="bold">{j.code}{j.express ? "  ⚡" : ""}</Txt>
             <Txt w="bold" size={11} color={C.brand}>{pickupLeg ? t("job_pickup") : t("job_delivery")}</Txt>

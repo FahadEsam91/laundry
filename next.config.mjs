@@ -18,7 +18,8 @@ const nextConfig = {
     return [
       { source: "/:path*", headers: security },
       { source: "/sw.js", headers: [{ key: "Cache-Control", value: "no-cache" }, { key: "Service-Worker-Allowed", value: "/" }] },
-      { source: "/api/:path*", headers: [{ key: "Cache-Control", value: "no-store" }] },
+      // API responses are never cached, except uploaded images (/api/media/:id), which never change
+      { source: "/api/:path((?!media/).*)", headers: [{ key: "Cache-Control", value: "no-store" }] },
     ];
   },
 };

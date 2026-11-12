@@ -50,7 +50,7 @@ export default function Orders() {
           renderItem={({ item: o }) => (
             <Pressable onPress={() => router.push(`/order/${o.id}`)} style={{ backgroundColor: C.white, borderRadius: 20, padding: 14, ...shadow }}>
               <View style={{ flexDirection: "row", gap: 12 }}>
-                <PartnerLogo p={{ color: o.partner_color, color2: o.partner_color2, initials: o.partner_initials }} size={48} />
+                <PartnerLogo p={{ color: o.partner_color, color2: o.partner_color2, initials: o.partner_initials, logo_url: o.partner_logo }} size={48} />
                 <View style={{ flex: 1, gap: 3 }}>
                   <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                     <Txt w="bold" numberOfLines={1} style={{ flex: 1 }}>{L({ name_ar: o.partner_ar, name_en: o.partner_en }, "name")}</Txt>

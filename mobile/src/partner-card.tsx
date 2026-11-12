@@ -1,4 +1,5 @@
-import { Pressable, View } from "react-native";
+import { Image, Pressable, View } from "react-native";
+import { mediaUrl } from "./config";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { useI18n } from "./i18n";
@@ -18,6 +19,7 @@ export function PartnerCard({ p, wide }: { p: any; wide?: boolean }) {
       <Pressable onPress={go} style={{ width: 260, backgroundColor: C.white, borderRadius: 20, overflow: "hidden", borderWidth: 1, borderColor: C.ink100, ...shadow }}>
         <LinearGradient colors={[p.color, p.color2]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ height: 96 }}>
           <View style={{ position: "absolute", width: 120, height: 120, borderRadius: 60, backgroundColor: "rgba(255,255,255,.14)", top: -40, end: -30 }} />
+          {p.cover_url ? <Image source={{ uri: mediaUrl(p.cover_url)! }} style={absFill} resizeMode="cover" /> : null}
           {!p.is_open && <View style={{ ...absFill, backgroundColor: "rgba(11,14,20,.5)", alignItems: "center", justifyContent: "center" }}><Txt w="bold" color="#fff">{t("closed")}</Txt></View>}
         </LinearGradient>
         <View style={{ flexDirection: "row", gap: 10, padding: 12 }}>

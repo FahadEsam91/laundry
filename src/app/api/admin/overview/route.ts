@@ -72,7 +72,7 @@ export const GET = handler(async (req: Request) => {
     start,
   );
   const topPartners = await all<any>(
-    `SELECT p.id,p.name_ar,p.name_en,p.color,p.color2,p.initials,p.rating,COUNT(o.id) orders,SUM(o.total) gmv
+    `SELECT p.id,p.name_ar,p.name_en,p.color,p.color2,p.initials,p.logo_url,p.rating,COUNT(o.id) orders,SUM(o.total) gmv
      FROM orders o JOIN partners p ON p.id=o.partner_id WHERE o.created_at>=? AND o.status!='cancelled' GROUP BY p.id ORDER BY gmv DESC LIMIT 6`,
     start,
   );

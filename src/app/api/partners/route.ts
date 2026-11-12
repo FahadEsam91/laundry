@@ -26,7 +26,7 @@ export const GET = handler(async (req: Request) => {
     params.push(like, like, like, like, like, like);
   }
   const rows = await all<any>(
-    `SELECT p.id,p.name_ar,p.name_en,p.desc_ar,p.desc_en,p.area_ar,p.area_en,p.lat,p.lng,p.rating,p.rating_count,p.eta_hours,p.express_hours,p.delivery_fee,p.min_order,p.color,p.color2,p.initials,p.is_open,p.featured,p.tags,
+    `SELECT p.id,p.name_ar,p.name_en,p.desc_ar,p.desc_en,p.area_ar,p.area_en,p.lat,p.lng,p.rating,p.rating_count,p.eta_hours,p.express_hours,p.delivery_fee,p.min_order,p.color,p.color2,p.initials,p.logo_url,p.cover_url,p.is_open,p.featured,p.tags,
       (SELECT GROUP_CONCAT(DISTINCT s.slug) FROM products x JOIN services s ON s.id=x.service_id WHERE x.partner_id=p.id AND x.active=1) AS services,
       (SELECT MIN(x.price) FROM products x WHERE x.partner_id=p.id AND x.active=1) AS from_price
      FROM partners p WHERE ${where.join(" AND ")}`,

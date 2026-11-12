@@ -177,7 +177,12 @@ export function Empty({ icon, title, sub, action }: { icon?: React.ReactNode; ti
   );
 }
 
-export function PartnerLogo({ p, size = 48, className }: { p: { color: string; color2: string; initials: string }; size?: number; className?: string }) {
+export function PartnerLogo({ p, size = 48, className }: { p: { color: string; color2: string; initials: string; logo_url?: string | null }; size?: number; className?: string }) {
+  if (p.logo_url)
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={p.logo_url} alt="" width={size} height={size} loading="lazy" className={cx("relative shrink-0 rounded-2xl bg-white object-cover shadow-sm", className)} style={{ width: size, height: size }} />
+    );
   return (
     <div
       className={cx("relative flex shrink-0 items-center justify-center overflow-hidden rounded-2xl font-extrabold tracking-tight text-white shadow-sm", className)}
@@ -192,7 +197,16 @@ export function PartnerLogo({ p, size = 48, className }: { p: { color: string; c
   );
 }
 
-export function PartnerCover({ p, className, children }: { p: { color: string; color2: string }; className?: string; children?: React.ReactNode }) {
+export function PartnerCover({ p, className, children }: { p: { color: string; color2: string; cover_url?: string | null }; className?: string; children?: React.ReactNode }) {
+  if (p.cover_url)
+    return (
+      <div className={cx("relative overflow-hidden bg-ink-100", className)}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={p.cover_url} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-black/10" />
+        {children}
+      </div>
+    );
   return (
     <div className={cx("relative overflow-hidden", className)} style={{ background: `linear-gradient(120deg, ${p.color} 0%, ${p.color2} 100%)` }}>
       <svg className="absolute inset-0 h-full w-full" preserveAspectRatio="xMidYMid slice" viewBox="0 0 400 200" aria-hidden>

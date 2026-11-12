@@ -43,7 +43,7 @@ export async function validatePromo(code: string, userId: number, subtotal: numb
 const LIST_SQL = `
 SELECT o.id,o.code,o.status,o.express,o.total,o.subtotal,o.payment_method,o.payment_status,o.items_count,o.created_at,o.updated_at,o.status_at,
   o.rating,o.address_text,o.pickup_slot,o.delivery_slot,o.partner_id,o.customer_id,o.driver_id,
-  p.name_ar AS partner_ar, p.name_en AS partner_en, p.color AS partner_color, p.color2 AS partner_color2, p.initials AS partner_initials, p.commission,
+  p.name_ar AS partner_ar, p.name_en AS partner_en, p.color AS partner_color, p.color2 AS partner_color2, p.initials AS partner_initials, p.logo_url AS partner_logo, p.commission,
   u.name AS customer_name, u.phone AS customer_phone,
   du.name AS driver_name
 FROM orders o
@@ -67,7 +67,7 @@ function lerp(a: number, b: number, t: number) {
 export async function orderDTO(id: number) {
   const o = await get<any>("SELECT * FROM orders WHERE id=?", id);
   if (!o) return null;
-  const partner = await get<any>("SELECT id,name_ar,name_en,area_ar,area_en,lat,lng,phone,color,color2,initials,rating,eta_hours,express_hours FROM partners WHERE id=?", o.partner_id);
+  const partner = await get<any>("SELECT id,name_ar,name_en,area_ar,area_en,lat,lng,phone,color,color2,initials,logo_url,cover_url,rating,eta_hours,express_hours FROM partners WHERE id=?", o.partner_id);
   const customer = await get<any>("SELECT id,name,phone FROM users WHERE id=?", o.customer_id);
   const driver = o.driver_id
     ? await get<any>("SELECT d.id,d.vehicle,d.plate,d.rating,d.lat,d.lng,u.name,u.phone FROM drivers d JOIN users u ON u.id=d.user_id WHERE d.id=?", o.driver_id)

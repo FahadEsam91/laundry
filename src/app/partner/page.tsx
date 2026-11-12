@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import useSWR from "swr";
-import { Check, X, Sparkles, PackageCheck, Truck, Zap, Clock, Bike, Inbox, Banknote, Star, ReceiptText, PackageOpen } from "lucide-react";
+import { ImagePlus, Check, X, Sparkles, PackageCheck, Truck, Zap, Clock, Bike, Inbox, Banknote, Star, ReceiptText, PackageOpen } from "lucide-react";
 import { useApp, useToast } from "@/components/providers";
 import { Kpi, PageHead } from "@/components/admin";
-import { Button, PartnerLogo, Skeleton, StatusBadge, Toggle, cx } from "@/components/ui";
+import { Button, PartnerLogo, Sheet, Skeleton, StatusBadge, Toggle, cx } from "@/components/ui";
+import { ImageUpload } from "@/components/image-upload";
 import { api, errText, timeAgo } from "@/lib/client";
 
 export default function PartnerBoard() {
@@ -70,10 +71,13 @@ export default function PartnerBoard() {
         title={L(p, "name")}
         sub={`${L(p, "area")} • ★ ${num(p.rating, 1)}`}
         actions={
-          <label className={cx("flex items-center gap-3 rounded-2xl px-4 py-2.5 text-sm font-bold", p.is_open ? "bg-emerald-50 text-emerald-800" : "bg-ink-100 text-ink-600")}>
-            <Toggle checked={!!p.is_open} onChange={toggleOpen} />
-            {p.is_open ? t("store_open") : t("store_closed")}
-          </label>
+          <div className="flex flex-wrap items-center gap-2">
+            <StorePhotos p={p} onSaved={() => mutate()} />
+            <label className={cx("flex items-center gap-3 rounded-2xl px-4 py-2.5 text-sm font-bold", p.is_open ? "bg-emerald-50 text-emerald-800" : "bg-ink-100 text-ink-600")}>
+              <Toggle checked={!!p.is_open} onChange={toggleOpen} />
+              {p.is_open ? t("store_open") : t("store_closed")}
+            </label>
+          </div>
         }
       />
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -148,5 +152,33 @@ function OrderCard({ o, actions, onAct, busy, fresh }: { o: any; actions: any[];
         </div>
       )}
     </div>
+  );
+}
+
+/** Laundry owners upload their own cover photo and logo (saved immediately). */
+function StorePhotos({ p, onSaved }: { p: any; onSaved: () => void }) {
+  const { t, lang } = useApp();
+  const toast = useToast();
+  const [open, setOpen] = useState(false);
+  const save = async (k: "logo_url" | "cover_url", v: string | null) => {
+    try {
+      await api("/api/partner/store", { method: "PATCH", body: { [k]: v } });
+      onSaved();
+      toast(t("saved"));
+    } catch (e) {
+      toast(errText(e, lang), "error");
+    }
+  };
+  return (
+    <>
+      <Button variant="outline" onClick={() => setOpen(true)}><ImagePlus className="h-4 w-4" /> {t("laundry_photos")}</Button>
+      <Sheet open={open} onClose={() => setOpen(false)} title={t("laundry_photos")}>
+        <p className="mb-4 text-xs text-ink-500">{t("laundry_photos_d")}</p>
+        <div className="space-y-5">
+          <ImageUpload kind="cover" label={t("cover_photo")} value={p.cover_url} onChange={(v) => save("cover_url", v)} />
+          <ImageUpload kind="logo" label={t("logo")} value={p.logo_url} onChange={(v) => save("logo_url", v)} />
+        </div>
+      </Sheet>
+    </>
   );
 }

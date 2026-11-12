@@ -2,6 +2,7 @@ import { all, get, run, tx, now, insert } from "@/lib/db";
 import { handler, ok, body, fail } from "@/lib/api";
 import { requirePermission } from "@/lib/auth";
 import { audit } from "@/lib/audit";
+import { imageUrl } from "@/lib/media";
 
 export const GET = handler(async () => {
   const me = await requirePermission("partners.view");
@@ -29,10 +30,10 @@ export const POST = handler(async (req: Request) => {
   const initials = String(b.name_en).split(/\s+/).map((w: string) => w[0]).join("").slice(0, 2).toUpperCase();
   const id = await tx(async () => {
     const id = await insert(
-      `INSERT INTO partners(name_ar,name_en,desc_ar,desc_en,area_ar,area_en,lat,lng,rating,rating_count,eta_hours,express_hours,delivery_fee,min_order,commission,color,color2,initials,is_open,status,featured,tags,phone,created_at)
-       VALUES(?,?,?,?,?,?,?,?,5,0,?,?,?,?,?,?,?,?,1,'active',0,'',?,?)`,
+      `INSERT INTO partners(name_ar,name_en,desc_ar,desc_en,area_ar,area_en,lat,lng,rating,rating_count,eta_hours,express_hours,delivery_fee,min_order,commission,color,color2,initials,is_open,status,featured,tags,phone,logo_url,cover_url,created_at)
+       VALUES(?,?,?,?,?,?,?,?,5,0,?,?,?,?,?,?,?,?,1,'active',0,'',?,?,?,?)`,
       b.name_ar, b.name_en, b.desc_ar || "", b.desc_en || "", b.area_ar || "", b.area_en || "", Number(b.lat) || 33.315, Number(b.lng) || 44.38,
-      Number(b.eta_hours) || 24, Number(b.express_hours) || 6, Number(b.delivery_fee) || 0, Number(b.min_order) || 0, Number(b.commission) || 15, c[0], c[1], initials || "NQ", b.phone || null, now(),
+      Number(b.eta_hours) || 24, Number(b.express_hours) || 6, Number(b.delivery_fee) || 0, Number(b.min_order) || 0, Number(b.commission) || 15, c[0], c[1], initials || "NQ", b.phone || null, imageUrl(b.logo_url) ?? null, imageUrl(b.cover_url) ?? null, now(),
     );
     // seed the price list from the platform's reference catalog (cheapest active offer per item)
     const template = await all<any>(

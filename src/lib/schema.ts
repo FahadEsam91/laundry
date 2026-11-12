@@ -272,6 +272,15 @@ const BASE = [
 )`,
   `CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_log(created_at)`,
   `CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_log(user_id)`,
+  // uploaded images (laundry logos and cover photos), stored in the database so backups include them
+  `CREATE TABLE IF NOT EXISTS media(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  mime TEXT NOT NULL,
+  data TEXT NOT NULL,
+  size INTEGER NOT NULL,
+  user_id INTEGER,
+  created_at TEXT NOT NULL
+)`,
 ];
 
 const pg = (s: string) =>
@@ -291,6 +300,8 @@ const COLUMNS: [table: string, column: string, def: string][] = [
   ["orders", "sub_free_delivery", "INTEGER NOT NULL DEFAULT 0"],
   ["users", "deleted_at", "TEXT"],
   ["users", "admin_role_id", "INTEGER"],
+  ["partners", "logo_url", "TEXT"],
+  ["partners", "cover_url", "TEXT"],
 ];
 
 export function MIGRATIONS(kind: "postgres" | "sqlite") {
