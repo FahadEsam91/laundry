@@ -194,7 +194,7 @@ export function Kpi({ label, value, delta, icon: I, invert, hint, accent = "#1A6
 
 export function Panel({ title, sub, action, children, className, bodyClass }: { title?: React.ReactNode; sub?: string; action?: React.ReactNode; children: React.ReactNode; className?: string; bodyClass?: string }) {
   return (
-    <section className={cx("rounded-2xl border border-ink-100 bg-white shadow-soft", className)}>
+    <section className={cx("min-w-0 rounded-2xl border border-ink-100 bg-white shadow-soft", className)}>
       {(title || action) && (
         <div className="flex items-center justify-between gap-3 px-5 pt-5">
           <div>

@@ -105,7 +105,7 @@ function Inner({ id }: { id: string }) {
   return (
     <div className="bg-ink-50 pb-10">
       {celebrate && (
-        <div className="fixed inset-0 z-[90] mx-auto flex max-w-[460px] flex-col items-center justify-center bg-brand-600 text-white">
+        <div className="fixed inset-0 z-[90] mx-auto flex max-w-[460px] flex-col lg:max-w-none items-center justify-center bg-brand-600 text-white">
           <div className="relative">
             <span className="absolute inset-0 animate-ping2 rounded-full bg-white/40" />
             <CheckCircle2 className="relative h-24 w-24" />

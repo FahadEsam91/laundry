@@ -1,6 +1,7 @@
 "use client";
 
 import { forwardRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import clsx from "clsx";
 import {
   Shirt, Wind, Sparkles, WashingMachine, Footprints, BedDouble, Layers, Blinds, Scissors, Star, X, Loader2, Package,
@@ -224,8 +225,10 @@ export function Sheet({ open, onClose, title, children, wide }: { open: boolean;
       document.body.style.overflow = "";
     };
   }, [open, onClose]);
-  if (!open) return null;
-  return (
+  if (!open || typeof document === "undefined") return null;
+  // Portal to <body>: an animated (transformed) page wrapper would otherwise become the containing block of this
+  // fixed overlay, so in Safari the dialog was centred inside the tall page, off-screen, leaving only a blurred page.
+  return createPortal(
     <div className="fixed inset-0 z-[80] flex items-end justify-center sm:items-center">
       <div className="absolute inset-0 bg-ink-950/50 backdrop-blur-[2px]" onClick={onClose} />
       <div
@@ -242,7 +245,8 @@ export function Sheet({ open, onClose, title, children, wide }: { open: boolean;
         </div>
         <div className="p-5">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
