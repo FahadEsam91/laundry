@@ -250,7 +250,7 @@ export function PartnerCard({ p, variant = "row" }: { p: any; variant?: "row" | 
     return (
       <Link href={`/laundry/${p.id}`} className={cx("block shrink-0 overflow-hidden transition hover:-translate-y-0.5 hover:shadow-lift", variant === "grid" ? "w-full" : "w-[270px] lg:w-auto", " rounded-2xl border border-ink-100 bg-white shadow-soft active:scale-[.99]")}>
         <PartnerCover p={p} className={variant === "grid" ? "h-36" : "h-28"}>
-          <div className="absolute bottom-2 start-2 flex gap-1">
+          <div className="absolute end-2 top-2 flex max-w-[85%] flex-wrap justify-end gap-1">
             <PartnerTags tags={p.tags} />
           </div>
           {!p.is_open && <div className="absolute inset-0 flex items-center justify-center bg-ink-950/50 text-sm font-bold text-white">{t("closed")}</div>}
