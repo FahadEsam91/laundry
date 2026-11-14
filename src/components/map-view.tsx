@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import "leaflet/dist/leaflet.css";
+import { addBasemap } from "./basemap";
 
 export type MapMarker = {
   id: string | number;
@@ -73,11 +74,7 @@ export function MapView({
         doubleClickZoom: interactive,
         touchZoom: interactive,
       }).setView(center || [33.315, 44.38], zoom);
-      // OpenStreetMap tiles (no key). For heavy traffic switch NEXT_PUBLIC_MAP_TILES to a keyed provider (MapTiler, Stadia…).
-      L.tileLayer(process.env.NEXT_PUBLIC_MAP_TILES || "https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        maxZoom: 19,
-        attribution: process.env.NEXT_PUBLIC_MAP_ATTRIBUTION || '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>',
-      }).addTo(map);
+      addBasemap(L, map);
       if (interactive) L.control.zoom({ position: "bottomright" }).addTo(map);
       map.on("click", (e: any) => pickRef.current?.(e.latlng.lat, e.latlng.lng));
       layerRef.current = L.layerGroup().addTo(map);

@@ -2,20 +2,24 @@
   "name": "nuqa-laundry",
   "version": "1.0.0",
   "private": true,
-  "description": "Nuqa — on-demand laundry delivery platform (customer app, admin dashboard, partner & driver apps)",
+  "description": "Nuqa \u2014 on-demand laundry delivery platform (customer app, admin dashboard, partner & driver apps)",
   "scripts": {
     "dev": "next dev -p 3000",
     "build": "next build",
     "start": "next start -p 3000",
-    "reset-db": "rm -f data/nuqa.db* && echo 'Database will be re-seeded on next start'"
+    "reset-db": "rm -f data/nuqa.db* && echo 'Database will be re-seeded on next start'",
+    "prebuild": "node scripts/copy-map-worker.mjs",
+    "predev": "node scripts/copy-map-worker.mjs"
   },
   "engines": {
     "node": ">=22.5"
   },
   "dependencies": {
+    "@maplibre/maplibre-gl-leaflet": "^0.1.4",
     "clsx": "^2.1.1",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.72.0",
+    "maplibre-gl": "^6.18.0",
     "next": "^15.5.29",
     "pg": "^8.23.1",
     "react": "^19.1.1",

@@ -2,13 +2,12 @@
 
 import { useEffect, useRef } from "react";
 import "leaflet/dist/leaflet.css";
+import { addBasemap } from "./basemap";
 
 export type LatLng = [number, number];
 export type MapZone = { id: number; name: string; polygon: LatLng[]; color: string; active: boolean };
 export type MapPartner = { id: number; name: string; lat: number; lng: number; color: string };
 
-const TILES = process.env.NEXT_PUBLIC_MAP_TILES || "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
-const ATTR = process.env.NEXT_PUBLIC_MAP_ATTRIBUTION || '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>';
 
 /**
  * Service-zone map. Shows every zone; while `draft` is set the map is in drawing mode:
@@ -50,7 +49,7 @@ export function ZoneMap({
       if (disposed || !el.current || map.current) return;
       L.current = Lf;
       const m = Lf.map(el.current, { zoomControl: false, doubleClickZoom: false }).setView(center, 12);
-      Lf.tileLayer(TILES, { maxZoom: 19, attribution: ATTR }).addTo(m);
+      addBasemap(Lf, m);
       Lf.control.zoom({ position: "bottomright" }).addTo(m);
       m.on("click", (e: any) => {
         const d = props.current.draft;
