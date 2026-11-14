@@ -50,7 +50,7 @@ The app signs in with a phone number and an SMS code. Give reviewers the fixed l
 `deploy/go-live.sh` prints (no SMS is sent to that number):
 
 > Sign in with phone **+9647000000001** and code **(the code go-live.sh printed)**.
-> Then pick a laundry, add items, choose an address on the map and place an order with “Cash”.
+> Then pick a laundry, add items, attach a photo of an item (required), choose an address on the map and place an order with “Cash”.
 > Account deletion: Account → Delete account.
 
 Contact: your name, phone and email.

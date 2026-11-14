@@ -40,6 +40,7 @@ const ERR: Record<string, [string, string]> = {
   account_suspended: ["الحساب موقوف", "Account suspended"],
   online_payments_disabled: ["الدفع الإلكتروني غير متاح حالياً", "Online payment isn't available yet"],
   invalid_image: ["الملف ليس صورة صالحة (JPG أو PNG)", "That file isn't a valid image (JPG or PNG)"],
+  photos_required: ["أضف صورة واحدة على الأقل لقطعك قبل تأكيد الطلب", "Add at least one photo of your items to place the order"],
   too_many_photos: ["عدد الصور أكبر من المسموح", "Too many photos"],
   image_too_large: ["الصورة كبيرة جداً", "The image is too large"],
   memberships_disabled: ["اشتراكات نقاء بلس غير متاحة حالياً", "Nuqa Plus is not available right now"],

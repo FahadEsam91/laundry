@@ -99,6 +99,7 @@ const ERR: Record<string, [string, string]> = {
   too_many_attempts: ["محاولات كثيرة، اطلب رمزاً جديداً", "Too many attempts, request a new code"],
   invalid_phone: ["رقم الهاتف غير صحيح", "Invalid phone number"],
   wallet_insufficient: ["رصيد المحفظة غير كافٍ", "Insufficient wallet balance"],
+  photos_required: ["أضف صورة واحدة على الأقل لقطعك قبل تأكيد الطلب", "Add at least one photo of your items to place the order"],
   memberships_disabled: ["اشتراكات نقاء بلس غير متاحة حالياً", "Nuqa Plus is not available right now"],
   online_payments_disabled: ["الدفع الإلكتروني غير متاح حالياً", "Online payment isn't available yet"],
   promo_invalid: ["كود الخصم غير صالح", "Invalid promo code"],

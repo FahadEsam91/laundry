@@ -91,6 +91,10 @@ export default function CartPage() {
     if (!me?.user) return router.push("/login?next=/cart");
     if (!addr) return setAddrOpen(true);
     if (pay === "wallet" && wallet < totals.total) return toast(t("wallet_insufficient"), "error");
+    if (settings.photos_required && !photos.length) {
+      document.getElementById("item-photos")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return toast(errText({ code: "photos_required" }, lang), "error");
+    }
     setPlacing(true);
     try {
       const r = await api("/api/orders", {
@@ -254,9 +258,12 @@ export default function CartPage() {
           <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("notes_ph")} className="min-h-[64px]" />
         </div>
         {me?.user && (
-          <div className="mt-4">
-            <div className="text-sm font-bold">{t("item_photos")}</div>
-            <p className="mb-2 mt-0.5 text-xs text-ink-500">{t("item_photos_hint")}</p>
+          <div id="item-photos" className="mt-4 scroll-mt-24">
+            <div className="flex items-center gap-2 text-sm font-bold">
+              {settings.photos_required ? t("item_photos_req") : t("item_photos")}
+              {settings.photos_required && <span className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-bold text-red-600">{t("required")}</span>}
+            </div>
+            <p className="mb-2 mt-0.5 text-xs text-ink-500">{settings.photos_required ? t("item_photos_req_hint") : t("item_photos_hint")}</p>
             <PhotosPicker value={photos} onChange={setPhotos} />
           </div>
         )}

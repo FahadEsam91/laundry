@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState, type ComponentRef } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -40,6 +40,8 @@ export default function Cart() {
   const [slot, setSlot] = useState("asap");
   const [notes, setNotes] = useState("");
   const [photos, setPhotos] = useState<string[]>([]);
+  const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
+  const photosY = useRef(0);
   const [promoText, setPromoText] = useState("");
   const [promo, setPromo] = useState<Promo | null>(null);
   const [pay, setPay] = useState<"cash" | "card_pos" | "card" | "wallet">("cash");
@@ -83,6 +85,10 @@ export default function Cart() {
   const place = async () => {
     if (!token) return router.push({ pathname: "/login", params: { next: "/cart" } });
     if (!addr) return router.push("/addresses/new");
+    if (settings.photos_required && !photos.length) {
+      scroll.current?.scrollTo({ y: Math.max(0, photosY.current - 80), animated: true });
+      return toast(errText({ code: "photos_required" }, lang, money), "error");
+    }
     setBusy("place");
     try {
       const r = await api("/api/orders", { body: { partner_id: p.id, items: lines.map((l) => ({ product_id: l.product_id, qty: l.qty })), express, address_id: addr.id, pickup_slot: slot, notes, photos, payment_method: pay, promo_code: promo?.code || null } });
@@ -104,7 +110,7 @@ export default function Cart() {
   return (
     <View style={{ flex: 1, backgroundColor: C.ink50 }}>
       <Header title={t("checkout")} />
-      <ScrollView contentContainerStyle={{ paddingBottom: 130 }} keyboardShouldPersistTaps="handled">
+      <ScrollView ref={scroll} contentContainerStyle={{ paddingBottom: 130 }} keyboardShouldPersistTaps="handled">
         <Section>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8 }}>
             <PartnerLogo p={p} size={40} />
@@ -186,10 +192,12 @@ export default function Cart() {
         </Section>
 
         {token ? (
-          <Section title={t("item_photos")}>
-            <Txt size={12} color={C.ink500} style={{ marginBottom: 10 }}>{t("item_photos_hint")}</Txt>
-            <PhotosPicker value={photos} onChange={setPhotos} />
-          </Section>
+          <View onLayout={(e) => (photosY.current = e.nativeEvent.layout.y)}>
+            <Section title={settings.photos_required ? `${t("item_photos_req")} • ${t("required")}` : t("item_photos")}>
+              <Txt size={12} color={C.ink500} style={{ marginBottom: 10 }}>{settings.photos_required ? t("item_photos_req_hint") : t("item_photos_hint")}</Txt>
+              <PhotosPicker value={photos} onChange={setPhotos} />
+            </Section>
+          </View>
         ) : null}
 
         <Section title={t("promo_code")}>

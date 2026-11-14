@@ -8,6 +8,8 @@ jqv(){ python3 -c "import json,sys;d=json.load(sys.stdin);print(eval('d'+sys.arg
 login(){ curl -s -c "$T/$1" -X POST "$BASE/api/auth/demo" -H "$J" -d "{\"role\":\"$1\"}" >/dev/null; }
 call(){ local who=$1 m=$2 path=$3 body=${4:-}; if [ -n "$body" ]; then curl -s -b "$T/$who" -X "$m" "$BASE$path" -H "$J" -d "$body"; else curl -s -b "$T/$who" -X "$m" "$BASE$path"; fi; }
 for r in customer admin partner driver; do login $r; done
+JPEG='data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAoHBwgHBgoICAgLCgoLDhgQDg0NDh0VFhEYIx8lJCIfIiEmKzcvJik0KSEiMEExNDk7Pj4+JS5ESUM8SDc9Pjv/2wBDAQoLCw4NDhwQEBw7KCIoOzs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozv/wAARCAAIAAgDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwCeiiivnT6Q/9k='
+photo(){ call customer POST /api/media "{\"kind\":\"order\",\"data\":\"$JPEG\"}" | jqv "['url']"; }  # a private item photo, required to order
 
 echo "health / catalog"
 [ "$(curl -s $BASE/api/health | jqv "['ok']")" = "True" ] && pass health || fail health "$(curl -s $BASE/api/health)"
@@ -16,8 +18,9 @@ n=$(curl -s "$BASE/api/partners" | jqv "['partners'].__len__()"); [ "${n:-0}" -g
 [ "$(curl -s "$BASE/api/partners/1" | jqv "['products'].__len__() > 10")" = "True" ] && pass "laundry menu" || fail menu "-"
 
 echo "orders"
+[ "$(call customer POST /api/orders '{"partner_id":1,"items":[{"product_id":1,"qty":8}],"address_id":1,"payment_method":"cash"}' | jqv "['error']")" = "photos_required" ] && pass "photo required to order" || fail "photos required" "-"
 call admin PATCH /api/admin/settings '{"autopilot":false}' >/dev/null
-r=$(call customer POST /api/orders '{"partner_id":1,"items":[{"product_id":1,"qty":8}],"address_id":1,"payment_method":"card_pos","promo_code":"nuqa20"}')
+r=$(call customer POST /api/orders '{"partner_id":1,"items":[{"product_id":1,"qty":8}],"address_id":1,"photos":["'"$(photo)"'"],"payment_method":"card_pos","promo_code":"nuqa20"}')
 ID=$(echo "$r" | jqv "['id']"); CODE=$(echo "$r" | jqv "['code']")
 [ -n "$ID" ] && pass "create order $CODE (promo case-insensitive)" || fail "create order" "$r"
 st(){ call customer GET /api/orders/$ID | jqv "['order']['status']"; }
@@ -30,7 +33,7 @@ for a in take out_for_delivery delivered; do call driver POST /api/driver/jobs/$
 [ "$(call customer GET /api/orders/$ID | jqv "['order']['payment_status']")" = "paid" ] && pass "card on delivery marked paid at delivery" || fail "card_pos paid" "-"
 [ "$(call customer POST /api/orders/$ID/rate '{"rating":5,"review":"ok"}' | jqv "['ok']")" = "True" ] && pass rating || fail rating "-"
 w1=$(call customer GET /api/me | jqv "['user']['wallet']")
-r=$(call customer POST /api/orders '{"partner_id":1,"items":[{"product_id":1,"qty":4}],"address_id":1,"payment_method":"wallet"}'); ID2=$(echo "$r" | jqv "['id']")
+r=$(call customer POST /api/orders '{"partner_id":1,"items":[{"product_id":1,"qty":4}],"address_id":1,"photos":["'"$(photo)"'"],"payment_method":"wallet"}'); ID2=$(echo "$r" | jqv "['id']")
 call customer POST /api/orders/$ID2/cancel '{}' >/dev/null
 w2=$(call customer GET /api/me | jqv "['user']['wallet']")
 [ "$w1" = "$w2" ] && pass "wallet pay + cancel refund ($w1)" || fail refund "$w1 -> $w2"
@@ -41,13 +44,13 @@ call admin PATCH /api/admin/settings '{"online_payments":false}' >/dev/null
 [ "$(call customer POST /api/orders '{"partner_id":1,"items":[{"product_id":1,"qty":8}],"address_id":1,"payment_method":"card"}' | jqv "['error']")" = "online_payments_disabled" ] && pass "online card refused while gateway off" || fail "online card gate" "-"
 [ "$(call customer POST /api/wallet '{"amount":5000}' | jqv "['error']")" = "online_payments_disabled" ] && pass "wallet top-up refused while gateway off" || fail "topup gate" "-"
 call admin PATCH /api/admin/settings '{"online_payments":true}' >/dev/null
-[ -n "$(call customer POST /api/orders '{"partner_id":1,"items":[{"product_id":1,"qty":8}],"address_id":1,"payment_method":"card"}' | jqv "['id']")" ] && pass "online card accepted when enabled" || fail "online card enabled" "-"
+[ -n "$(call customer POST /api/orders '{"partner_id":1,"items":[{"product_id":1,"qty":8}],"address_id":1,"photos":["'"$(photo)"'"],"payment_method":"card"}' | jqv "['id']")" ] && pass "online card accepted when enabled" || fail "online card enabled" "-"
 call admin PATCH /api/admin/settings '{"online_payments":false}' >/dev/null
 
 echo "membership"
 r=$(call customer POST /api/subscription '{"plan_id":2,"payment_method":"wallet"}')
 if [ -n "$(echo "$r" | jqv "['id']")" ]; then pass subscribe; elif [ "$(echo "$r" | jqv "['error']")" = "already_subscribed" ]; then pass "subscribe (already a member — duplicate correctly refused)"; else fail subscribe "$r"; fi
-r=$(call customer POST /api/orders '{"partner_id":1,"items":[{"product_id":1,"qty":10}],"address_id":1,"payment_method":"cash"}'); ID3=$(echo "$r" | jqv "['id']")
+r=$(call customer POST /api/orders '{"partner_id":1,"items":[{"product_id":1,"qty":10}],"address_id":1,"photos":["'"$(photo)"'"],"payment_method":"cash"}'); ID3=$(echo "$r" | jqv "['id']")
 sv=$(call customer GET /api/orders/$ID3 | jqv "['order']['sub_savings']"); [ "${sv%.*}" -gt 0 ] 2>/dev/null && pass "member savings applied ($sv)" || fail savings "$sv"
 
 echo "admin / analytics"

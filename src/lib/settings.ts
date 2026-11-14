@@ -15,6 +15,8 @@ export type Settings = {
   online_payments: boolean;
   /** Nuqa Plus memberships offered to customers (needs a way to pay: online payments or wallet balance). */
   memberships: boolean;
+  /** customers must attach at least one photo of their items to place an order */
+  photos_required: boolean;
   autopilot_seconds: number;
   support_phone: string;
   city_ar: string;
@@ -35,12 +37,13 @@ export async function getSettings(): Promise<Settings> {
   for (const r of rows) {
     if (r.key.startsWith("vapid_")) continue; // server-only secrets
     if (NUM.includes(r.key)) o[r.key] = Number(r.value);
-    else if (r.key === "autopilot" || r.key === "online_payments" || r.key === "memberships") o[r.key] = r.value === "1";
+    else if (r.key === "autopilot" || r.key === "online_payments" || r.key === "memberships" || r.key === "photos_required") o[r.key] = r.value === "1";
     else o[r.key] = r.value;
   }
   o.online_payments = !!o.online_payments; // off until a payment gateway is connected
   // Not set yet: on in the demo, off in production until customers have a way to pay for a membership.
   o.memberships = o.memberships === undefined ? DEMO : !!o.memberships;
+  o.photos_required = o.photos_required === undefined ? true : !!o.photos_required;
   cache = { at: Date.now(), v: o as Settings };
   return o as Settings;
 }
