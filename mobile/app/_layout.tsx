@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Platform } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -13,6 +13,7 @@ import { I18nProvider, useI18n } from "@/i18n";
 import { CartProvider } from "@/cart";
 import { ToastProvider } from "@/toast";
 import { registerForPush, routeForUrl } from "@/push";
+import { Intro } from "@/intro";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -20,6 +21,7 @@ function Boot() {
   const { ready, token } = useAuth();
   const { setSettings, lang } = useI18n();
   const router = useRouter();
+  const [intro, setIntro] = useState(true);
 
   useEffect(() => {
     api("/api/config").then((c) => setSettings({ ...c.settings, services: c.services })).catch(() => {});
@@ -50,7 +52,11 @@ function Boot() {
   return (
     <>
       <StatusBar style="dark" />
-      <Stack screenOptions={{ headerShown: false, animation: "slide_from_right", contentStyle: { backgroundColor: "#F7F8FA" } }} />
+      <Stack screenOptions={{ headerShown: false, animation: "slide_from_right", contentStyle: { backgroundColor: "#F7F8FA" } }}>
+        <Stack.Screen name="onboarding" options={{ animation: "fade" }} />
+        <Stack.Screen name="(customer)" options={{ animation: "fade" }} />
+      </Stack>
+      {intro ? <Intro onDone={() => setIntro(false)} /> : null}
     </>
   );
 }

@@ -6,6 +6,7 @@ import { useI18n } from "./i18n";
 import { useAuth } from "./auth";
 import { C, shadow } from "./theme";
 import { Icon, PartnerLogo, Txt } from "./ui";
+import { PressScale } from "./motion";
 
 export function PartnerCard({ p, wide }: { p: any; wide?: boolean }) {
   const { L, t, money, num } = useI18n();
@@ -16,7 +17,7 @@ export function PartnerCard({ p, wide }: { p: any; wide?: boolean }) {
   const go = () => router.push(`/laundry/${p.id}`);
   if (wide)
     return (
-      <Pressable onPress={go} style={{ width: 260, backgroundColor: C.white, borderRadius: 20, overflow: "hidden", borderWidth: 1, borderColor: C.ink100, ...shadow }}>
+      <PressScale onPress={go} style={{ width: 260, backgroundColor: C.white, borderRadius: 20, overflow: "hidden", borderWidth: 1, borderColor: C.ink100, ...shadow }}>
         <LinearGradient colors={[p.color, p.color2]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ height: 96 }}>
           <View style={{ position: "absolute", width: 120, height: 120, borderRadius: 60, backgroundColor: "rgba(255,255,255,.14)", top: -40, end: -30 }} />
           {p.cover_url ? <Image source={{ uri: mediaUrl(p.cover_url)! }} style={absFill} resizeMode="cover" /> : null}
@@ -32,7 +33,7 @@ export function PartnerCard({ p, wide }: { p: any; wide?: boolean }) {
             <Txt size={12} color={C.ink500}>{p.express_hours}–{p.eta_hours} {t("hour_short")} • {fee}</Txt>
           </View>
         </View>
-      </Pressable>
+      </PressScale>
     );
   return (
     <Pressable onPress={go} style={({ pressed }) => ({ flexDirection: "row", gap: 12, paddingHorizontal: 16, paddingVertical: 12, backgroundColor: pressed ? C.ink50 : C.white })}>

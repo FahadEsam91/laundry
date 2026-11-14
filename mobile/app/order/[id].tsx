@@ -11,6 +11,7 @@ import { useAuth } from "@/auth";
 import { useToast } from "@/toast";
 import { LiveMap, type Pin } from "@/map";
 import { PhotoGallery } from "@/photos";
+import { Celebration } from "@/motion";
 import { C, shadow } from "@/theme";
 import { Btn, Header, Icon, Input, Loading, PartnerLogo, Sheet, StatusBadge, Txt } from "@/ui";
 
@@ -42,12 +43,14 @@ export default function OrderScreen() {
     refreshInterval: (d: any) => (d?.order?.tracking ? 2000 : d && ["delivered", "cancelled"].includes(d.order.status) ? 0 : 4000),
   });
   const o = data?.order;
+  const loaded = !!o;
   useEffect(() => {
-    if (!celebrate) return;
+    // start the celebration only once the order is on screen, so the confetti isn't spent while loading
+    if (!celebrate || !loaded) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-    const tm = setTimeout(() => setCelebrate(false), 2200);
+    const tm = setTimeout(() => setCelebrate(false), 2800);
     return () => clearTimeout(tm);
-  }, [celebrate]);
+  }, [celebrate, loaded]);
   useEffect(() => {
     if (o?.status === "delivered" && !o.rating) setRateOpen(true);
   }, [o?.status, o?.rating]);
@@ -80,12 +83,8 @@ export default function OrderScreen() {
 
   if (celebrate)
     return (
-      <LinearGradient colors={[C.brand, C.brandDark]} style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        <View style={{ width: 110, height: 110, borderRadius: 55, backgroundColor: "rgba(255,255,255,.2)", alignItems: "center", justifyContent: "center" }}>
-          <Icon name="checkmark-circle" size={88} color="#fff" />
-        </View>
-        <Txt w="bold" size={24} color="#fff" style={{ marginTop: 20 }}>{t("order_placed")}</Txt>
-        <Txt color="rgba(255,255,255,.8)">{o.code}</Txt>
+      <LinearGradient colors={[C.brand, C.brandDark]} style={{ flex: 1, overflow: "hidden" }}>
+        <Celebration title={t("order_placed")} sub={o.code} />
       </LinearGradient>
     );
 

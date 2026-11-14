@@ -9,6 +9,7 @@ import { useI18n } from "@/i18n";
 import { useAuth } from "@/auth";
 import { useToast } from "@/toast";
 import { PartnerCard } from "@/partner-card";
+import { FadeIn, Float, PressScale } from "@/motion";
 import { C, shadow } from "@/theme";
 import { Icon, ServiceIcon, StatusBadge, Txt } from "@/ui";
 
@@ -36,7 +37,9 @@ export default function Home() {
       style={{ flex: 1, backgroundColor: C.white }}
       refreshControl={<RefreshControl refreshing={refreshing || (isValidating && !data)} onRefresh={async () => { setRefreshing(true); await mutate(); setRefreshing(false); }} />}
     >
-      <LinearGradient colors={[C.brand, C.brandDark]} style={{ paddingTop: insets.top + 10, paddingHorizontal: 16, paddingBottom: 56 }}>
+      <LinearGradient colors={[C.brand, C.brandDark]} style={{ paddingTop: insets.top + 10, paddingHorizontal: 16, paddingBottom: 56, overflow: "hidden" }}>
+        <Float distance={14} duration={3200} style={{ position: "absolute", top: -50, end: -40 }}><View style={{ width: 170, height: 170, borderRadius: 85, backgroundColor: "rgba(255,255,255,.10)" }} /></Float>
+        <Float distance={10} duration={2600} delay={600} style={{ position: "absolute", bottom: 10, start: -30 }}><View style={{ width: 90, height: 90, borderRadius: 45, backgroundColor: "rgba(255,255,255,.08)" }} /></Float>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
           <Pressable onPress={() => router.push(token ? "/addresses" : "/login")} style={{ flexDirection: "row", alignItems: "center", gap: 8, flex: 1 }}>
             <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(255,255,255,.18)", alignItems: "center", justifyContent: "center" }}><Icon name="location" size={20} color="#fff" /></View>
@@ -53,10 +56,12 @@ export default function Home() {
             {me?.unread > 0 && <View style={{ position: "absolute", top: 6, end: 6, minWidth: 16, height: 16, borderRadius: 8, backgroundColor: C.gold, alignItems: "center", justifyContent: "center" }}><Txt w="bold" size={10}>{me.unread}</Txt></View>}
           </Pressable>
         </View>
-        <Txt w="bold" size={24} color="#fff" style={{ marginTop: 20 }}>
-          {me?.user ? (lang === "ar" ? `أهلاً ${me.user.name.split(" ")[0]} 👋` : `Hi ${me.user.name.split(" ")[0]} 👋`) : t("login_title")}
-        </Txt>
-        <Txt color="rgba(255,255,255,.8)">{lang === "ar" ? "نستلم ونغسل ونكوي ونرجعها لك" : "We collect, clean & deliver"}</Txt>
+        <FadeIn delay={150}>
+          <Txt w="bold" size={24} color="#fff" style={{ marginTop: 20 }}>
+            {me?.user ? (lang === "ar" ? `أهلاً ${me.user.name.split(" ")[0]} 👋` : `Hi ${me.user.name.split(" ")[0]} 👋`) : t("login_title")}
+          </Txt>
+        </FadeIn>
+        <FadeIn delay={300}><Txt color="rgba(255,255,255,.8)">{lang === "ar" ? "نستلم ونغسل ونكوي ونرجعها لك" : "We collect, clean & deliver"}</Txt></FadeIn>
       </LinearGradient>
 
       <Pressable onPress={() => router.push("/search")} style={{ marginTop: -28, marginHorizontal: 16, height: 56, borderRadius: 18, backgroundColor: C.white, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16, ...shadow, shadowOpacity: 0.14 }}>
@@ -77,15 +82,15 @@ export default function Home() {
 
       <Txt w="bold" size={18} style={{ marginHorizontal: 16, marginTop: 22, marginBottom: 12 }}>{t("services")}</Txt>
       <View style={{ flexDirection: "row", flexWrap: "wrap", paddingHorizontal: 12 }}>
-        {services.map((s) => (
-          <Pressable key={s.slug} onPress={() => router.push({ pathname: "/search", params: { service: s.slug } })} style={{ width: "33.33%", padding: 4 }}>
-            <View style={{ alignItems: "center", backgroundColor: C.white, borderRadius: 18, borderWidth: 1, borderColor: C.ink100, paddingVertical: 14, ...shadow, shadowOpacity: 0.04 }}>
+        {services.map((s, i) => (
+          <FadeIn key={s.slug} delay={120 + i * 45} style={{ width: "33.33%", padding: 4 }}>
+            <PressScale onPress={() => router.push({ pathname: "/search", params: { service: s.slug } })} style={{ alignItems: "center", backgroundColor: C.white, borderRadius: 18, borderWidth: 1, borderColor: C.ink100, paddingVertical: 14, ...shadow, shadowOpacity: 0.04 }}>
               <View style={{ width: 48, height: 48, borderRadius: 16, backgroundColor: `${s.color}18`, alignItems: "center", justifyContent: "center", marginBottom: 8 }}>
                 <ServiceIcon name={s.icon} color={s.color} />
               </View>
               <Txt w="bold" size={12} center numberOfLines={2}>{L(s, "name")}</Txt>
-            </View>
-          </Pressable>
+            </PressScale>
+          </FadeIn>
         ))}
       </View>
 
@@ -144,7 +149,7 @@ export default function Home() {
         <>
           <Txt w="bold" size={18} style={{ marginHorizontal: 16, marginTop: 20 }}>{t("all_laundries")}</Txt>
           <Txt size={12} color={C.ink500} style={{ marginHorizontal: 16, marginBottom: 4 }}>{partners.length} {lang === "ar" ? "مغسلة متاحة" : "laundries available"}</Txt>
-          {partners.map((p) => <PartnerCard key={p.id} p={p} />)}
+          {partners.map((p, i) => <FadeIn key={p.id} delay={Math.min(i, 8) * 60}><PartnerCard p={p} /></FadeIn>)}
         </>
       ) : null}
       <View style={{ height: 24 }} />

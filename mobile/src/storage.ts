@@ -21,3 +21,6 @@ export const prefs = {
   },
   set: (k: string, v: unknown) => AsyncStorage.setItem(k, JSON.stringify(v)).catch(() => {}),
 };
+
+/** Set once the customer has seen the welcome slides. */
+export const ONBOARDED = "onboarded_v1";
