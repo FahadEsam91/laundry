@@ -59,20 +59,21 @@ Contact: your name, phone and email.
 **Apple “App Privacy”**: data linked to the user, used for App Functionality only, no tracking:
 - Contact info: Name, Phone number
 - Location: Precise location (delivery address and rider tracking)
-- User content: Customer support / order notes
+- User content: Photos (optional photos of the customer's items attached to an order), order notes
 - Identifiers: User ID; Device ID (push notification token)
 - Purchases: Purchase history (orders)
 
 **Google Play “Data safety”**: collected, not shared, encrypted in transit, users can request deletion (in-app):
 - Personal info: Name, Phone number, Address
 - Location: Precise location
+- Photos and videos: Photos (optional, attached to an order; only the laundry and support see them)
 - App activity: Other actions (orders)
 - Device or other IDs (push token)
 - Purpose: App functionality, Account management
 
 **Other Play declarations**: Ads: No · Content rating questionnaire: Utility/Shopping, no violence etc. ·
 Target audience: 18+ · News app: No · Government app: No · Financial features: None ·
-Location permission: foreground only (address and live tracking).
+Location permission: foreground only (address and live tracking). Camera/photos: only when the customer chooses to attach item photos.
 
 ### Assets (`store-assets/`)
 | Store | Files | Size |

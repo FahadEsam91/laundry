@@ -2,6 +2,7 @@ import { get } from "@/lib/db";
 import { handler, ok, fail } from "@/lib/api";
 import { requireUser } from "@/lib/auth";
 import { autopilotTick, listOrders } from "@/lib/orders";
+import { orderPhotos } from "@/lib/media";
 
 export const GET = handler(async (req: Request) => {
   const u = await requireUser("partner");
@@ -9,7 +10,9 @@ export const GET = handler(async (req: Request) => {
   if (!pid) return fail(403, "no_partner");
   await autopilotTick();
   const partner = await get<any>("SELECT * FROM partners WHERE id=?", pid);
-  const active = await listOrders("o.partner_id=? AND o.status NOT IN ('delivered','cancelled')", [pid], 200);
+  const active: any[] = await listOrders("o.partner_id=? AND o.status NOT IN ('delivered','cancelled')", [pid], 200);
+  const photos = await orderPhotos(active.map((o) => o.id));
+  for (const o of active) o.photos = photos[o.id] || [];
   const history = await listOrders("o.partner_id=? AND o.status IN ('delivered','cancelled')", [pid], 30);
   const since = new Date();
   since.setHours(0, 0, 0, 0);

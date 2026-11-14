@@ -53,6 +53,10 @@ const config: ExpoConfig = {
     "expo-secure-store",
     "expo-localization",
     ["expo-notifications", { icon: "./assets/notification-icon.png", color: isRider ? "#059669" : "#1A62EC" }],
+    ["expo-image-picker", {
+      photosPermission: "Nuqa lets you attach photos of your items (stains, damage) to an order for the laundry.",
+      cameraPermission: "Nuqa lets you photograph your items (stains, damage) and attach them to an order for the laundry.",
+    }],
     ["expo-location", { locationWhenInUsePermission: isRider ? "Nuqa Rider uses your location for navigation and live tracking." : "Nuqa uses your location to set your address." }],
     ["expo-splash-screen", { image: "./assets/splash-icon.png", imageWidth: 160, backgroundColor: isRider ? "#059669" : "#1A62EC" }],
   ],

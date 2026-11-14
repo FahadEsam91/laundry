@@ -7,6 +7,7 @@ import { Download, Search, Phone, MapPin, XCircle, ChevronsRight, UserCheck, Zap
 import { useApp, useCan, useToast } from "@/components/providers";
 import { PageHead, Pager, Panel, Table, Td } from "@/components/admin";
 import { Button, Input, PartnerLogo, Select, Sheet, Skeleton, StatusBadge, cx } from "@/components/ui";
+import { PhotoGallery } from "@/components/image-upload";
 import { MapView } from "@/components/map-view";
 import { NEXT_STATUS, ORDER_FLOW, STATUS_META } from "@/lib/constants";
 import { api, errText } from "@/lib/client";
@@ -80,6 +81,7 @@ function OrdersInner() {
               <tr key={o.id} onClick={() => setOpenId(o.id)} className="cursor-pointer hover:bg-brand-50/40">
                 <Td>
                   <span className="font-bold text-brand-700">{o.code}</span>
+                  {Number(o.photos_count) > 0 && <span className="ms-1.5 rounded-full bg-ink-100 px-1.5 py-0.5 text-[10px] font-bold text-ink-600" title={t("customer_photos")}>📷 {o.photos_count}</span>}
                   {o.express ? <Zap className="ms-1 inline h-3.5 w-3.5 fill-amber-400 text-amber-500" /> : null}
                 </Td>
                 <Td><div className="font-semibold">{o.customer_name}</div><div className="text-xs text-ink-400" dir="ltr">{o.customer_phone}</div></Td>
@@ -151,6 +153,12 @@ function OrderDrawer({ id, onClose, onChanged }: { id: number | null; onClose: (
             </div>
             <div className="flex items-start gap-2 text-sm text-ink-600"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-ink-400" /> {o.address_text}</div>
             {o.notes && <div className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">📝 {o.notes}</div>}
+            {o.photos?.length > 0 && (
+              <div>
+                <div className="mb-2 text-xs font-bold text-ink-600">📷 {t("customer_photos")} ({o.photos.length})</div>
+                <PhotoGallery photos={o.photos} size={84} />
+              </div>
+            )}
             <div className="rounded-2xl border border-ink-100">
               {o.items.map((i: any) => (
                 <div key={i.id} className="flex items-center gap-3 border-b border-ink-100 px-4 py-2.5 text-sm last:border-0">

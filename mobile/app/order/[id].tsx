@@ -10,6 +10,7 @@ import { useI18n, errText } from "@/i18n";
 import { useAuth } from "@/auth";
 import { useToast } from "@/toast";
 import { LiveMap, type Pin } from "@/map";
+import { PhotoGallery } from "@/photos";
 import { C, shadow } from "@/theme";
 import { Btn, Header, Icon, Input, Loading, PartnerLogo, Sheet, StatusBadge, Txt } from "@/ui";
 
@@ -181,6 +182,13 @@ export default function OrderScreen() {
             </View>
           </View>
           <View style={{ flexDirection: "row", gap: 6, marginTop: 10 }}><Icon name="location-outline" size={16} color={C.ink400} /><Txt size={12} color={C.ink700} style={{ flex: 1 }}>{o.address_text}</Txt></View>
+          {o.notes ? <View style={{ marginTop: 10, backgroundColor: "#FFFBEB", borderRadius: 12, padding: 10 }}><Txt size={12} color="#78350F">📝 {o.notes}</Txt></View> : null}
+          {o.photos?.length ? (
+            <View style={{ marginTop: 12 }}>
+              <Txt w="bold" size={12} color={C.ink700} style={{ marginBottom: 8 }}>📷 {t("your_photos")}</Txt>
+              <PhotoGallery photos={o.photos} size={60} />
+            </View>
+          ) : null}
         </View>
 
         <View style={{ marginTop: 12, marginHorizontal: 16, backgroundColor: C.white, borderRadius: 24, padding: 16, ...shadow }}>

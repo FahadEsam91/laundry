@@ -10,6 +10,7 @@ import { AddressIcon, AddressSheet, TopBar } from "@/components/customer";
 import { Button, Empty, Input, PartnerLogo, QtyStepper, Textarea, cx } from "@/components/ui";
 import { computeTotals, type Promo } from "@/lib/pricing";
 import { api, errText } from "@/lib/client";
+import { PhotosPicker } from "@/components/image-upload";
 
 function buildSlots(lang: "ar" | "en") {
   const out: { value: string; day: string; label: string }[] = [];
@@ -37,6 +38,7 @@ export default function CartPage() {
   const [day, setDay] = useState("asap");
   const [slot, setSlot] = useState("asap");
   const [notes, setNotes] = useState("");
+  const [photos, setPhotos] = useState<string[]>([]);
   const [promoInput, setPromoInput] = useState("");
   const [promo, setPromo] = useState<Promo | null>(null);
   const [promoBusy, setPromoBusy] = useState(false);
@@ -99,6 +101,7 @@ export default function CartPage() {
           address_id: addr.id,
           pickup_slot: slot,
           notes,
+          photos,
           payment_method: pay,
           promo_code: promo?.code || null,
         },
@@ -250,6 +253,13 @@ export default function CartPage() {
         <div className="mt-3">
           <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("notes_ph")} className="min-h-[64px]" />
         </div>
+        {me?.user && (
+          <div className="mt-4">
+            <div className="text-sm font-bold">{t("item_photos")}</div>
+            <p className="mb-2 mt-0.5 text-xs text-ink-500">{t("item_photos_hint")}</p>
+            <PhotosPicker value={photos} onChange={setPhotos} />
+          </div>
+        )}
       </section>
 
       {/* promo */}

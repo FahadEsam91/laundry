@@ -6,6 +6,7 @@ import useSWR from "swr";
 import { computeTotals, type Promo } from "@shared/pricing";
 import { api } from "@/api";
 import { useAuth } from "@/auth";
+import { PhotosPicker } from "@/photos";
 import { useCart } from "@/cart";
 import { useI18n, errText } from "@/i18n";
 import { useToast } from "@/toast";
@@ -38,6 +39,7 @@ export default function Cart() {
   const [day, setDay] = useState<number | "now">("now");
   const [slot, setSlot] = useState("asap");
   const [notes, setNotes] = useState("");
+  const [photos, setPhotos] = useState<string[]>([]);
   const [promoText, setPromoText] = useState("");
   const [promo, setPromo] = useState<Promo | null>(null);
   const [pay, setPay] = useState<"cash" | "card_pos" | "card" | "wallet">("cash");
@@ -83,7 +85,7 @@ export default function Cart() {
     if (!addr) return router.push("/addresses/new");
     setBusy("place");
     try {
-      const r = await api("/api/orders", { body: { partner_id: p.id, items: lines.map((l) => ({ product_id: l.product_id, qty: l.qty })), express, address_id: addr.id, pickup_slot: slot, notes, payment_method: pay, promo_code: promo?.code || null } });
+      const r = await api("/api/orders", { body: { partner_id: p.id, items: lines.map((l) => ({ product_id: l.product_id, qty: l.qty })), express, address_id: addr.id, pickup_slot: slot, notes, photos, payment_method: pay, promo_code: promo?.code || null } });
       cart.clear();
       refreshMe();
       router.replace({ pathname: "/order/[id]", params: { id: String(r.id), placed: "1" } });
@@ -182,6 +184,13 @@ export default function Cart() {
           )}
           <View style={{ marginTop: 12 }}><Input value={notes} onChangeText={setNotes} placeholder={t("notes_ph")} multiline style={{ height: 70, textAlignVertical: "top", paddingTop: 12 }} /></View>
         </Section>
+
+        {token ? (
+          <Section title={t("item_photos")}>
+            <Txt size={12} color={C.ink500} style={{ marginBottom: 10 }}>{t("item_photos_hint")}</Txt>
+            <PhotosPicker value={photos} onChange={setPhotos} />
+          </Section>
+        ) : null}
 
         <Section title={t("promo_code")}>
           {promo ? (

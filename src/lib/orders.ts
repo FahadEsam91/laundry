@@ -6,6 +6,7 @@ import { HttpError, type SessionUser } from "./auth";
 import { CANCELLABLE, NEXT_STATUS, ORDER_FLOW, PAY_ON_DELIVERY, STATUS_META, type OrderStatus } from "./constants";
 import { driverUser, onlineDriverUsers, partnerStaff, queuePush } from "./push";
 import { activeSubscription, refundFreeDelivery, renewSweep } from "./subscriptions";
+import { attachOrderPhotos, orderPhotos } from "./media";
 
 // ---------------------------------------------------------------- helpers
 
@@ -45,7 +46,8 @@ SELECT o.id,o.code,o.status,o.express,o.total,o.subtotal,o.payment_method,o.paym
   o.rating,o.address_text,o.pickup_slot,o.delivery_slot,o.partner_id,o.customer_id,o.driver_id,
   p.name_ar AS partner_ar, p.name_en AS partner_en, p.color AS partner_color, p.color2 AS partner_color2, p.initials AS partner_initials, p.logo_url AS partner_logo, p.commission,
   u.name AS customer_name, u.phone AS customer_phone,
-  du.name AS driver_name
+  du.name AS driver_name,
+  (SELECT COUNT(*) FROM media m WHERE m.order_id=o.id AND m.private=1) AS photos_count
 FROM orders o
 JOIN partners p ON p.id=o.partner_id
 JOIN users u ON u.id=o.customer_id
@@ -99,7 +101,8 @@ export async function orderDTO(id: number) {
       eta_min: Math.max(1, Math.ceil(((dist / 22) * 60 + 3) * (1 - ease))),
     };
   }
-  return { ...o, partner, customer, driver, items, events, tracking };
+  const photos = (await orderPhotos([o.id]))[o.id] || [];
+  return { ...o, partner, customer, driver, items, events, tracking, photos };
 }
 
 // ---------------------------------------------------------------- transitions
@@ -210,6 +213,8 @@ export type CreateOrderInput = {
   address_id: number;
   pickup_slot?: string; // 'asap' | ISO
   notes?: string;
+  /** private photos of the items, uploaded with kind "order" before placing the order */
+  photos?: string[];
   payment_method: "cash" | "card_pos" | "card" | "wallet";
   promo_code?: string | null;
 };
@@ -273,6 +278,7 @@ export async function createOrder(user: SessionUser, input: CreateOrderInput) {
       await run("INSERT INTO order_items(order_id,product_id,service_id,name_ar,name_en,service_ar,service_en,icon,qty,unit_price) VALUES(?,?,?,?,?,?,?,?,?,?)", id, p.id, p.service_id, p.name_ar, p.name_en, p.s_ar, p.s_en, p.icon, qty, p.price);
     }
     await run("INSERT INTO order_events(order_id,status,note,actor,created_at) VALUES(?,?,?,?,?)", id, "pending", null, "customer", ts);
+    await attachOrderPhotos(user.id, id, input.photos);
     if (input.payment_method === "wallet") await run("INSERT INTO wallet_tx(user_id,amount,kind,note,created_at) VALUES(?,?,?,?,?)", user.id, -totals.total, "payment", code, ts);
     if (promo) await run("UPDATE promos SET used=used+1 WHERE code=?", promo.code);
     if (member && totals.subFreeDelivery && member.plan.free_deliveries > 0) await run("UPDATE subscriptions SET deliveries_used=deliveries_used+1 WHERE id=?", member.sub.id);

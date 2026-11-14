@@ -11,6 +11,7 @@ import { MapView, type MapMarker } from "@/components/map-view";
 import { STATUS_META, ORDER_FLOW } from "@/lib/constants";
 import { api, errText } from "@/lib/client";
 import { PushPrompt } from "@/components/push";
+import { PhotoGallery } from "@/components/image-upload";
 
 const MACRO = [
   { key: "placed", icon: ReceiptText, ar: "تم الطلب", en: "Placed", upto: "accepted" },
@@ -260,6 +261,12 @@ function Inner({ id }: { id: string }) {
             <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-ink-400" /> {o.address_text}
           </div>
           {o.notes && <div className="mt-2 rounded-xl bg-amber-50 p-3 text-xs text-amber-900">📝 {o.notes}</div>}
+          {o.photos?.length > 0 && (
+            <div className="mt-3">
+              <div className="mb-2 text-xs font-bold text-ink-600">📷 {t("your_photos")}</div>
+              <PhotoGallery photos={o.photos} size={64} />
+            </div>
+          )}
         </div>
 
         {/* timeline */}

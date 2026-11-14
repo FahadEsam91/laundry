@@ -279,6 +279,8 @@ const BASE = [
   data TEXT NOT NULL,
   size INTEGER NOT NULL,
   user_id INTEGER,
+  private INTEGER NOT NULL DEFAULT 0,
+  order_id INTEGER,
   created_at TEXT NOT NULL
 )`,
 ];
@@ -302,6 +304,8 @@ const COLUMNS: [table: string, column: string, def: string][] = [
   ["users", "admin_role_id", "INTEGER"],
   ["partners", "logo_url", "TEXT"],
   ["partners", "cover_url", "TEXT"],
+  ["media", "private", "INTEGER NOT NULL DEFAULT 0"],
+  ["media", "order_id", "INTEGER"],
 ];
 
 export function MIGRATIONS(kind: "postgres" | "sqlite") {

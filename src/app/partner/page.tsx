@@ -6,7 +6,7 @@ import { ImagePlus, Check, X, Sparkles, PackageCheck, Truck, Zap, Clock, Bike, I
 import { useApp, useToast } from "@/components/providers";
 import { Kpi, PageHead } from "@/components/admin";
 import { Button, PartnerLogo, Sheet, Skeleton, StatusBadge, Toggle, cx } from "@/components/ui";
-import { ImageUpload } from "@/components/image-upload";
+import { ImageUpload, PhotoGallery } from "@/components/image-upload";
 import { api, errText, timeAgo } from "@/lib/client";
 
 export default function PartnerBoard() {
@@ -137,6 +137,12 @@ function OrderCard({ o, actions, onAct, busy, fresh }: { o: any; actions: any[];
         {items.length > 4 && <div className="text-xs text-ink-400">+{items.length - 4}</div>}
       </div>
       {data?.order?.notes && <div className="mt-2 rounded-lg bg-amber-50 p-2 text-xs text-amber-900">📝 {data.order.notes}</div>}
+      {(o.photos?.length || 0) > 0 && (
+        <div className="mt-2">
+          <div className="mb-1 text-[11px] font-bold text-ink-500">📷 {t("customer_photos")}</div>
+          <PhotoGallery photos={o.photos} size={52} />
+        </div>
+      )}
       <div className="mt-3 flex items-center justify-between">
         <StatusBadge status={o.status} />
         {o.driver_name && <span className="flex items-center gap-1 text-xs text-ink-500"><Bike className="h-3.5 w-3.5" />{o.driver_name}</span>}

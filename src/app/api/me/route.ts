@@ -42,6 +42,7 @@ export const DELETE = handler(async () => {
     await run("UPDATE orders SET address_text='—', address_lat=0, address_lng=0, notes=NULL, review=NULL WHERE customer_id=?", u.id);
     await run("UPDATE subscriptions SET status='cancelled', auto_renew=0, cancelled_at=? WHERE user_id=? AND status='active'", ts, u.id);
     for (const t of ["addresses", "favorites", "notifications", "push_subscriptions", "mobile_push_tokens"]) await run(`DELETE FROM ${t} WHERE user_id=?`, u.id);
+    await run("DELETE FROM media WHERE user_id=? AND private=1", u.id); // photos of their items
     await run("DELETE FROM otp_codes WHERE phone=?", u.phone);
     if (u.driver_id) await run("UPDATE drivers SET status='offline', plate=NULL, lat=NULL, lng=NULL WHERE id=?", u.driver_id);
   });

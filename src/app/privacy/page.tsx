@@ -10,6 +10,7 @@ const sections: Section[] = [
       ["بيانات الحساب: الاسم ورقم الهاتف (والبريد الإلكتروني إن أضفته).", "Account data: your name and phone number (and email if you add it)."],
       ["العناوين وموقع الاستلام الذي تحدده على الخريطة لتنفيذ الطلبات.", "Addresses and the pickup location you pin on the map, to fulfil orders."],
       ["سجل الطلبات والقطع والتقييمات والمدفوعات (نوع وسيلة الدفع فقط — لا نخزن أرقام البطاقات؛ تتم معالجتها لدى مزود الدفع).", "Order history, items, ratings and payments (payment method type only — card numbers are never stored by us; they are processed by our payment provider)."],
+      ["صور القطع التي ترفقها بطلبك (اختياري). لا يراها إلا أنت والمغسلة المنفذة للطلب وفريق دعم نقاء، وتُحذف عند حذف حسابك.", "Photos of your items that you attach to an order (optional). Only you, the laundry handling the order and Nuqa support can see them; they are deleted when you delete your account."],
       ["معرّفات الأجهزة لإرسال الإشعارات إذا فعّلتها.", "Device push tokens if you enable notifications."],
       ["للمندوبين: الموقع أثناء العمل لعرض التتبع المباشر للزبون.", "For riders: location while online, to show live tracking to customers."],
     ],
