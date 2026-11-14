@@ -272,6 +272,21 @@ const BASE = [
 )`,
   `CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_log(created_at)`,
   `CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_log(user_id)`,
+  // service zones drawn by the operator; when at least one exists, orders are only accepted inside an active zone
+  `CREATE TABLE IF NOT EXISTS zones(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name_ar TEXT NOT NULL, name_en TEXT NOT NULL,
+  polygon TEXT NOT NULL,
+  color TEXT NOT NULL DEFAULT '#1A62EC',
+  active INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+)`,
+  `CREATE TABLE IF NOT EXISTS partner_zones(
+  partner_id INTEGER NOT NULL REFERENCES partners(id) ON DELETE CASCADE,
+  zone_id INTEGER NOT NULL REFERENCES zones(id) ON DELETE CASCADE,
+  PRIMARY KEY(partner_id, zone_id)
+)`,
+  `CREATE INDEX IF NOT EXISTS idx_partner_zones_zone ON partner_zones(zone_id)`,
   // uploaded images (laundry logos and cover photos), stored in the database so backups include them
   `CREATE TABLE IF NOT EXISTS media(
   id INTEGER PRIMARY KEY AUTOINCREMENT,

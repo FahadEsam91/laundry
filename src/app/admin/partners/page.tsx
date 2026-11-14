@@ -19,6 +19,9 @@ export default function PartnersPage() {
   const manage = can("partners.manage");
   const { data, mutate } = useSWR("/api/admin/partners");
   const [edit, setEdit] = useState<any>(null);
+  const canZones = useCan()("zones.manage");
+  const { data: zoneData } = useSWR(canZones ? "/api/admin/zones" : null);
+  const allZones: any[] = zoneData?.zones || [];
   const [prices, setPrices] = useState<any>(null);
   const [busy, setBusy] = useState(false);
   const list: any[] = data?.partners || [];
@@ -32,7 +35,7 @@ export default function PartnersPage() {
     try {
       if (edit.id) {
         const { id, services: _s, ...rest } = edit;
-        const allowed = ["name_ar", "name_en", "area_ar", "area_en", "desc_ar", "desc_en", "phone", "delivery_fee", "min_order", "commission", "eta_hours", "express_hours", "lat", "lng", "tags", "logo_url", "cover_url"];
+        const allowed = ["name_ar", "name_en", "area_ar", "area_en", "desc_ar", "desc_en", "phone", "delivery_fee", "min_order", "commission", "eta_hours", "express_hours", "lat", "lng", "tags", "logo_url", "cover_url", "zone_ids"];
         await api(`/api/admin/partners/${id}`, { method: "PATCH", body: Object.fromEntries(Object.entries(rest).filter(([k]) => allowed.includes(k))) });
       } else await api("/api/admin/partners", { body: edit });
       toast(t("saved"));
@@ -103,6 +106,22 @@ export default function PartnersPage() {
                 <ImageUpload kind="logo" label={t("logo")} value={edit.logo_url} onChange={(v) => setEdit({ ...edit, logo_url: v })} />
               </div>
             </div>
+            {allZones.length > 0 && (
+              <div className="md:col-span-2">
+                <div className="mb-2 text-xs font-semibold text-ink-600">{t("serves_zones")}</div>
+                <div className="flex flex-wrap gap-2">
+                  {allZones.map((z) => {
+                    const ids: number[] = edit.zone_ids || [];
+                    const on = ids.includes(z.id);
+                    return (
+                      <button key={z.id} onClick={() => setEdit({ ...edit, zone_ids: on ? ids.filter((x) => x !== z.id) : [...ids, z.id] })} className={cx("flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold", on ? "border-transparent text-white" : "border-ink-200 text-ink-700")} style={on ? { background: z.color } : undefined}>
+                        <span className="h-2 w-2 rounded-full" style={{ background: on ? "#fff" : z.color }} /> {L(z, "name")}{!z.active && ` (${t("closed")})`}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             {F("name_ar", t("name_ar"))}
             {F("name_en", t("name_en"))}
             {F("area_ar", `${t("area")} (AR)`)}

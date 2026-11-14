@@ -3,6 +3,7 @@ import { handler, ok, body, fail } from "@/lib/api";
 import { requirePermission } from "@/lib/auth";
 import { audit } from "@/lib/audit";
 import { imageUrl } from "@/lib/media";
+import { getZones, inPolygon, setPartnerZones } from "@/lib/zones";
 
 export const GET = handler(async () => {
   const me = await requirePermission("partners.view");
@@ -12,10 +13,12 @@ export const GET = handler(async () => {
       (SELECT COUNT(*) FROM orders o WHERE o.partner_id=p.id AND o.status!='cancelled' AND o.created_at>=?) orders_30,
       (SELECT COALESCE(SUM(o.total),0) FROM orders o WHERE o.partner_id=p.id AND o.status!='cancelled' AND o.created_at>=?) gmv_30,
       (SELECT COUNT(*) FROM orders o WHERE o.partner_id=p.id AND o.status NOT IN ('delivered','cancelled')) active_orders,
-      (SELECT COUNT(*) FROM products x WHERE x.partner_id=p.id) products
+      (SELECT COUNT(*) FROM products x WHERE x.partner_id=p.id) products,
+      (SELECT GROUP_CONCAT(DISTINCT pz.zone_id) FROM partner_zones pz WHERE pz.partner_id=p.id) zone_ids
      FROM partners p ORDER BY p.status='pending' DESC, gmv_30 DESC`,
     since, since,
   );
+  for (const p of partners as any[]) p.zone_ids = p.zone_ids ? String(p.zone_ids).split(",").map(Number) : [];
   return ok({ partners });
 });
 
@@ -41,6 +44,9 @@ export const POST = handler(async (req: Request) => {
        WHERE s.slug IN (${services.map(() => "?").join(",")}) GROUP BY p.service_id,p.name_en`,
       ...services,
     );
+    // zones it serves: as chosen, or every zone its location falls in
+    const lat = Number(b.lat) || 33.315, lng = Number(b.lng) || 44.38;
+    await setPartnerZones(id, Array.isArray(b.zone_ids) ? b.zone_ids : (await getZones()).filter((z) => inPolygon([lat, lng], z.polygon)).map((z) => z.id));
     for (const t of template) await insert("INSERT INTO products(partner_id,service_id,name_ar,name_en,icon,price,unit,popular) VALUES(?,?,?,?,?,?,?,?)", id, t.service_id, t.name_ar, t.name_en, t.icon, t.price, t.unit, t.popular);
     return id;
   });

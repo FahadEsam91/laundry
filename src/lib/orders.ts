@@ -7,6 +7,7 @@ import { CANCELLABLE, NEXT_STATUS, ORDER_FLOW, PAY_ON_DELIVERY, STATUS_META, typ
 import { driverUser, onlineDriverUsers, partnerStaff, queuePush } from "./push";
 import { activeSubscription, refundFreeDelivery, renewSweep } from "./subscriptions";
 import { attachOrderPhotos, orderPhotos } from "./media";
+import { assertDeliverable } from "./zones";
 
 // ---------------------------------------------------------------- helpers
 
@@ -245,6 +246,7 @@ export async function createOrder(user: SessionUser, input: CreateOrderInput) {
   const promo = input.promo_code ? await validatePromo(input.promo_code, user.id, subtotal) : null;
   const member = await activeSubscription(user.id);
   const totals = computeTotals(subtotal, partner.delivery_fee, !!input.express, s, promo, member?.benefits);
+  await assertDeliverable(addr.lat, addr.lng, partner.id);
   if (s.photos_required && (!Array.isArray(input.photos) || !input.photos.length)) throw new HttpError(400, "photos_required");
 
   return await tx(async () => {

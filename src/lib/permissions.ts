@@ -12,6 +12,7 @@ export const PERMISSION_GROUPS = [
     ],
   },
   { key: "partners", ar: "المغاسل", en: "Laundries", perms: [["partners.view", "عرض المغاسل", "View laundries"], ["partners.manage", "إضافة وتعديل وتفعيل المغاسل والأسعار", "Add, edit, approve laundries & prices"]] },
+  { key: "zones", ar: "مناطق التغطية", en: "Service zones", perms: [["zones.manage", "رسم وفتح وإغلاق مناطق التغطية", "Draw, open & close service zones"]] },
   { key: "drivers", ar: "المندوبين", en: "Riders", perms: [["drivers.view", "عرض المندوبين", "View riders"], ["drivers.manage", "إضافة وإيقاف المندوبين", "Add & suspend riders"]] },
   {
     key: "customers", ar: "الزبائن", en: "Customers",
@@ -42,7 +43,7 @@ export const SYSTEM_ROLES: { key: string; ar: string; en: string; desc_ar: strin
   { key: "super_admin", ar: "مدير عام", en: "Super admin", desc_ar: "صلاحيات كاملة على كل شيء", desc_en: "Full access to everything", perms: "*" },
   {
     key: "operations", ar: "العمليات", en: "Operations", desc_ar: "إدارة الطلبات والمغاسل والمندوبين يومياً", desc_en: "Runs orders, laundries and riders day to day",
-    perms: ["dashboard.view", "orders.view", "orders.manage", "orders.cancel", "orders.export", "partners.view", "partners.manage", "drivers.view", "drivers.manage", "customers.view", "catalog.manage"],
+    perms: ["dashboard.view", "orders.view", "orders.manage", "orders.cancel", "orders.export", "partners.view", "partners.manage", "zones.manage", "drivers.view", "drivers.manage", "customers.view", "catalog.manage"],
   },
   {
     key: "support", ar: "خدمة العملاء", en: "Customer support", desc_ar: "متابعة الطلبات ومساعدة الزبائن", desc_en: "Helps customers and follows up orders",
@@ -63,6 +64,7 @@ export const PAGE_PERMISSION: Record<string, Permission> = {
   "/admin": "dashboard.view",
   "/admin/orders": "orders.view",
   "/admin/partners": "partners.view",
+  "/admin/zones": "zones.manage",
   "/admin/drivers": "drivers.view",
   "/admin/customers": "customers.view",
   "/admin/catalog": "catalog.manage",

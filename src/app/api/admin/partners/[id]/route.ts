@@ -3,6 +3,7 @@ import { handler, ok, body, fail } from "@/lib/api";
 import { requirePermission } from "@/lib/auth";
 import { audit } from "@/lib/audit";
 import { imageUrl } from "@/lib/media";
+import { setPartnerZones } from "@/lib/zones";
 
 const FIELDS = ["name_ar", "name_en", "desc_ar", "desc_en", "area_ar", "area_en", "lat", "lng", "eta_hours", "express_hours", "delivery_fee", "min_order", "commission", "is_open", "status", "featured", "tags", "phone"];
 
@@ -12,8 +13,9 @@ export const PATCH = handler(async (req: Request, { params }: { params: Promise<
   if (!await get("SELECT 1 FROM partners WHERE id=?", id)) return fail(404, "not_found");
   const b = await body(req);
   for (const k of ["logo_url", "cover_url"]) { const v = imageUrl(b[k]); if (v !== undefined) await run(`UPDATE partners SET ${k}=? WHERE id=?`, v, id); }
+  await setPartnerZones(id, b.zone_ids);
   for (const k of FIELDS) if (b[k] !== undefined) await run(`UPDATE partners SET ${k}=? WHERE id=?`, typeof b[k] === "boolean" ? (b[k] ? 1 : 0) : b[k], id);
   if (b.status === "active") await run("UPDATE partners SET is_open=1 WHERE id=? AND is_open=0 AND status='active'", id);
-  await audit(me, b.status && Object.keys(b).length <= 2 ? `partner.${b.status}` : "partner.update", "partner", id, Object.fromEntries([...FIELDS, "logo_url", "cover_url"].filter((k) => b[k] !== undefined).map((k) => [k, b[k]])));
+  await audit(me, b.status && Object.keys(b).length <= 2 ? `partner.${b.status}` : "partner.update", "partner", id, Object.fromEntries([...FIELDS, "logo_url", "cover_url", "zone_ids"].filter((k) => b[k] !== undefined).map((k) => [k, b[k]])));
   return ok({ ok: true });
 });

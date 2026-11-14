@@ -2,6 +2,7 @@ import { all, get } from "@/lib/db";
 import { handler, ok } from "@/lib/api";
 import { currentUser } from "@/lib/auth";
 import { haversineKm } from "@/lib/orders";
+import { coverageAt, zoneDTO } from "@/lib/zones";
 
 export const GET = handler(async (req: Request) => {
   const url = new URL(req.url);
@@ -16,6 +17,13 @@ export const GET = handler(async (req: Request) => {
   }
   const where = ["p.status='active'"];
   const params: any[] = [];
+  // service zones: with a known location, only laundries that serve its zone are listed
+  const cov = lat ? await coverageAt(lat, lng) : null;
+  if (cov && cov.status !== "open") {
+    if (cov.status !== "ok") return ok({ partners: [], coverage: { status: cov.status, zone: zoneDTO(cov.zone) } });
+    where.push("EXISTS(SELECT 1 FROM partner_zones pz WHERE pz.partner_id=p.id AND pz.zone_id=?)");
+    params.push(cov.zone.id);
+  }
   if (service) {
     where.push("EXISTS(SELECT 1 FROM products x JOIN services s ON s.id=x.service_id WHERE x.partner_id=p.id AND s.slug=? AND x.active=1)");
     params.push(service);
@@ -34,5 +42,5 @@ export const GET = handler(async (req: Request) => {
   );
   for (const r of rows) r.distance_km = lat ? Math.round(haversineKm(lat, lng, r.lat, r.lng) * 10) / 10 : null;
   rows.sort((a, b) => b.is_open - a.is_open || b.featured - a.featured || b.rating - a.rating);
-  return ok({ partners: rows });
+  return ok({ partners: rows, coverage: { status: cov?.status ?? "unknown", zone: zoneDTO(cov?.zone ?? null) } });
 });

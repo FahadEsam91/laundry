@@ -116,9 +116,20 @@ export default function Home() {
       </ScrollView>
 
       {data && partners.length === 0 ? (
-        <View style={{ margin: 16, padding: 28, borderRadius: 24, borderWidth: 1, borderStyle: "dashed", borderColor: C.ink200, backgroundColor: "#fff" }}>
-          <Txt w="semibold" size={14} color={C.ink500} style={{ textAlign: "center" }}>{t("no_laundries_yet")}</Txt>
-        </View>
+        ["outside", "paused"].includes(data.coverage?.status) ? (
+          <LinearGradient colors={["#0B0E14", "#19398A"]} style={{ margin: 16, padding: 24, borderRadius: 24, alignItems: "center", gap: 8 }}>
+            <View style={{ width: 52, height: 52, borderRadius: 18, backgroundColor: "rgba(255,255,255,.1)", alignItems: "center", justifyContent: "center" }}><Icon name="location" size={26} color="#fff" /></View>
+            <Txt w="bold" size={17} color="#fff" style={{ textAlign: "center" }}>{data.coverage.status === "paused" ? t("zone_paused_title") : t("outside_zone_title")}</Txt>
+            <Txt size={13} color="rgba(255,255,255,.75)" style={{ textAlign: "center" }}>{data.coverage.status === "paused" ? t("zone_paused_body") : t("outside_zone_body")}</Txt>
+            <Pressable onPress={() => router.push("/addresses")} style={{ marginTop: 8, backgroundColor: "#fff", borderRadius: 14, paddingHorizontal: 18, paddingVertical: 10 }}>
+              <Txt w="bold" size={13}>{t("change_address")}</Txt>
+            </Pressable>
+          </LinearGradient>
+        ) : (
+          <View style={{ margin: 16, padding: 28, borderRadius: 24, borderWidth: 1, borderStyle: "dashed", borderColor: C.ink200, backgroundColor: "#fff" }}>
+            <Txt w="semibold" size={14} color={C.ink500} style={{ textAlign: "center" }}>{t("no_laundries_yet")}</Txt>
+          </View>
+        )
       ) : null}
       {partners.some((p) => p.featured) ? (
         <>

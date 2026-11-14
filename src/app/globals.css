@@ -13,3 +13,16 @@ body { @apply bg-ink-50 text-ink-900 antialiased; font-feature-settings: "ss01";
 @keyframes pulse2 { 0% { transform: scale(1); opacity: .45 } 100% { transform: scale(2.2); opacity: 0 } }
 .pb-safe { padding-bottom: max(env(safe-area-inset-bottom), 0px); }
 .tabular { font-variant-numeric: tabular-nums; }
+
+/* service-zone names drawn on the admin map */
+.leaflet-tooltip.zone-label {
+  background: rgba(255, 255, 255, 0.92);
+  border: 0;
+  border-radius: 999px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  padding: 2px 10px;
+  font-family: inherit;
+  font-size: 12px;
+  color: #0b0e14;
+}
+.leaflet-tooltip.zone-label::before { display: none; }

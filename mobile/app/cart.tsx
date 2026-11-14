@@ -7,6 +7,7 @@ import { computeTotals, type Promo } from "@shared/pricing";
 import { api } from "@/api";
 import { useAuth } from "@/auth";
 import { PhotosPicker } from "@/photos";
+import { ZoneBadge } from "@/zone";
 import { useCart } from "@/cart";
 import { useI18n, errText } from "@/i18n";
 import { useToast } from "@/toast";
@@ -185,7 +186,9 @@ export default function Cart() {
               <View style={{ flex: 1 }}><Txt w="bold">{t(`label_${addr.label}` as any)}</Txt><Txt size={12} color={C.ink500} numberOfLines={1}>{[addr.area, addr.street, addr.building].filter(Boolean).join("، ")}</Txt></View>
               <Txt w="semibold" color={C.brand}>{t("change")}</Txt>
             </Pressable>
-          ) : (
+          ) : null}
+          {addr ? <ZoneBadge lat={addr.lat} lng={addr.lng} style={{ marginTop: 12 }} /> : null}
+          {addr ? null : (
             <Btn title={t("add_address")} variant="outline" icon="location-outline" onPress={() => (token ? router.push("/addresses/new") : router.push({ pathname: "/login", params: { next: "/cart" } }))} />
           )}
           <View style={{ marginTop: 12 }}><Input value={notes} onChangeText={setNotes} placeholder={t("notes_ph")} multiline style={{ height: 70, textAlignVertical: "top", paddingTop: 12 }} /></View>

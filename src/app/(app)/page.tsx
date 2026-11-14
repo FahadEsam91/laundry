@@ -222,7 +222,16 @@ export default function HomePage() {
 
       {data && partners.length === 0 && (
         <section className="px-4 pt-6 lg:px-0 lg:pt-12">
-          <div className="rounded-3xl border border-dashed border-ink-200 bg-white p-8 text-center text-sm font-semibold text-ink-500">{t("no_laundries_yet")}</div>
+          {["outside", "paused"].includes(data.coverage?.status) ? (
+            <div className="rounded-3xl bg-gradient-to-br from-ink-900 to-brand-900 p-6 text-center text-white lg:p-10">
+              <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10"><MapPin className="h-7 w-7" /></span>
+              <h3 className="mt-4 text-lg font-extrabold lg:text-2xl">{data.coverage.status === "paused" ? t("zone_paused_title") : t("outside_zone_title")}</h3>
+              <p className="mx-auto mt-1 max-w-md text-sm text-white/70">{data.coverage.status === "paused" ? t("zone_paused_body") : t("outside_zone_body")}</p>
+              <Link href="/account/addresses" className="mt-5 inline-flex rounded-xl bg-white px-5 py-2.5 text-sm font-bold text-ink-900">{t("change_address")}</Link>
+            </div>
+          ) : (
+            <div className="rounded-3xl border border-dashed border-ink-200 bg-white p-8 text-center text-sm font-semibold text-ink-500">{t("no_laundries_yet")}</div>
+          )}
         </section>
       )}
 

@@ -37,7 +37,7 @@ function toPg(sql: string) {
   let i = 0;
   return sql
     .replace(/\?/g, () => `$${++i}`)
-    .replace(/\bGROUP_CONCAT\(DISTINCT ([^)]+)\)/gi, "string_agg(DISTINCT $1, ',')")
+    .replace(/\bGROUP_CONCAT\(DISTINCT ([^)]+)\)/gi, "string_agg(DISTINCT CAST($1 AS TEXT), ',')")
     .replace(/\sLIKE\s/g, " ILIKE ");
 }
 

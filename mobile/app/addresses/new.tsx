@@ -7,6 +7,7 @@ import { useAuth } from "@/auth";
 import { useI18n, errText } from "@/i18n";
 import { useToast } from "@/toast";
 import { LiveMap } from "@/map";
+import { ZoneBadge } from "@/zone";
 import { C } from "@/theme";
 import { Btn, Header, Icon, Input, Txt } from "@/ui";
 
@@ -60,6 +61,7 @@ export default function NewAddress() {
             <Icon name="locate" size={16} color={C.brand} /><Txt w="bold" size={12}>{t("use_my_location")}</Txt>
           </Pressable>
         </View>
+        <ZoneBadge lat={pos[0]} lng={pos[1]} style={{ marginHorizontal: 16, marginTop: 12 }} />
         <View style={{ padding: 16, gap: 12 }}>
           <Txt size={12} color={C.ink500}>{t("pin_location")}</Txt>
           <View style={{ flexDirection: "row", backgroundColor: C.ink100, borderRadius: 14, padding: 4 }}>

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import { ShoppingBasket, Zap, Clock, MapPin, Banknote, CreditCard, Wallet, TicketPercent, Check, Plus, Trash2, Truck, ChevronDown, Lock, Crown } from "lucide-react";
 import { useApp, useCart, useToast } from "@/components/providers";
-import { AddressIcon, AddressSheet, TopBar } from "@/components/customer";
+import { AddressIcon, AddressSheet, TopBar, ZoneBadge } from "@/components/customer";
 import { Button, Empty, Input, PartnerLogo, QtyStepper, Textarea, cx } from "@/components/ui";
 import { computeTotals, type Promo } from "@/lib/pricing";
 import { api, errText } from "@/lib/client";
@@ -249,7 +249,9 @@ export default function CartPage() {
               <div className="truncate text-xs text-ink-500">{[addr.area, addr.street, addr.building].filter(Boolean).join("، ")}</div>
             </div>
           </div>
-        ) : (
+        ) : null}
+        {addr && <ZoneBadge lat={addr.lat} lng={addr.lng} className="mt-3" />}
+        {addr ? null : (
           <button onClick={() => (me?.user ? setAddrOpen(true) : router.push("/login?next=/cart"))} className="flex w-full items-center gap-2 rounded-xl border border-dashed border-ink-300 p-3 text-sm font-semibold text-ink-600">
             <MapPin className="h-4 w-4" /> {t("add_address")}
           </button>

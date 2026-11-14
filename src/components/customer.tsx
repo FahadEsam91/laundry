@@ -367,6 +367,20 @@ export function AddressIcon({ label }: { label: string }) {
   );
 }
 
+/** Whether a location is inside an open service zone (renders nothing while zones aren't set up). */
+export function ZoneBadge({ lat, lng, className }: { lat?: number; lng?: number; className?: string }) {
+  const { t, L } = useApp();
+  const { data } = useSWR(lat && lng ? `/api/zones/check?lat=${lat.toFixed(5)}&lng=${lng.toFixed(5)}` : null);
+  if (!data || data.status === "open") return null;
+  const tone = data.status === "ok" ? "bg-emerald-50 text-emerald-800" : data.status === "paused" ? "bg-amber-50 text-amber-800" : "bg-red-50 text-red-700";
+  const text = data.status === "ok" ? t("zone_ok", { x: L(data.zone, "name") }) : data.status === "paused" ? t("zone_paused_short") : t("zone_outside_short");
+  return (
+    <div className={cx("flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold", tone, className)}>
+      <MapPin className="h-4 w-4 shrink-0" /> {text}
+    </div>
+  );
+}
+
 export function AddressForm({ onDone }: { onDone: () => void }) {
   const { t, settings, lang } = useApp();
   const toast = useToast();
@@ -403,6 +417,7 @@ export function AddressForm({ onDone }: { onDone: () => void }) {
           <MapPin className="me-1 inline h-3 w-3" /> {t("pin_location")}
         </div>
       </div>
+      <ZoneBadge lat={pos[0]} lng={pos[1]} />
       <Segmented
         value={label}
         onChange={setLabel}
