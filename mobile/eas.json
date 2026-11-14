@@ -17,7 +17,8 @@
       "env": {
         "APP_VARIANT": "customer",
         "EXPO_PUBLIC_API_URL": "http://192.168.1.10:3000"
-      }
+      },
+      "channel": "development"
     },
     "development-rider": {
       "extends": "base",
@@ -26,7 +27,8 @@
       "env": {
         "APP_VARIANT": "rider",
         "EXPO_PUBLIC_API_URL": "http://192.168.1.10:3000"
-      }
+      },
+      "channel": "development-rider"
     },
     "customer-preview": {
       "extends": "base",
@@ -36,7 +38,8 @@
       },
       "android": {
         "buildType": "apk"
-      }
+      },
+      "channel": "preview"
     },
     "rider-preview": {
       "extends": "base",
@@ -46,21 +49,24 @@
       },
       "android": {
         "buildType": "apk"
-      }
+      },
+      "channel": "rider-preview"
     },
     "customer-production": {
       "extends": "base",
       "env": {
         "APP_VARIANT": "customer"
       },
-      "autoIncrement": true
+      "autoIncrement": true,
+      "channel": "production"
     },
     "rider-production": {
       "extends": "base",
       "env": {
         "APP_VARIANT": "rider"
       },
-      "autoIncrement": true
+      "autoIncrement": true,
+      "channel": "rider-production"
     }
   },
   "submit": {

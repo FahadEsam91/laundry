@@ -55,3 +55,11 @@ npx eas-cli@latest build --profile customer-production --platform ios --auto-sub
 npx eas-cli@latest build --profile customer-production --platform android
 ```
 حمّل ملف `.aab` من الرابط، وارفعه في Play Console ← Testing ← Closed testing. الصور في `mobile/store-assets/android/`.
+
+## بعد النشر: كيف تصل التعديلات للجميع
+| نوع التعديل | يصل إلى | كيف |
+|---|---|---|
+| الإعدادات والأسعار والمغاسل والمناطق والعروض (من لوحة التحكم) | الموقع والتطبيقات فوراً | لا شيء، لأنها مخزّنة في السيرفر |
+| تعديلات الموقع ولوحات التحكم وقواعد السيرفر | الموقع والتطبيقات | `sudo bash /opt/nuqa/deploy/update.sh` على السيرفر |
+| تعديل شكل التطبيق أو شاشاته | جوالات المستخدمين خلال دقائق، **بدون مراجعة المتجر** | من الماك: `cd ~/nuqa-app && git pull && cd mobile && npm install && npm run update:app` |
+| إضافة صلاحية جديدة للجوال (كاميرا، بلوتوث…) أو مكتبة أصلية | تحتاج نسخة جديدة في المتجر | ارفع رقم `version` في `mobile/app.config.ts` ثم ابنِ وأرسل كما في الخطوات ٣ و٥ |

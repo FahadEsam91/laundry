@@ -8,7 +8,9 @@
     "start:rider": "APP_VARIANT=rider expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "update:app": "APP_VARIANT=customer eas update --channel production --auto",
+    "update:preview": "APP_VARIANT=customer eas update --channel preview --auto"
   },
   "dependencies": {
     "@expo-google-fonts/ibm-plex-sans-arabic": "^0.4.2",

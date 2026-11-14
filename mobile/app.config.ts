@@ -8,7 +8,8 @@ import type { ExpoConfig } from "expo/config";
  */
 const VARIANT = process.env.APP_VARIANT === "rider" ? "rider" : "customer";
 const isRider = VARIANT === "rider";
-const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000";
+// The live server. Over-the-air updates (eas update) are built with this too, so it must never fall back to localhost.
+const API_URL = process.env.EXPO_PUBLIC_API_URL || "https://68-183-76-10.sslip.io";
 // Expo (EAS) project of the customer app: expo.dev/@fahadesams-team/napa
 const EXPO_OWNER = "fahadesams-team";
 const CUSTOMER_PROJECT_ID = "7709ceb9-f1f7-49a6-a9c5-4a1292b634d6";
