@@ -1,4 +1,5 @@
 "use client";
+import { Reveal } from "@/components/reveal";
 
 import { use, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -158,11 +159,11 @@ export default function LaundryPage({ params }: { params: Promise<{ id: string }
       {!q && popular.length > 0 && (
         <section className="pt-5">
           <h2 className="mb-3 px-4 text-lg font-bold lg:px-0">🔥 {t("popular")}</h2>
-          <div className="no-scrollbar flex gap-3 overflow-x-auto px-4 pb-1 lg:grid lg:grid-cols-4 lg:overflow-visible lg:px-0">
+          <Reveal stagger className="no-scrollbar flex gap-3 overflow-x-auto px-4 pb-1 lg:grid lg:grid-cols-4 lg:overflow-visible lg:px-0">
             {popular.map((x) => {
               const qty = qtyOf(x.id);
               return (
-                <div key={x.id} className="w-36 shrink-0 rounded-2xl border border-ink-100 bg-white p-3 shadow-soft lg:w-auto">
+                <div key={x.id} className="w-36 shrink-0 rounded-2xl border border-ink-100 bg-white p-3 shadow-soft transition duration-300 lg:w-auto lg:hover:-translate-y-1 lg:hover:shadow-lift">
                   <div className="flex h-20 items-center justify-center rounded-xl text-4xl" style={{ background: `${p.color}10` }}>
                     {x.icon}
                   </div>
@@ -183,7 +184,7 @@ export default function LaundryPage({ params }: { params: Promise<{ id: string }
                 </div>
               );
             })}
-          </div>
+          </Reveal>
         </section>
       )}
 

@@ -1,4 +1,5 @@
 "use client";
+import { Reveal } from "@/components/reveal";
 
 import Link from "next/link";
 import { useState } from "react";
@@ -48,7 +49,7 @@ export default function OrdersPage() {
       {me?.user && data && !list.length && (
         <Empty icon={<ReceiptText className="h-9 w-9" />} title={t("no_orders")} sub={t("no_orders_sub")} action={<Link href="/"><Button>{t("browse")}</Button></Link>} />
       )}
-      <div className="space-y-3 p-4 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0 lg:px-0">
+      <Reveal stagger className="space-y-3 p-4 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0 lg:px-0">
         {list.map((o) => {
           const p = { color: o.partner_color, color2: o.partner_color2, initials: o.partner_initials, logo_url: o.partner_logo };
           return (
@@ -83,7 +84,7 @@ export default function OrdersPage() {
             </div>
           );
         })}
-      </div>
+      </Reveal>
       <BottomNav />
     </div>
   );

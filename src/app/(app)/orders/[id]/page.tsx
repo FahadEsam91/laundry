@@ -106,16 +106,19 @@ function Inner({ id }: { id: string }) {
   return (
     <div className="bg-ink-50 pb-10">
       {celebrate && (
-        <div className="fixed inset-0 z-[90] mx-auto flex max-w-[460px] flex-col lg:max-w-none items-center justify-center bg-brand-600 text-white">
-          <div className="relative">
-            <span className="absolute inset-0 animate-ping2 rounded-full bg-white/40" />
-            <CheckCircle2 className="relative h-24 w-24" />
-          </div>
-          <h2 className="mt-6 text-2xl font-extrabold">{t("order_placed")}</h2>
-          <p className="mt-1 text-white/80">{o.code}</p>
-          {[...Array(14)].map((_, i) => (
-            <span key={i} className="absolute bottom-0 h-4 w-4 animate-bubble rounded-full bg-white/40" style={{ left: `${(i * 7.3) % 100}%`, animationDelay: `${(i % 5) * 0.35}s` }} />
+        <div className="hero-gradient fixed inset-0 z-[90] mx-auto flex max-w-[460px] flex-col overflow-hidden lg:max-w-none items-center justify-center bg-gradient-to-br from-brand-700 via-brand-600 to-sky-500 text-white">
+          {[...Array(36)].map((_, i) => (
+            <span key={i} className="confetti" style={{ left: `${(i * 29) % 100}%`, background: ["#FBBF24", "#F472B6", "#34D399", "#FFFFFF", "#93C5FD"][i % 5], animationDelay: `${(i % 9) * 0.12}s`, animationDuration: `${2.2 + (i % 4) * 0.35}s` }} />
           ))}
+          <div className="pop-in relative">
+            <span className="absolute inset-0 animate-ping2 rounded-full bg-white/30" />
+            <svg viewBox="0 0 96 96" className="relative h-28 w-28 drop-shadow-xl" aria-hidden>
+              <circle cx="48" cy="48" r="44" fill="white" />
+              <path className="check-draw" d="M28 50 l13 13 l27 -29" fill="none" stroke="#1A62EC" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+          <h2 className="rise-in mt-6 text-2xl font-extrabold" style={{ animationDelay: "450ms" }}>{t("order_placed")}</h2>
+          <p className="rise-in mt-1 text-white/80" style={{ animationDelay: "600ms" }}>{o.code}</p>
         </div>
       )}
 

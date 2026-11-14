@@ -163,7 +163,7 @@ export function Spinner({ className }: { className?: string }) {
 }
 
 export function Skeleton({ className }: { className?: string }) {
-  return <div className={cx("animate-pulse rounded-xl bg-ink-100", className)} />;
+  return <div className={cx("shimmer rounded-xl", className)} />;
 }
 
 export function Empty({ icon, title, sub, action }: { icon?: React.ReactNode; title: string; sub?: string; action?: React.ReactNode }) {
@@ -202,14 +202,14 @@ export function PartnerCover({ p, className, children }: { p: { color: string; c
     return (
       <div className={cx("relative overflow-hidden bg-ink-100", className)}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={p.cover_url} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+        <img src={p.cover_url} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-105" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-black/10" />
         {children}
       </div>
     );
   return (
     <div className={cx("relative overflow-hidden", className)} style={{ background: `linear-gradient(120deg, ${p.color} 0%, ${p.color2} 100%)` }}>
-      <svg className="absolute inset-0 h-full w-full" preserveAspectRatio="xMidYMid slice" viewBox="0 0 400 200" aria-hidden>
+      <svg className="absolute inset-0 h-full w-full transition duration-700 group-hover:scale-110" preserveAspectRatio="xMidYMid slice" viewBox="0 0 400 200" aria-hidden>
         <g fill="white" opacity=".14">
           <circle cx="340" cy="40" r="60" />
           <circle cx="60" cy="190" r="70" />

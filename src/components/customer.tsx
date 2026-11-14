@@ -248,7 +248,7 @@ export function PartnerCard({ p, variant = "row" }: { p: any; variant?: "row" | 
   const fee = p.delivery_fee === 0 ? t("free") : me?.member?.benefits?.free_delivery ? `👑 ${t("free_with_plus")}` : money(p.delivery_fee);
   if (variant === "wide" || variant === "grid")
     return (
-      <Link href={`/laundry/${p.id}`} className={cx("block shrink-0 overflow-hidden transition hover:-translate-y-0.5 hover:shadow-lift", variant === "grid" ? "w-full" : "w-[270px] lg:w-auto", " rounded-2xl border border-ink-100 bg-white shadow-soft active:scale-[.99]")}>
+      <Link href={`/laundry/${p.id}`} className={cx("group block shrink-0 overflow-hidden transition duration-300 hover:-translate-y-1 hover:shadow-lift", variant === "grid" ? "w-full" : "w-[270px] lg:w-auto", " rounded-2xl border border-ink-100 bg-white shadow-soft active:scale-[.99]")}>
         <PartnerCover p={p} className={variant === "grid" ? "h-36" : "h-28"}>
           <div className="absolute end-2 top-2 flex max-w-[85%] flex-wrap justify-end gap-1">
             <PartnerTags tags={p.tags} />

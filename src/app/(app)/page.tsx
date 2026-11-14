@@ -9,6 +9,8 @@ import { useApp, useToast } from "@/components/providers";
 import { AddressSheet, BottomNav, PartnerCard, SectionTitle, useActiveOrders } from "@/components/customer";
 import { ServiceIcon, Skeleton, StatusBadge, cx, LogoMark, PartnerLogo } from "@/components/ui";
 import { PlusBanner } from "@/components/plus";
+import { Reveal } from "@/components/reveal";
+import { Bubbles, CountUp, WasherArt, WordsIn } from "@/components/motion";
 
 const PROMO_STYLES = [
   "from-brand-600 via-brand-500 to-sky-400",
@@ -25,29 +27,32 @@ function DesktopHero() {
   const { data } = useSWR("/api/partners");
   const count = data?.partners?.length || 0;
   return (
-    <section className="relative hidden overflow-hidden bg-gradient-to-br from-brand-700 via-brand-600 to-sky-500 text-white lg:block">
+    <section className="hero-gradient relative hidden overflow-hidden bg-gradient-to-br from-brand-800 via-brand-600 to-sky-500 text-white lg:block">
+      <div className="blob -top-24 start-[8%] h-80 w-80 bg-sky-300" />
+      <div className="blob -bottom-40 end-[-4rem] h-[28rem] w-[28rem] bg-indigo-500" style={{ animationDelay: "-7s" }} />
+      <Bubbles count={12} />
       <svg className="absolute inset-0 h-full w-full opacity-[.08]" aria-hidden>
         <defs><pattern id="hero-dots" width="28" height="28" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="2" fill="white" /></pattern></defs>
         <rect width="100%" height="100%" fill="url(#hero-dots)" />
       </svg>
       <div className="relative mx-auto grid max-w-7xl grid-cols-2 items-center gap-12 px-8 py-16">
         <div>
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-1.5 text-sm font-semibold backdrop-blur">
+          <div className="rise-in mb-4 inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-1.5 text-sm font-semibold backdrop-blur">
             <Sparkles className="h-4 w-4" /> {me?.user ? (lang === "ar" ? `أهلاً ${me.user.name.split(" ")[0]} 👋` : `Hi ${me.user.name.split(" ")[0]} 👋`) : t("tagline")}
           </div>
-          <h1 className="text-5xl font-extrabold leading-[1.15]">{lang === "ar" ? "ملابسك نظيفة ومكوية… بدون ما تطلع من البيت" : "Fresh, pressed clothes — without leaving home"}</h1>
-          <p className="mt-4 max-w-xl text-lg text-white/80">{lang === "ar" ? "نستلم من باب بيتك، نغسل ونكوي عند أفضل المغاسل، ونرجعها لك مرتبة — مع تتبع مباشر لكل خطوة." : "We collect from your door, clean at the best local laundries and bring everything back — with live tracking at every step."}</p>
-          <form onSubmit={(e) => { e.preventDefault(); router.push(q.trim() ? `/search?q=${encodeURIComponent(q.trim())}` : "/search"); }} className="mt-8 flex max-w-xl items-center gap-2 rounded-2xl bg-white p-2 shadow-lift">
+          <h1 className="text-5xl font-extrabold leading-[1.2]"><WordsIn text={lang === "ar" ? "ملابسك نظيفة ومكوية… بدون ما تطلع من البيت" : "Fresh, pressed clothes — without leaving home"} delay={150} /></h1>
+          <p className="rise-in mt-4 max-w-xl text-lg text-white/80" style={{ animationDelay: "650ms" }}>{lang === "ar" ? "نستلم من باب بيتك، نغسل ونكوي عند أفضل المغاسل، ونرجعها لك مرتبة — مع تتبع مباشر لكل خطوة." : "We collect from your door, clean at the best local laundries and bring everything back — with live tracking at every step."}</p>
+          <form onSubmit={(e) => { e.preventDefault(); router.push(q.trim() ? `/search?q=${encodeURIComponent(q.trim())}` : "/search"); }} className="rise-in mt-8 flex max-w-xl items-center gap-2 rounded-2xl bg-white p-2 shadow-lift transition focus-within:shadow-2xl focus-within:ring-4 focus-within:ring-white/30" style={{ animationDelay: "800ms" }}>
             <Search className="ms-3 h-5 w-5 shrink-0 text-brand-600" />
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("search_ph")} className="h-12 min-w-0 flex-1 bg-transparent text-base text-ink-900 outline-none placeholder:text-ink-400" />
-            <button className="h-12 rounded-xl bg-ink-900 px-6 text-sm font-bold text-white hover:bg-ink-800">{t("search")}</button>
+            <button className="h-12 rounded-xl bg-ink-900 px-6 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-ink-800 active:translate-y-0">{t("search")}</button>
           </form>
-          <div className="mt-8 flex gap-8">
-            {[
-              [count ? num(count) : "—", lang === "ar" ? "مغسلة شريكة" : "partner laundries"],
-              ["45", lang === "ar" ? "دقيقة للاستلام" : "min pickup"],
-              ["4.8 ★", lang === "ar" ? "تقييم الزبائن" : "customer rating"],
-            ].map(([a, b]) => (
+          <div className="rise-in mt-8 flex gap-8" style={{ animationDelay: "950ms" }}>
+            {([
+              [count ? <CountUp key="c" to={count} format={num} /> : "—", lang === "ar" ? "مغسلة شريكة" : "partner laundries"],
+              [<CountUp key="m" to={45} format={num} />, lang === "ar" ? "دقيقة للاستلام" : "min pickup"],
+              [<CountUp key="r" to={4.8} decimals={1} suffix=" ★" />, lang === "ar" ? "تقييم الزبائن" : "customer rating"],
+            ] as [React.ReactNode, string][]).map(([a, b]) => (
               <div key={b}>
                 <div className="text-3xl font-extrabold">{a}</div>
                 <div className="text-sm text-white/70">{b}</div>
@@ -56,20 +61,26 @@ function DesktopHero() {
           </div>
         </div>
         <div className="relative mx-auto h-[380px] w-full max-w-md" aria-hidden>
-          <div className="absolute inset-8 rounded-full bg-white/10" />
-          <div className="absolute inset-20 rounded-full bg-white/10" />
-          <div className="absolute left-1/2 top-1/2 flex h-40 w-40 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-[2.5rem] bg-white text-brand-600 shadow-2xl">
-            <WashingMachine className="h-20 w-20" strokeWidth={1.4} />
+          {/* rings and machine share one centred square, so nothing is skewed by the column width */}
+          <div className="absolute left-1/2 top-1/2 h-[360px] w-[360px] -translate-x-1/2 -translate-y-1/2">
+            <div className="pop-in absolute inset-0 rounded-full bg-white/10" />
+            <div className="pop-in absolute inset-14 rounded-full bg-white/10" style={{ animationDelay: "120ms" }} />
+            <div className="absolute -inset-3 animate-[nq-spin_40s_linear_infinite] rounded-full border-2 border-dashed border-white/20" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="pop-in h-64 w-56" style={{ animationDelay: "250ms" }}>
+                <div className="float h-full w-full drop-shadow-2xl"><WasherArt className="h-full w-full" /></div>
+              </div>
+            </div>
           </div>
-          <div className="absolute start-0 top-10 flex items-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-bold text-ink-900 shadow-lift">
+          <div className="float absolute -start-6 top-4 flex items-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-bold text-ink-900 shadow-lift">
             <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-100 text-amber-600"><Zap className="h-4 w-4" /></span>
             {lang === "ar" ? "مستعجل خلال 3 ساعات" : "Express in 3 hours"}
           </div>
-          <div className="absolute end-0 top-1/2 flex items-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-bold text-ink-900 shadow-lift">
+          <div className="float absolute -end-10 top-[45%] flex items-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-bold text-ink-900 shadow-lift" style={{ animationDelay: "-1.6s" }}>
             <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600"><Truck className="h-4 w-4" /></span>
             {lang === "ar" ? "استلام خلال 45 دقيقة" : "Pickup in 45 min"}
           </div>
-          <div className="absolute bottom-8 start-10 flex items-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-bold text-ink-900 shadow-lift">
+          <div className="float absolute -bottom-8 start-[30%] flex items-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-bold text-ink-900 shadow-lift" style={{ animationDelay: "-3.2s" }}>
             <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-violet-100 text-violet-600"><ShieldCheck className="h-4 w-4" /></span>
             {lang === "ar" ? "ضمان إعادة التنظيف" : "Re-clean guarantee"}
           </div>
@@ -111,8 +122,10 @@ export default function HomePage() {
     <div className="animate-fade-up">
       {/* header */}
       <DesktopHero />
-      <div className="bg-gradient-to-b from-brand-600 to-brand-700 px-4 pb-16 pt-4 text-white lg:hidden">
-        <div className="flex items-center justify-between">
+      <div className="hero-gradient relative overflow-hidden bg-gradient-to-br from-brand-700 via-brand-600 to-sky-500 px-4 pb-16 pt-4 text-white lg:hidden">
+        <Bubbles count={8} />
+        <div className="blob -end-16 -top-16 h-48 w-48 bg-sky-300" />
+        <div className="relative flex items-center justify-between">
           <button onClick={() => setAddrOpen(true)} className="flex min-w-0 items-center gap-2 text-start">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/15">
               <MapPin className="h-5 w-5" />
@@ -135,15 +148,15 @@ export default function HomePage() {
             </Link>
           </div>
         </div>
-        <h1 className="mt-5 text-2xl font-extrabold leading-snug">
-          {me?.user ? (lang === "ar" ? `أهلاً ${me.user.name.split(" ")[0]} 👋` : `Hi ${me.user.name.split(" ")[0]} 👋`) : t("login_title")}
+        <h1 className="relative mt-5 text-2xl font-extrabold leading-snug">
+          <WordsIn text={me?.user ? (lang === "ar" ? `أهلاً ${me.user.name.split(" ")[0]} 👋` : `Hi ${me.user.name.split(" ")[0]} 👋`) : t("login_title")} delay={100} />
         </h1>
-        <p className="text-sm text-white/75">{lang === "ar" ? "شنو تحتاج اليوم؟ نستلم ونغسل ونكوي ونرجعها لك" : "What do you need today? We collect, clean & deliver"}</p>
+        <p className="rise-in relative text-sm text-white/75" style={{ animationDelay: "350ms" }}>{lang === "ar" ? "شنو تحتاج اليوم؟ نستلم ونغسل ونكوي ونرجعها لك" : "What do you need today? We collect, clean & deliver"}</p>
       </div>
 
       {/* search */}
       <div className="-mt-10 px-4 lg:hidden">
-        <Link href="/search" className="flex h-14 items-center gap-3 rounded-2xl bg-white px-4 text-sm text-ink-400 shadow-lift">
+        <Link href="/search" className="rise-in flex h-14 items-center gap-3 rounded-2xl bg-white px-4 text-sm text-ink-400 shadow-lift" style={{ animationDelay: "450ms" }}>
           <Search className="h-5 w-5 text-brand-600" /> {t("search_ph")}
         </Link>
       </div>
@@ -174,24 +187,24 @@ export default function HomePage() {
       {/* services */}
       <section className="pt-6 lg:pt-10">
         <SectionTitle title={t("services")} />
-        <div className="grid grid-cols-3 gap-2.5 px-4 lg:grid-cols-9 lg:gap-4 lg:px-0">
+        <Reveal stagger className="grid grid-cols-3 gap-2.5 px-4 lg:grid-cols-9 lg:gap-4 lg:px-0">
           {services.map((s) => (
             <Link key={s.slug} href={`/search?service=${s.slug}`} className="group flex flex-col items-center rounded-2xl border border-ink-100 bg-white p-3 text-center shadow-soft transition active:scale-95 lg:py-5 lg:hover:-translate-y-0.5 lg:hover:border-brand-200 lg:hover:shadow-lift">
-              <span className="mb-2 flex h-12 w-12 items-center justify-center rounded-2xl transition group-hover:scale-105" style={{ background: `${s.color}14`, color: s.color }}>
+              <span className="mb-2 flex h-12 w-12 items-center justify-center rounded-2xl transition duration-300 group-hover:-translate-y-1 group-hover:rotate-[-6deg] group-hover:scale-110" style={{ background: `${s.color}14`, color: s.color }}>
                 <ServiceIcon name={s.icon} className="h-6 w-6" />
               </span>
               <span className="text-[13px] font-bold leading-tight text-ink-800">{L(s, "name")}</span>
             </Link>
           ))}
-        </div>
+        </Reveal>
       </section>
 
       {/* promos */}
       <section className="pt-6 lg:pt-10">
-        <div className="no-scrollbar flex snap-x gap-3 overflow-x-auto px-4 pb-1 lg:grid lg:grid-cols-4 lg:gap-5 lg:overflow-visible lg:px-0">
+        <Reveal stagger className="no-scrollbar flex snap-x gap-3 overflow-x-auto px-4 pb-1 lg:grid lg:grid-cols-4 lg:gap-5 lg:overflow-visible lg:px-0">
           {(promoData?.promos || []).map((p: any, i: number) => (
-            <div key={p.code} className={cx("relative h-36 w-[300px] shrink-0 snap-start lg:h-44 lg:w-auto overflow-hidden rounded-3xl bg-gradient-to-br p-5 text-white", PROMO_STYLES[i % PROMO_STYLES.length])}>
-              <svg className="absolute -end-6 -top-6 h-40 w-40 opacity-20" viewBox="0 0 100 100" aria-hidden>
+            <div key={p.code} className={cx("group relative h-36 w-[300px] shrink-0 snap-start lg:h-44 lg:w-auto overflow-hidden rounded-3xl bg-gradient-to-br p-5 text-white transition duration-300 lg:hover:-translate-y-1 lg:hover:shadow-lift", PROMO_STYLES[i % PROMO_STYLES.length])}>
+              <svg className="absolute -end-6 -top-6 h-40 w-40 opacity-20 transition duration-700 group-hover:rotate-45 group-hover:scale-110" viewBox="0 0 100 100" aria-hidden>
                 <circle cx="50" cy="50" r="40" fill="none" stroke="white" strokeWidth="10" />
                 <circle cx="50" cy="50" r="16" fill="white" />
               </svg>
@@ -212,7 +225,7 @@ export default function HomePage() {
             </div>
           ))}
           {!promoData && <Skeleton className="h-36 w-[300px] shrink-0 rounded-3xl" />}
-        </div>
+        </Reveal>
       </section>
 
       {/* membership */}
@@ -238,20 +251,21 @@ export default function HomePage() {
       {/* featured */}
       {(!data || partners.some((p) => p.featured)) && <section className="pt-6 lg:pt-12">
         <SectionTitle title={t("featured_laundries")} href="/search" />
-        <div className="no-scrollbar flex gap-3 overflow-x-auto px-4 pb-2 lg:grid lg:grid-cols-4 lg:gap-5 lg:overflow-visible lg:px-0">
+        <Reveal stagger className="no-scrollbar flex gap-3 overflow-x-auto px-4 pb-2 lg:grid lg:grid-cols-4 lg:gap-5 lg:overflow-visible lg:px-0">
           {!data && [1, 2].map((i) => <Skeleton key={i} className="h-48 w-[270px] shrink-0" />)}
           {partners.filter((p) => p.featured).map((p) => <PartnerCard key={p.id} p={p} variant="wide" />)}
-        </div>
+        </Reveal>
       </section>}
 
       {/* how it works */}
       <section className="px-4 pt-6 lg:px-0 lg:pt-12">
-        <div className="rounded-3xl bg-ink-900 p-5 text-white lg:p-10">
-          <div className="mb-4 flex items-center gap-2">
+        <Reveal className="relative overflow-hidden rounded-3xl bg-ink-900 p-5 text-white lg:p-10">
+          <div className="blob -end-24 -top-24 h-72 w-72 bg-brand-600" />
+          <div className="relative mb-4 flex items-center gap-2">
             <LogoMark className="h-7 w-7" />
             <h2 className="font-bold">{t("how_it_works")}</h2>
           </div>
-          <div className="grid grid-cols-4 gap-2 text-center lg:gap-8">
+          <Reveal stagger className="relative grid grid-cols-4 gap-2 text-center lg:gap-8">
             {[
               [Shirt, t("how_1"), t("how_1d")],
               [Truck, t("how_2"), t("how_2d")],
@@ -259,18 +273,18 @@ export default function HomePage() {
               [PackageCheck, t("how_4"), t("how_4d")],
             ].map(([I, a, b]: any, i) => (
               <div key={i} className="relative">
-                <div className="mx-auto mb-2 flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 text-brand-300 lg:h-16 lg:w-16">
+                <div className="float mx-auto mb-2 flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 text-brand-300 lg:h-16 lg:w-16" style={{ animationDelay: `${-i * 1.2}s` }}>
                   <I className="h-5 w-5" />
                 </div>
                 <div className="text-xs font-bold lg:text-lg">{a}</div>
                 <div className="mt-0.5 text-[10px] leading-tight text-white/55 lg:text-sm">{b}</div>
               </div>
             ))}
-          </div>
-          <div className="mt-4 flex items-center gap-2 rounded-2xl bg-white/5 p-3 text-xs text-white/80">
+          </Reveal>
+          <div className="relative mt-4 flex items-center gap-2 rounded-2xl bg-white/5 p-3 text-xs text-white/80">
             <ShieldCheck className="h-5 w-5 shrink-0 text-emerald-400" /> {t("guarantee")}
           </div>
-        </div>
+        </Reveal>
       </section>
 
       {/* all */}
@@ -295,14 +309,14 @@ export default function HomePage() {
             </button>
           ))}
         </div>
-        <div className="mt-1 lg:hidden">
+        <Reveal stagger className="mt-1 lg:hidden">
           {!data && [1, 2, 3].map((i) => <Skeleton key={i} className="mx-4 my-3 h-20" />)}
           {list.map((p) => <PartnerCard key={p.id} p={p} />)}
-        </div>
-        <div className="mt-4 hidden grid-cols-3 gap-5 lg:grid xl:grid-cols-4">
+        </Reveal>
+        <Reveal stagger className="mt-4 hidden grid-cols-3 gap-5 lg:grid xl:grid-cols-4">
           {!data && [1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-56" />)}
           {list.map((p) => <PartnerCard key={p.id} p={p} variant="grid" />)}
-        </div>
+        </Reveal>
       </section>
       )}
 

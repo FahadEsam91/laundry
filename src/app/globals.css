@@ -26,3 +26,86 @@ body { @apply bg-ink-50 text-ink-900 antialiased; font-feature-settings: "ss01";
   color: #0b0e14;
 }
 .leaflet-tooltip.zone-label::before { display: none; }
+
+/* ───────────────────────────── brand intro ───────────────────────────── */
+.nq-intro {
+  position: fixed; inset: 0; z-index: 200; overflow: hidden; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(120% 90% at 50% 35%, #2E7BFF 0%, #1A62EC 38%, #0B2E86 100%);
+  transition: transform .8s cubic-bezier(.75,0,.25,1), border-radius .8s cubic-bezier(.75,0,.25,1);
+}
+.nq-intro-seen .nq-intro { display: none; }
+.nq-intro-out { transform: translateY(-100%); border-bottom-left-radius: 50% 14%; border-bottom-right-radius: 50% 14%; pointer-events: none; }
+.nq-stage { position: relative; display: flex; flex-direction: column; align-items: center; transition: opacity .35s ease, transform .5s cubic-bezier(.7,0,.3,1); }
+.nq-intro-out .nq-stage { opacity: 0; transform: translateY(-50px) scale(.94); }
+.nq-drop { width: 112px; height: 112px; filter: drop-shadow(0 18px 40px rgba(0,0,0,.35)); animation: nq-fall .75s cubic-bezier(.55,0,.85,.35) both, nq-land .5s .75s cubic-bezier(.2,.9,.3,1.3) both; }
+.nq-drop .nq-tile { animation: nq-tile .5s .75s ease-out both; transform-origin: center; }
+.nq-shine { stroke-dasharray: 20; stroke-dashoffset: 20; animation: nq-draw .5s 1.1s ease-out forwards; }
+.nq-ripples { position: absolute; top: 56px; left: 50%; width: 0; height: 0; }
+.nq-ripples i { position: absolute; left: -60px; top: -60px; width: 120px; height: 120px; border-radius: 999px; border: 2px solid rgba(255,255,255,.55); opacity: 0; animation: nq-ripple 1.4s .78s cubic-bezier(.2,.7,.3,1) both; }
+.nq-ripples i:nth-child(2) { animation-delay: .98s; }
+.nq-ripples i:nth-child(3) { animation-delay: 1.18s; }
+.nq-word { margin-top: 26px; display: flex; gap: 2px; color: #fff; font-size: 54px; font-weight: 800; letter-spacing: -.02em; line-height: 1; }
+/* the whole word is revealed as one piece: splitting Arabic into letters would break the joined script */
+.nq-word span { display: inline-block; padding: 0 .08em; animation: nq-wipe-ltr .9s 1.05s cubic-bezier(.2,.8,.2,1) both; }
+[dir="rtl"] .nq-word span { animation-name: nq-wipe-rtl; }
+.nq-tag { margin-top: 14px; color: rgba(255,255,255,.85); font-size: 15px; font-weight: 600; opacity: 0; animation: nq-up .6s 1.55s ease-out both; }
+.nq-bar { position: absolute; bottom: 56px; left: 50%; width: 140px; height: 3px; margin-left: -70px; border-radius: 9px; background: rgba(255,255,255,.18); overflow: hidden; }
+.nq-bar i { display: block; height: 100%; width: 100%; background: #fff; transform-origin: left; animation: nq-progress 2.5s cubic-bezier(.4,0,.2,1) both; }
+[dir="rtl"] .nq-bar i { transform-origin: right; }
+.nq-skip { position: absolute; top: 20px; inset-inline-end: 20px; padding: 6px 14px; border-radius: 999px; background: rgba(255,255,255,.14); color: #fff; font-size: 13px; font-weight: 700; backdrop-filter: blur(6px); }
+.nq-bubble { position: absolute; bottom: -30px; border-radius: 999px; background: rgba(255,255,255,.18); box-shadow: inset 0 0 6px rgba(255,255,255,.35); animation: nq-rise linear infinite; }
+@keyframes nq-fall { 0% { transform: translateY(-70vh) scale(.55); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateY(0) scale(.85); } }
+@keyframes nq-land { 0% { transform: scale(1.15, .78); } 55% { transform: scale(.94, 1.06); } 100% { transform: scale(1); } }
+@keyframes nq-tile { from { transform: scale(.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes nq-draw { to { stroke-dashoffset: 0; } }
+@keyframes nq-ripple { 0% { transform: scale(.3); opacity: .9; } 100% { transform: scale(3.2); opacity: 0; } }
+@keyframes nq-wipe-rtl { from { clip-path: inset(-20% 0 -20% 100%); transform: translateY(14px); filter: blur(6px); } to { clip-path: inset(-20% 0 -20% 0); transform: none; filter: blur(0); } }
+@keyframes nq-wipe-ltr { from { clip-path: inset(-20% 100% -20% 0); transform: translateY(14px); filter: blur(6px); } to { clip-path: inset(-20% 0 -20% 0); transform: none; filter: blur(0); } }
+@keyframes nq-letter { from { opacity: 0; transform: translateY(26px) scale(.9); filter: blur(8px); } to { opacity: 1; transform: none; filter: blur(0); } }
+@keyframes nq-up { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@keyframes nq-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes nq-rise { 0% { transform: translateY(0) translateX(0); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(-110vh) translateX(30px); opacity: 0; } }
+
+/* ───────────────────────────── scroll reveal ───────────────────────────── */
+.reveal { opacity: 0; transform: translateY(28px); transition: opacity .8s cubic-bezier(.2,.8,.2,1), transform .8s cubic-bezier(.2,.8,.2,1); transition-delay: var(--d, 0ms); }
+.reveal.is-in { opacity: 1; transform: none; }
+.reveal-stagger > * { opacity: 0; transform: translateY(22px) scale(.98); transition: opacity .65s cubic-bezier(.2,.8,.2,1), transform .65s cubic-bezier(.2,.8,.2,1); }
+.reveal-stagger.is-in > * { opacity: 1; transform: none; }
+.reveal-stagger.is-in > *:nth-child(1) { transition-delay: 0ms } .reveal-stagger.is-in > *:nth-child(2) { transition-delay: 60ms }
+.reveal-stagger.is-in > *:nth-child(3) { transition-delay: 120ms } .reveal-stagger.is-in > *:nth-child(4) { transition-delay: 180ms }
+.reveal-stagger.is-in > *:nth-child(5) { transition-delay: 240ms } .reveal-stagger.is-in > *:nth-child(6) { transition-delay: 300ms }
+.reveal-stagger.is-in > *:nth-child(7) { transition-delay: 360ms } .reveal-stagger.is-in > *:nth-child(8) { transition-delay: 420ms }
+.reveal-stagger.is-in > *:nth-child(9) { transition-delay: 480ms } .reveal-stagger.is-in > *:nth-child(n+10) { transition-delay: 520ms }
+
+/* ───────────────────────────── page + hero motion ───────────────────────────── */
+/* opacity only: a transform here would break position:fixed bars inside pages */
+.page-in { animation: page-in .45s ease-out both; }
+@keyframes page-in { from { opacity: 0; } to { opacity: 1; } }
+.hero-gradient { background-size: 220% 220%; animation: hero-shift 14s ease-in-out infinite; }
+@keyframes hero-shift { 0%,100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+.blob { position: absolute; border-radius: 999px; filter: blur(60px); opacity: .45; animation: blob 18s ease-in-out infinite; }
+@keyframes blob { 0%,100% { transform: translate(0,0) scale(1); } 33% { transform: translate(40px,-30px) scale(1.12); } 66% { transform: translate(-30px,25px) scale(.92); } }
+.float { animation: float 5s ease-in-out infinite; }
+@keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+.word-in { display: inline-block; opacity: 0; animation: word-in .7s cubic-bezier(.2,.8,.2,1) both; }
+/* same entrance for block / flex elements (keeps their display) */
+.rise-in { opacity: 0; animation: word-in .7s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes word-in { from { opacity: 0; transform: translateY(18px); filter: blur(6px); } to { opacity: 1; transform: none; filter: blur(0); } }
+.drum-spin { transform-box: view-box; animation: nq-spin 2.4s linear infinite; }
+@keyframes nq-spin { to { transform: rotate(360deg); } }
+.wave { animation: wave 3s ease-in-out infinite; }
+@keyframes wave { 0%,100% { transform: translateX(0); } 50% { transform: translateX(-12px); } }
+.shimmer { background: linear-gradient(90deg, #EEF0F4 0%, #F7F8FA 40%, #EEF0F4 80%); background-size: 200% 100%; animation: shimmer 1.4s linear infinite; }
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+.check-draw { stroke-dasharray: 60; stroke-dashoffset: 60; animation: nq-draw60 .6s .25s cubic-bezier(.65,0,.35,1) forwards; }
+@keyframes nq-draw60 { to { stroke-dashoffset: 0; } }
+.pop-in { animation: pop-in .55s cubic-bezier(.2,.9,.3,1.4) both; }
+@keyframes pop-in { from { transform: scale(.3); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.confetti { position: absolute; top: -20px; width: 8px; height: 14px; border-radius: 2px; animation: confetti 2.6s cubic-bezier(.3,.6,.5,1) both; }
+@keyframes confetti { 0% { transform: translateY(0) rotate(0); opacity: 1; } 100% { transform: translateY(105vh) rotate(720deg); opacity: .8; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal, .reveal-stagger > * { opacity: 1 !important; transform: none !important; transition: none !important; }
+  .hero-gradient, .blob, .float, .word-in, .rise-in, .drum-spin, .wave, .page-in, .confetti { animation: none !important; opacity: 1; }
+}

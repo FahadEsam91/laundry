@@ -6,6 +6,7 @@ import { getSettings } from "@/lib/settings";
 import { all } from "@/lib/db";
 import type { Lang } from "@/lib/i18n";
 import { DEMO } from "@/lib/env";
+import { INTRO_BOOT } from "@/lib/intro-boot";
 
 export const dynamic = "force-dynamic";
 
@@ -29,8 +30,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const settings = await getSettings();
   const services = await all("SELECT * FROM services WHERE active=1 ORDER BY sort");
   return (
-    <html lang={lang} dir={lang === "ar" ? "rtl" : "ltr"}>
+    <html lang={lang} dir={lang === "ar" ? "rtl" : "ltr"} suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: INTRO_BOOT }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
