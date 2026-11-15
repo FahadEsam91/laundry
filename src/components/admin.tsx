@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { PAGE_PERMISSION } from "@/lib/permissions";
 import {
-  LayoutDashboard, ReceiptText, Store, MapPinned, QrCode, Bike, Users, Tags, TicketPercent, Settings, Crown, Megaphone, ShieldCheck, ScrollText, Lock, Menu, X, Languages, LogOut, ExternalLink, TrendingUp, TrendingDown,
+  LayoutDashboard, ReceiptText, Store, MapPinned, QrCode, Building2, Bike, Users, Tags, TicketPercent, Settings, Crown, Megaphone, ShieldCheck, ScrollText, Lock, Menu, X, Languages, LogOut, ExternalLink, TrendingUp, TrendingDown,
 } from "lucide-react";
 import { useApp, useCan } from "./providers";
 import { Logo, cx } from "./ui";
@@ -100,6 +100,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     { href: "/admin/labels", label: t("labels"), icon: QrCode },
     { href: "/admin/drivers", label: t("drivers"), icon: Bike },
     { href: "/admin/customers", label: t("customers"), icon: Users },
+    { href: "/admin/companies", label: t("companies"), icon: Building2 },
     { href: "/admin/catalog", label: t("catalog"), icon: Tags },
     { href: "/admin/subscriptions", label: t("subscriptions"), icon: Crown },
     { href: "/admin/promos", label: t("promos"), icon: TicketPercent },

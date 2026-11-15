@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type ComponentRef } from "react";
+import { useEffect, useMemo, useRef, useState, type ComponentRef } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -47,7 +47,13 @@ export default function Cart() {
   const photosY = useRef(0);
   const [promoText, setPromoText] = useState("");
   const [promo, setPromo] = useState<Promo | null>(null);
-  const [pay, setPay] = useState<"cash" | "card_pos" | "card" | "wallet">("cash");
+  const [pay, setPay] = useState<"cash" | "card_pos" | "card" | "wallet" | "invoice">(me?.company ? "invoice" : "cash");
+  const company = me?.company;
+  // company staff bill their company by default (the account loads after the first render)
+  const payTouched = useRef(false);
+  useEffect(() => {
+    if (company && !payTouched.current) setPay("invoice");
+  }, [company?.id]);
   const [busy, setBusy] = useState<string | null>(null);
   const allSlots = useMemo(() => slots(lang), [lang]);
   const { data: plans } = useSWR(me?.member ? null : "/api/plans");
@@ -64,7 +70,7 @@ export default function Cart() {
 
   const member = me?.member;
   const s = { service_fee: settings.service_fee ?? 500, express_pct: settings.express_pct ?? 50, vat_pct: settings.vat_pct ?? 0, free_delivery_over: settings.free_delivery_over ?? 0 };
-  const totals = computeTotals(cart.subtotal, p.delivery_fee, express, s, promo, member?.benefits);
+  const totals = computeTotals(cart.subtotal, p.delivery_fee, express, s, promo, member?.benefits, pay === "invoice" && company ? company.discount_pct : 0);
   const up = (plans?.plans || []).find((x: any) => x.popular);
   const upSave = up ? totals.total - computeTotals(cart.subtotal, p.delivery_fee, express, s, promo, { free_delivery: up.free_deliveries !== 0, discount_pct: up.discount_pct, no_service_fee: !!up.no_service_fee, express_discount_pct: up.express_discount_pct }).total : 0;
   const addr = me?.addresses?.find((a: any) => a.is_default) || me?.addresses?.[0];
@@ -97,7 +103,7 @@ export default function Cart() {
       const r = await api("/api/orders", { body: { partner_id: p.id, items: lines.map((l) => ({ product_id: l.product_id, qty: l.qty })), express, address_id: addr.id, pickup_slot: slot, notes, photos, payment_method: pay, promo_code: promo?.code || null } });
       if (repeat.on && repeat.days.length) {
         try {
-          await api("/api/schedules", { body: { partner_id: p.id, address_id: addr.id, items: lines.map((l) => ({ product_id: l.product_id, qty: l.qty })), days: repeat.days, time: repeat.time, express, notes, payment_method: pay === "card_pos" ? "card_pos" : "cash" } });
+          await api("/api/schedules", { body: { partner_id: p.id, address_id: addr.id, items: lines.map((l) => ({ product_id: l.product_id, qty: l.qty })), days: repeat.days, time: repeat.time, express, notes, payment_method: pay === "card_pos" || pay === "invoice" ? pay : "cash" } });
           toast(t("schedule_saved"));
         } catch (e) {
           toast(errText(e, lang, money), "error");
@@ -242,12 +248,13 @@ export default function Cart() {
 
         <Section title={t("payment")}>
           {([
+            ["invoice", "business-outline", t("pay_invoice"), company ? `${t("pay_invoice_d", { x: company.name })}${company.discount_pct ? ` • ${company.discount_pct}%` : ""}` : "", !!company],
             ["cash", "cash-outline", t("pay_cash"), t("pay_cash_sub"), true],
             ["card_pos", "card-outline", t("pay_card_pos"), t("pay_card_pos_sub"), true],
             ["card", "card-outline", t("pay_card"), "Visa • Mastercard", !!settings.online_payments],
             ["wallet", "wallet-outline", t("pay_wallet"), `${t("balance")}: ${money(wallet)}`, wallet > 0 || !!settings.online_payments],
           ] as const).filter((o) => o[4]).map(([v, ic, label, sub]) => (
-            <Choice key={v} selected={pay === v} onPress={() => setPay(v)} style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 8 }}>
+            <Choice key={v} selected={pay === v} onPress={() => { payTouched.current = true; setPay(v); }} style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 8 }}>
               <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: C.ink100, alignItems: "center", justifyContent: "center" }}><Icon name={ic} size={20} color={C.ink700} /></View>
               <View style={{ flex: 1 }}><Txt w="bold">{label}</Txt>{sub ? <Txt size={12} color={v === "wallet" && wallet < totals.total ? C.red : C.ink500}>{sub}</Txt> : null}</View>
               <Icon name={pay === v ? "radio-button-on" : "radio-button-off"} size={22} color={pay === v ? C.brand : C.ink300} />
@@ -262,6 +269,7 @@ export default function Cart() {
           {totals.expressFee > 0 && <Line k={t("express_fee")} v={money(totals.expressFee)} />}
           <Line k={t("service_fee")} v={totals.serviceFee ? money(totals.serviceFee) : t("free")} green={!totals.serviceFee} />
           {totals.memberDiscount > 0 && <Line k={`👑 ${t("member_discount")}`} v={`- ${money(totals.memberDiscount)}`} green />}
+          {totals.companyDiscount > 0 ? <Line k={`🏢 ${t("company_discount")} (${company.discount_pct}%)`} v={`- ${money(totals.companyDiscount)}`} green /> : null}
           {totals.discount > 0 && <Line k={t("discount")} v={`- ${money(totals.discount)}`} green />}
           {totals.vat > 0 && <Line k={t("vat")} v={money(totals.vat)} />}
           <View style={{ flexDirection: "row", justifyContent: "space-between", borderTopWidth: 1, borderTopColor: C.ink100, paddingTop: 10, marginTop: 6 }}>

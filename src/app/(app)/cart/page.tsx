@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import useSWR from "swr";
-import { ShoppingBasket, Zap, Clock, MapPin, Banknote, CreditCard, Wallet, TicketPercent, Check, Plus, Trash2, Truck, ChevronDown, Lock, Crown, Repeat } from "lucide-react";
+import { ShoppingBasket, Zap, Clock, MapPin, Banknote, CreditCard, Wallet, TicketPercent, Check, Plus, Trash2, Truck, ChevronDown, Lock, Crown, Repeat, Building2 } from "lucide-react";
 import { useApp, useCart, useToast } from "@/components/providers";
 import { AddressIcon, AddressSheet, TopBar, ZoneBadge } from "@/components/customer";
 import { Button, Empty, Input, PartnerLogo, QtyStepper, Textarea, Toggle, cx } from "@/components/ui";
@@ -44,7 +44,7 @@ export default function CartPage() {
   const [promoInput, setPromoInput] = useState("");
   const [promo, setPromo] = useState<Promo | null>(null);
   const [promoBusy, setPromoBusy] = useState(false);
-  const [pay, setPay] = useState<"cash" | "card_pos" | "card" | "wallet">("cash");
+  const [pay, setPay] = useState<"cash" | "card_pos" | "card" | "wallet" | "invoice">(me?.company ? "invoice" : "cash");
   const [addrOpen, setAddrOpen] = useState(false);
   const [placing, setPlacing] = useState(false);
   const [card, setCard] = useState("4242 4242 4242 4242");
@@ -54,7 +54,13 @@ export default function CartPage() {
   const lines = Object.values(cart.lines);
   const addr = me?.addresses?.find((a: any) => a.is_default) || me?.addresses?.[0];
   const member = me?.member;
-  const totals = computeTotals(cart.subtotal, p?.delivery_fee || 0, express, settings as any, promo, member?.benefits);
+  const company = me?.company;
+  // company staff bill their company by default (the account loads after the first render)
+  const payTouched = useRef(false);
+  useEffect(() => {
+    if (company && !payTouched.current) setPay("invoice");
+  }, [company?.id]);
+  const totals = computeTotals(cart.subtotal, p?.delivery_fee || 0, express, settings as any, promo, member?.benefits, pay === "invoice" && company ? company.discount_pct : 0);
   // membership upsell: what the most popular plan would save on this exact basket
   const { data: plansData } = useSWR(member ? null : "/api/plans");
   const upPlan = (plansData?.plans || []).find((x: any) => x.popular) || plansData?.plans?.[0];
@@ -115,7 +121,7 @@ export default function CartPage() {
       if (repeat.on && repeat.days.length) {
         try {
           await api("/api/schedules", {
-            body: { partner_id: p.id, address_id: addr.id, items: lines.map((l) => ({ product_id: l.product_id, qty: l.qty })), days: repeat.days, time: repeat.time, express, notes, payment_method: pay === "card_pos" ? "card_pos" : "cash" },
+            body: { partner_id: p.id, address_id: addr.id, items: lines.map((l) => ({ product_id: l.product_id, qty: l.qty })), days: repeat.days, time: repeat.time, express, notes, payment_method: pay === "card_pos" || pay === "invoice" ? pay : "cash" },
           });
           toast(t("schedule_saved"));
         } catch (e) {
@@ -323,12 +329,13 @@ export default function CartPage() {
         <h3 className="mb-3 font-bold">{t("payment")}</h3>
         <div className="space-y-2">
           {[
+            { v: "invoice" as const, icon: Building2, label: t("pay_invoice"), sub: company ? `${t("pay_invoice_d", { x: company.name })}${company.discount_pct ? ` • ${t("company_discount")} ${company.discount_pct}%` : ""}` : "", show: !!company },
             { v: "cash" as const, icon: Banknote, label: t("pay_cash"), sub: t("pay_cash_sub"), show: true },
             { v: "card_pos" as const, icon: CreditCard, label: t("pay_card_pos"), sub: t("pay_card_pos_sub"), show: true },
             { v: "card" as const, icon: CreditCard, label: t("pay_card"), sub: "Visa • Mastercard", show: !!settings.online_payments },
             { v: "wallet" as const, icon: Wallet, label: t("pay_wallet"), sub: `${t("balance")}: ${money(wallet)}`, show: wallet > 0 || !!settings.online_payments },
           ].filter((o) => o.show).map((o) => (
-            <button key={o.v} onClick={() => setPay(o.v)} className={cx("flex w-full items-center gap-3 rounded-2xl border-2 p-3 text-start transition", pay === o.v ? "border-brand-600 bg-brand-50/40" : "border-ink-100")}>
+            <button key={o.v} onClick={() => { payTouched.current = true; setPay(o.v); }} className={cx("flex w-full items-center gap-3 rounded-2xl border-2 p-3 text-start transition", pay === o.v ? "border-brand-600 bg-brand-50/40" : "border-ink-100")}>
               <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-ink-100"><o.icon className="h-5 w-5 text-ink-700" /></span>
               <span className="flex-1">
                 <span className="block text-sm font-bold">{o.label}</span>
@@ -362,6 +369,7 @@ export default function CartPage() {
           {totals.expressFee > 0 && <Row k={t("express_fee")} v={money(totals.expressFee)} />}
           <Row k={t("service_fee")} v={totals.serviceFee ? money(totals.serviceFee) : t("free")} green={!totals.serviceFee} />
           {totals.memberDiscount > 0 && <Row k={`👑 ${t("member_discount")} (${member.benefits.discount_pct}%)`} v={`- ${money(totals.memberDiscount)}`} green />}
+          {totals.companyDiscount > 0 && <Row k={`🏢 ${t("company_discount")} (${company.discount_pct}%)`} v={`- ${money(totals.companyDiscount)}`} green />}
           {totals.discount > 0 && <Row k={t("discount")} v={`- ${money(totals.discount)}`} green />}
           {totals.vat > 0 && <Row k={`${t("vat")} (${settings.vat_pct}%)`} v={money(totals.vat)} />}
           <div className="flex justify-between border-t border-ink-100 pt-3 text-base font-extrabold">

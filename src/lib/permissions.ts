@@ -12,6 +12,7 @@ export const PERMISSION_GROUPS = [
     ],
   },
   { key: "partners", ar: "المغاسل", en: "Laundries", perms: [["partners.view", "عرض المغاسل", "View laundries"], ["partners.manage", "إضافة وتعديل وتفعيل المغاسل والأسعار", "Add, edit, approve laundries & prices"]] },
+  { key: "business", ar: "حسابات الشركات", en: "Business accounts", perms: [["companies.manage", "إدارة حسابات الشركات وفواتيرها", "Manage business accounts & invoices"]] },
   { key: "zones", ar: "مناطق التغطية", en: "Service zones", perms: [["zones.manage", "رسم وفتح وإغلاق مناطق التغطية", "Draw, open & close service zones"]] },
   { key: "drivers", ar: "المندوبين", en: "Riders", perms: [["drivers.view", "عرض المندوبين", "View riders"], ["drivers.manage", "إضافة وإيقاف المندوبين", "Add & suspend riders"]] },
   {
@@ -51,7 +52,7 @@ export const SYSTEM_ROLES: { key: string; ar: string; en: string; desc_ar: strin
   },
   {
     key: "finance", ar: "المالية", en: "Finance", desc_ar: "الإيرادات والتقارير والاشتراكات", desc_en: "Revenue, reports and memberships",
-    perms: ["dashboard.view", "orders.view", "orders.export", "partners.view", "customers.view", "subscriptions.view", "audit.view"],
+    perms: ["dashboard.view", "orders.view", "orders.export", "partners.view", "customers.view", "subscriptions.view", "companies.manage", "audit.view"],
   },
   {
     key: "marketing", ar: "التسويق", en: "Marketing", desc_ar: "العروض والحملات والاشتراكات", desc_en: "Promos, campaigns and memberships",
@@ -65,6 +66,7 @@ export const PAGE_PERMISSION: Record<string, Permission> = {
   "/admin/orders": "orders.view",
   "/admin/partners": "partners.view",
   "/admin/zones": "zones.manage",
+  "/admin/companies": "companies.manage",
   "/admin/labels": "orders.manage",
   "/admin/drivers": "drivers.view",
   "/admin/customers": "customers.view",

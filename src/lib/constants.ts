@@ -57,7 +57,7 @@ export const STATUS_HEX: Record<OrderStatus, string> = {
 };
 
 /** cash & card_pos are collected by the rider at delivery; card = online gateway (enable in settings once connected). */
-export const PAYMENT_METHODS = ["cash", "card_pos", "card", "wallet"] as const;
+export const PAYMENT_METHODS = ["cash", "card_pos", "card", "wallet", "invoice"] as const;
 export const PAY_ON_DELIVERY = ["cash", "card_pos"];
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 

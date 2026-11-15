@@ -12,6 +12,7 @@ export type SessionUser = {
   phone: string;
   role: Role;
   partner_id: number | null;
+  company_id?: number | null;
   wallet: number;
   points: number;
   created_at: string;
@@ -76,7 +77,7 @@ export async function currentUser(): Promise<SessionUser | null> {
   const uid = readToken(bearer || (await cookies()).get(COOKIE)?.value);
   if (!uid) return null;
   const u = await get<any>(
-    `SELECT u.id,u.name,u.phone,u.role,u.partner_id,u.wallet,u.points,u.created_at,u.admin_role_id,d.id AS driver_id,
+    `SELECT u.id,u.name,u.phone,u.role,u.partner_id,u.company_id,u.wallet,u.points,u.created_at,u.admin_role_id,d.id AS driver_id,
             r.key AS admin_role, r.permissions AS role_permissions
      FROM users u LEFT JOIN drivers d ON d.user_id=u.id LEFT JOIN admin_roles r ON r.id=u.admin_role_id
      WHERE u.id=? AND u.status='active'`,

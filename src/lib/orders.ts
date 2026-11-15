@@ -227,7 +227,7 @@ export type CreateOrderInput = {
   photos?: string[];
   /** set when the order was created automatically from a recurring schedule */
   schedule_id?: number;
-  payment_method: "cash" | "card_pos" | "card" | "wallet";
+  payment_method: "cash" | "card_pos" | "card" | "wallet" | "invoice";
   promo_code?: string | null;
 };
 
@@ -238,7 +238,12 @@ export async function createOrder(user: SessionUser, input: CreateOrderInput) {
   const addr = await get<any>("SELECT * FROM addresses WHERE id=? AND user_id=?", input.address_id, user.id);
   if (!addr) throw new HttpError(400, "address_required");
   if (!Array.isArray(input.items) || !input.items.length) throw new HttpError(400, "empty_basket");
-  if (!["cash", "card_pos", "card", "wallet"].includes(input.payment_method)) throw new HttpError(400, "invalid_payment");
+  if (!["cash", "card_pos", "card", "wallet", "invoice"].includes(input.payment_method)) throw new HttpError(400, "invalid_payment");
+  // business accounts: staff can bill the order to their company (monthly invoice) with its negotiated discount
+  const company = input.payment_method === "invoice"
+    ? await get<any>("SELECT c.* FROM companies c JOIN users u ON u.company_id=c.id WHERE u.id=? AND c.active=1", user.id)
+    : null;
+  if (input.payment_method === "invoice" && !company) throw new HttpError(400, "invoice_not_allowed");
   if (input.payment_method === "card" && !(await getSettings()).online_payments) throw new HttpError(400, "online_payments_disabled");
 
   const lines: { p: any; qty: number }[] = [];
@@ -256,7 +261,11 @@ export async function createOrder(user: SessionUser, input: CreateOrderInput) {
   if (subtotal < partner.min_order) throw new HttpError(400, `min_order:${partner.min_order}`);
   const promo = input.promo_code ? await validatePromo(input.promo_code, user.id, subtotal) : null;
   const member = await activeSubscription(user.id);
-  const totals = computeTotals(subtotal, partner.delivery_fee, !!input.express, s, promo, member?.benefits);
+  const totals = computeTotals(subtotal, partner.delivery_fee, !!input.express, s, promo, member?.benefits, company?.discount_pct || 0);
+  if (company && company.credit_limit > 0) {
+    const open = (await get<any>("SELECT COALESCE(SUM(total),0) s FROM orders WHERE company_id=? AND payment_status='invoiced' AND status!='cancelled'", company.id))!.s;
+    if (Number(open) + totals.total > company.credit_limit) throw new HttpError(400, "credit_limit_reached");
+  }
   await assertDeliverable(addr.lat, addr.lng, partner.id);
   // scheduled orders are created without the customer present: the rider photographs the items at pickup instead
   if (s.photos_required && !input.schedule_id && (!Array.isArray(input.photos) || !input.photos.length)) throw new HttpError(400, "photos_required");
@@ -269,6 +278,8 @@ export async function createOrder(user: SessionUser, input: CreateOrderInput) {
       const { changes } = await run("UPDATE users SET wallet=wallet-? WHERE id=? AND wallet>=?", totals.total, user.id, totals.total);
       if (!changes) throw new HttpError(400, "wallet_insufficient");
       payStatus = "paid";
+    } else if (input.payment_method === "invoice") {
+      payStatus = "invoiced";
     } else if (input.payment_method === "card") {
       payStatus = "paid"; // integrate a real gateway (Stripe / Checkout.com / local PSP) here
     }
@@ -289,7 +300,7 @@ export async function createOrder(user: SessionUser, input: CreateOrderInput) {
     // human-friendly, collision-free order number derived from the primary key
     const code = `NQ-${10420 + id}`;
     // 4-digit handover code the customer gives the rider at delivery
-    await run("UPDATE orders SET code=?, delivery_pin=?, schedule_id=? WHERE id=?", code, String(randomInt(1000, 10000)), input.schedule_id ?? null, id);
+    await run("UPDATE orders SET code=?, delivery_pin=?, schedule_id=?, company_id=?, company_discount=? WHERE id=?", code, String(randomInt(1000, 10000)), input.schedule_id ?? null, company?.id ?? null, totals.companyDiscount, id);
     for (const { p, qty } of lines) {
       await run("INSERT INTO order_items(order_id,product_id,service_id,name_ar,name_en,service_ar,service_en,icon,qty,unit_price) VALUES(?,?,?,?,?,?,?,?,?,?)", id, p.id, p.service_id, p.name_ar, p.name_en, p.s_ar, p.s_en, p.icon, qty, p.price);
     }

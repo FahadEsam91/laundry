@@ -32,6 +32,7 @@ export type Totals = {
   serviceFee: number;
   discount: number; // promo code
   memberDiscount: number; // subscription % off
+  companyDiscount: number; // business account % off (orders billed to the company)
   vat: number;
   total: number;
   freeDeliveryGap: number;
@@ -48,6 +49,7 @@ export function computeTotals(
   s: PricingSettings,
   promo?: Promo | null,
   benefits?: Benefits | null,
+  companyPct = 0,
 ): Totals {
   const thresholdFree = s.free_delivery_over > 0 && subtotal >= s.free_delivery_over;
   let deliveryFee = thresholdFree ? 0 : partnerDeliveryFee;
@@ -75,6 +77,8 @@ export function computeTotals(
   const memberDiscount = benefits?.discount_pct ? r250((subtotal * benefits.discount_pct) / 100) : 0;
   subSavings += memberDiscount;
 
+  const companyDiscount = companyPct > 0 ? r250(((subtotal - memberDiscount) * companyPct) / 100) : 0;
+
   let discount = 0;
   if (promo && subtotal >= promo.min_order) {
     if (promo.kind === "percent") discount = r250(((subtotal - memberDiscount) * promo.value) / 100);
@@ -83,7 +87,7 @@ export function computeTotals(
     if (promo.max_discount) discount = Math.min(discount, promo.max_discount);
     discount = Math.max(0, Math.min(discount, subtotal - memberDiscount + deliveryFee));
   }
-  const taxable = subtotal + deliveryFee + expressFee + serviceFee - discount - memberDiscount;
+  const taxable = subtotal + deliveryFee + expressFee + serviceFee - discount - memberDiscount - companyDiscount;
   const vat = s.vat_pct > 0 ? Math.round((taxable * s.vat_pct) / 100) : 0;
   return {
     subtotal,
@@ -92,6 +96,7 @@ export function computeTotals(
     serviceFee,
     discount,
     memberDiscount,
+    companyDiscount,
     vat,
     total: Math.max(0, taxable + vat),
     freeDeliveryGap: thresholdFree || s.free_delivery_over <= 0 || deliveryFee === 0 ? 0 : s.free_delivery_over - subtotal,

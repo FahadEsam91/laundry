@@ -12,7 +12,9 @@ export const GET = handler(async () => {
   const stats = await get<any>("SELECT COUNT(*) orders, COALESCE(SUM(total),0) spent FROM orders WHERE customer_id=? AND status='delivered'", u.id);
   const m = u.role === "customer" ? await activeSubscription(u.id) : null;
   const member = m ? { plan: m.plan, benefits: m.benefits, sub: { id: m.sub.id, auto_renew: m.sub.auto_renew, current_period_end: m.sub.current_period_end, deliveries_used: m.sub.deliveries_used } } : null;
-  return ok({ user: u, addresses, unread, favorites, stats, member });
+  // business account the user orders for (only what checkout needs; limits and balances stay with the operator)
+  const company = u.company_id ? (await get<any>("SELECT id,name,discount_pct FROM companies WHERE id=? AND active=1", u.company_id)) ?? null : null;
+  return ok({ user: u, addresses, unread, favorites, stats, member, company });
 });
 
 export const PATCH = handler(async (req: Request) => {

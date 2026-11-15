@@ -337,6 +337,20 @@ const BASE = [
   delivered_at TEXT,
   PRIMARY KEY(order_id, garment_id)
 )`,
+  // business accounts: staff order with a negotiated discount and the company is billed monthly
+  `CREATE TABLE IF NOT EXISTS companies(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  contact_name TEXT,
+  phone TEXT,
+  email TEXT,
+  address TEXT,
+  tax_id TEXT,
+  discount_pct REAL NOT NULL DEFAULT 0,
+  credit_limit REAL NOT NULL DEFAULT 0,
+  active INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL
+)`,
   // uploaded images (laundry logos and cover photos), stored in the database so backups include them
   `CREATE TABLE IF NOT EXISTS media(
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -375,6 +389,9 @@ const COLUMNS: [table: string, column: string, def: string][] = [
   ["orders", "delivery_pin", "TEXT"],
   ["orders", "pin_attempts", "INTEGER NOT NULL DEFAULT 0"],
   ["orders", "schedule_id", "INTEGER"],
+  ["users", "company_id", "INTEGER"],
+  ["orders", "company_id", "INTEGER"],
+  ["orders", "company_discount", "REAL NOT NULL DEFAULT 0"],
 ];
 
 export function MIGRATIONS(kind: "postgres" | "sqlite") {

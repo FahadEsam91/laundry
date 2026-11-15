@@ -52,7 +52,7 @@ export async function createSchedule(user: SessionUser, b: any) {
   const items: Item[] = (Array.isArray(b.items) ? b.items : []).map((i: any) => ({ product_id: Number(i.product_id), qty: Math.max(1, Math.min(99, Number(i.qty) || 1)) }));
   if (!items.length) throw new HttpError(400, "empty_basket");
   for (const i of items) if (!(await get("SELECT 1 FROM products WHERE id=? AND partner_id=? AND active=1", i.product_id, partner.id))) throw new HttpError(400, "item_unavailable");
-  const pay = ["cash", "card_pos"].includes(b.payment_method) ? b.payment_method : "cash";
+  const pay = ["cash", "card_pos", "invoice"].includes(b.payment_method) ? b.payment_method : "cash";
   if ((await all("SELECT id FROM schedules WHERE user_id=? AND active=1", user.id)).length >= 5) throw new HttpError(400, "too_many_schedules");
   const s = await getSettings();
   const next = nextRun(days, time, s.timezone || "Asia/Baghdad");

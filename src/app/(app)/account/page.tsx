@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Wallet, MapPin, Bell, Languages, Headphones, LogOut, ChevronLeft, ChevronRight, Award, Crown, LayoutDashboard, Store, Truck, Heart, ReceiptText, Info, UserRound, Shield, FileText, Download, Trash2, Repeat, Shirt } from "lucide-react";
+import { Wallet, MapPin, Bell, Languages, Headphones, LogOut, ChevronLeft, ChevronRight, Award, Crown, LayoutDashboard, Store, Truck, Heart, ReceiptText, Info, UserRound, Shield, FileText, Download, Trash2, Repeat, Shirt, Building2 } from "lucide-react";
 import { useApp, useCart } from "@/components/providers";
 import { BottomNav } from "@/components/customer";
 import { Button, Empty, LogoMark, Sheet } from "@/components/ui";
@@ -68,6 +68,7 @@ export default function AccountPage() {
                 <h1 className="truncate text-xl font-extrabold">{u.name}</h1>
                 <p className="text-sm text-ink-500" dir="ltr">{u.phone}</p>
                 <p className="text-xs text-ink-400">{t("member_since")} {fmtDate(u.created_at, { month: "long", year: "numeric" })}</p>
+                {me.company && <p className="mt-1 inline-flex items-center gap-1 rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-bold text-brand-700"><Building2 className="h-3 w-3" /> {t("business_account")}: {me.company.name}</p>}
               </div>
             </div>
             <div className="mt-5 grid grid-cols-3 gap-2">
