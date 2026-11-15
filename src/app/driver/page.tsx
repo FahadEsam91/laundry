@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import { Power, Banknote, PackageCheck, MapPin, Phone, Navigation, Store, Home, ArrowDown, Zap, LogOut, Languages, Inbox } from "lucide-react";
 import { useApp, useToast } from "@/components/providers";
-import { Button, Empty, PartnerLogo, Skeleton, StatusBadge, cx } from "@/components/ui";
+import { Button, Empty, PartnerLogo, Sheet, Skeleton, StatusBadge, cx } from "@/components/ui";
+import { PhotosPicker } from "@/components/image-upload";
 import { MapView, type MapMarker } from "@/components/map-view";
 import { api, errText } from "@/lib/client";
 import { PushHeaderButton } from "@/components/push";
@@ -18,7 +19,8 @@ const STEP: Record<string, { action: string; key: any }> = {
 };
 
 export default function DriverApp() {
-  const { t, L, money, num, lang, setLang, refreshMe } = useApp();
+  const { t, L, money, num, lang, setLang, refreshMe, settings } = useApp();
+  const [confirm, setConfirm] = useState<{ j: any; action: string } | null>(null);
   const toast = useToast();
   const router = useRouter();
   const { data, mutate } = useSWR("/api/driver/jobs", { refreshInterval: 4000 });
@@ -35,10 +37,17 @@ export default function DriverApp() {
     await mutate();
     setBusy(null);
   };
-  const act = async (id: number, action: string) => {
+  const act = async (id: number, action: string, extra: Record<string, any> = {}) => {
+    // pickup and delivery need proof (photo) and, at delivery, the customer's handover code
+    const j = [...data.mine, ...data.available].find((x: any) => x.id === id);
+    const needsProof = settings.proof_photos && (action === "picked_up" || action === "delivered");
+    const needsPin = action === "delivered" && settings.handover_pin && j?.has_pin;
+    if ((needsProof || needsPin) && !extra.confirmed) return setConfirm({ j, action });
     setBusy(`${id}`);
     try {
-      await api(`/api/driver/jobs/${id}`, { body: { action } });
+      const { confirmed: _c, ...payload } = extra;
+      await api(`/api/driver/jobs/${id}`, { body: { action, ...payload } });
+      setConfirm(null);
       if (action === "delivered") toast("✅ " + t("confirm_delivered"));
       await mutate();
     } catch (e) {
@@ -118,6 +127,7 @@ export default function DriverApp() {
           </div>
         )}
       </section>
+      <HandoverSheet c={confirm} busy={!!busy} onClose={() => setConfirm(null)} onSubmit={(extra) => confirm && act(confirm.j.id, confirm.action, { ...extra, confirmed: true })} />
     </div>
   );
 }
@@ -167,5 +177,42 @@ function JobCard({ j, action, onAct, busy, mapsUrl }: { j: any; action?: { actio
         {action && <Button className="flex-[2]" variant={action.action === "take" ? "primary" : "success"} loading={busy} onClick={() => onAct(action.action)}>{t(action.key)}</Button>}
       </div>
     </div>
+  );
+}
+
+/** Rider confirms pickup / delivery: photo of the items and, at delivery, the customer's 4-digit code. */
+function HandoverSheet({ c, busy, onClose, onSubmit }: { c: { j: any; action: string } | null; busy: boolean; onClose: () => void; onSubmit: (extra: { photo?: string; pin?: string }) => void }) {
+  const { t, settings } = useApp();
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [pin, setPin] = useState("");
+  const delivery = c?.action === "delivered";
+  const needPin = delivery && settings.handover_pin && c?.j?.has_pin;
+  const needPhoto = !!settings.proof_photos;
+  const ready = (!needPhoto || photos.length > 0) && (!needPin || pin.length === 4);
+  return (
+    <Sheet open={!!c} onClose={() => { setPhotos([]); setPin(""); onClose(); }} title={delivery ? t("proof_title_delivery") : t("proof_title_pickup")}>
+      {c && (
+        <div className="space-y-5">
+          <div className="rounded-xl bg-ink-50 p-3 text-sm font-semibold">{c.j.code} • {c.j.customer_name}</div>
+          {needPhoto && (
+            <div>
+              <div className="mb-2 text-sm font-bold">{t("proof_photo_label")}</div>
+              <PhotosPicker value={photos} onChange={setPhotos} max={1} kind="proof" capture />
+            </div>
+          )}
+          {needPin && (
+            <div>
+              <div className="text-sm font-bold">{t("enter_pin")}</div>
+              <p className="mb-2 text-xs text-ink-500">{t("enter_pin_hint")}</p>
+              <input value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))} inputMode="numeric" autoComplete="one-time-code" dir="ltr" placeholder="• • • •"
+                className="h-16 w-full rounded-2xl border-2 border-ink-200 text-center text-3xl font-extrabold tracking-[0.6em] outline-none focus:border-brand-500" />
+            </div>
+          )}
+          <Button block size="lg" disabled={!ready} loading={busy} onClick={() => onSubmit({ photo: photos[0], pin: needPin ? pin : undefined })}>
+            {delivery ? t("confirm_delivered") : t("confirm_pickup")}
+          </Button>
+        </div>
+      )}
+    </Sheet>
   );
 }

@@ -11,7 +11,8 @@ export const POST = handler(async (req: Request) => {
   const u = await currentUser();
   if (!u) throw new HttpError(401, "unauthorized");
   const b = await body(req);
-  if (b.kind === "order") return ok({ url: await saveImage(b.data, u.id, { private: true }) }, 201);
+  // private photos: a customer's items ("order") or a rider's pickup / delivery proof ("proof")
+  if (b.kind === "order" || (b.kind === "proof" && u.role === "driver")) return ok({ url: await saveImage(b.data, u.id, { private: true }) }, 201);
   if (!(can(u, "partners.manage") || (u.role === "partner" && u.partner_id))) throw new HttpError(403, "forbidden");
   return ok({ url: await saveImage(b.data, u.id) }, 201);
 });

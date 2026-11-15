@@ -134,6 +134,19 @@ export default function OrderScreen() {
           </View>
         </View>
 
+        {!closed && o.delivery_pin && settings.handover_pin ? (
+          <LinearGradient colors={o.status === "out_for_delivery" ? [C.brand, C.brandDark] : ["#FFFFFF", "#FFFFFF"]} style={{ marginHorizontal: 16, marginTop: 12, borderRadius: 24, padding: 16, borderWidth: o.status === "out_for_delivery" ? 0 : 1, borderColor: C.ink100, gap: 10 }}>
+            <Txt w="bold" size={13} color={o.status === "out_for_delivery" ? "rgba(255,255,255,.85)" : C.ink500}>🔐 {t("handover_code")}</Txt>
+            <View style={{ flexDirection: "row", gap: 8, justifyContent: "center", direction: "ltr" } as any}>
+              {String(o.delivery_pin).split("").map((d: string, i: number) => (
+                <View key={i} style={{ width: 52, height: 60, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: o.status === "out_for_delivery" ? "#fff" : C.ink100 }}>
+                  <Txt w="bold" size={28} color={o.status === "out_for_delivery" ? C.brand : C.ink900}>{d}</Txt>
+                </View>
+              ))}
+            </View>
+            <Txt size={12} color={o.status === "out_for_delivery" ? "rgba(255,255,255,.8)" : C.ink500} style={{ textAlign: "center" }}>{t("handover_code_hint")}</Txt>
+          </LinearGradient>
+        ) : null}
         {o.driver && !closed && (
           <View style={{ marginTop: 12, marginHorizontal: 16, backgroundColor: C.white, borderRadius: 24, padding: 14, flexDirection: "row", alignItems: "center", gap: 12, ...shadow }}>
             <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: C.greenSoft, alignItems: "center", justifyContent: "center" }}><Txt w="bold" size={18} color={C.green}>{o.driver.name.slice(0, 1)}</Txt></View>
@@ -182,6 +195,12 @@ export default function OrderScreen() {
           </View>
           <View style={{ flexDirection: "row", gap: 6, marginTop: 10 }}><Icon name="location-outline" size={16} color={C.ink400} /><Txt size={12} color={C.ink700} style={{ flex: 1 }}>{o.address_text}</Txt></View>
           {o.notes ? <View style={{ marginTop: 10, backgroundColor: "#FFFBEB", borderRadius: 12, padding: 10 }}><Txt size={12} color="#78350F">📝 {o.notes}</Txt></View> : null}
+          {o.proofs?.pickup?.length || o.proofs?.delivery?.length ? (
+            <View style={{ marginTop: 12, flexDirection: "row", gap: 16 }}>
+              {o.proofs.pickup.length ? <View><Txt w="bold" size={12} color={C.ink700} style={{ marginBottom: 8 }}>{t("proof_pickup")}</Txt><PhotoGallery photos={o.proofs.pickup} size={60} /></View> : null}
+              {o.proofs.delivery.length ? <View><Txt w="bold" size={12} color={C.ink700} style={{ marginBottom: 8 }}>{t("proof_delivery")}</Txt><PhotoGallery photos={o.proofs.delivery} size={60} /></View> : null}
+            </View>
+          ) : null}
           {o.photos?.length ? (
             <View style={{ marginTop: 12 }}>
               <Txt w="bold" size={12} color={C.ink700} style={{ marginBottom: 8 }}>📷 {t("your_photos")}</Txt>

@@ -321,6 +321,9 @@ const COLUMNS: [table: string, column: string, def: string][] = [
   ["partners", "cover_url", "TEXT"],
   ["media", "private", "INTEGER NOT NULL DEFAULT 0"],
   ["media", "order_id", "INTEGER"],
+  ["media", "kind", "TEXT NOT NULL DEFAULT 'item'"],
+  ["orders", "delivery_pin", "TEXT"],
+  ["orders", "pin_attempts", "INTEGER NOT NULL DEFAULT 0"],
 ];
 
 export function MIGRATIONS(kind: "postgres" | "sqlite") {

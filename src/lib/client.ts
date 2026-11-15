@@ -40,6 +40,10 @@ const ERR: Record<string, [string, string]> = {
   account_suspended: ["الحساب موقوف", "Account suspended"],
   online_payments_disabled: ["الدفع الإلكتروني غير متاح حالياً", "Online payment isn't available yet"],
   invalid_image: ["الملف ليس صورة صالحة (JPG أو PNG)", "That file isn't a valid image (JPG or PNG)"],
+  pin_required: ["اكتب رمز التسليم من الزبون", "Enter the customer's handover code"],
+  pin_wrong: ["رمز التسليم غير صحيح. المحاولات المتبقية: {x}", "Wrong handover code. Tries left: {x}"],
+  pin_locked: ["تم قفل التسليم بعد محاولات خاطئة. تواصل مع الإدارة", "Delivery locked after wrong tries. Contact operations"],
+  proof_photo_required: ["التقط صورة للقطع أولاً", "Take a photo of the items first"],
   outside_zone: ["عنوانك خارج مناطق التغطية حالياً", "Your address is outside our service area"],
   zone_paused: ["الخدمة متوقفة مؤقتاً في منطقتك", "Service is paused in your area"],
   partner_not_in_zone: ["هذه المغسلة لا تخدم منطقتك. اختر مغسلة أخرى", "This laundry doesn't serve your area. Please choose another"],
@@ -72,7 +76,8 @@ export function errText(e: any, lang: "ar" | "en", money?: (n: number) => string
   const m = ERR[code];
   if (!m) return lang === "ar" ? "حدث خطأ، حاول مرة أخرى" : "Something went wrong, please try again";
   const s = m[lang === "ar" ? 0 : 1];
-  return arg ? s.replace("{x}", money ? money(Number(arg)) : arg) : s;
+  // only amounts are formatted as money (e.g. min_order:5000); counts stay plain (pin_wrong:3)
+  return arg ? s.replace("{x}", money && (code === "min_order" || code === "promo_min") ? money(Number(arg)) : arg) : s;
 }
 
 export function timeAgo(iso: string, lang: "ar" | "en") {

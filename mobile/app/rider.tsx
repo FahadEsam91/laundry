@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Linking, Platform, Pressable, RefreshControl, ScrollView, View } from "react-native";
+import { Linking, Platform, Pressable, RefreshControl, ScrollView, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -13,6 +13,7 @@ import { useI18n, errText } from "@/i18n";
 import { registerForPush } from "@/push";
 import { useToast } from "@/toast";
 import { LiveMap, type Pin } from "@/map";
+import { PhotosPicker } from "@/photos";
 import { API_URL } from "@/config";
 import { C, shadow } from "@/theme";
 import { Btn, Empty, Icon, Loading, PartnerLogo, Row, Sheet, StatusBadge, Txt } from "@/ui";
@@ -44,7 +45,8 @@ function useLiveLocation(online: boolean) {
 }
 
 export default function Rider() {
-  const { t, L, money, num, lang, setLang } = useI18n();
+  const { t, L, money, num, lang, setLang, settings } = useI18n();
+  const [confirm, setConfirm] = useState<{ j: any; action: string } | null>(null);
   const { token, ready, signOut } = useAuth();
   const toast = useToast();
   const router = useRouter();
@@ -71,10 +73,17 @@ export default function Rider() {
     await mutate();
     setBusy(null);
   };
-  const act = async (id: number, action: string) => {
+  const act = async (id: number, action: string, extra: Record<string, any> = {}) => {
+    // pickup and delivery need a proof photo and, at delivery, the customer's handover code
+    const j = [...(data?.mine || []), ...(data?.available || [])].find((x: any) => x.id === id);
+    const needsProof = settings.proof_photos && (action === "picked_up" || action === "delivered");
+    const needsPin = action === "delivered" && settings.handover_pin && j?.has_pin;
+    if ((needsProof || needsPin) && !extra.confirmed) return setConfirm({ j, action });
     setBusy(String(id));
     try {
-      await api(`/api/driver/jobs/${id}`, { body: { action } });
+      const { confirmed: _c, ...payload } = extra;
+      await api(`/api/driver/jobs/${id}`, { body: { action, ...payload } });
+      setConfirm(null);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       if (action === "delivered") toast(`✅ ${t("confirm_delivered")}`);
       await mutate();
@@ -180,10 +189,47 @@ export default function Rider() {
         <Row icon="log-out-outline" label={t("logout")} onPress={async () => { setMenu(false); await signOut(); router.replace("/login"); }} />
         <Row icon="trash-outline" label={t("delete_account")} danger onPress={() => { setMenu(false); setDelOpen(true); }} />
       </Sheet>
+      <HandoverSheet c={confirm} busy={!!busy} onClose={() => setConfirm(null)} onSubmit={(extra) => confirm && act(confirm.j.id, confirm.action, { ...extra, confirmed: true })} />
       <Sheet open={delOpen} onClose={() => setDelOpen(false)} title={t("delete_account")}>
         <Txt color={C.ink700}>{t("delete_account_d")}</Txt>
         <Btn title={t("delete_forever")} variant="danger" icon="trash" style={{ marginTop: 16 }} onPress={async () => { try { await deleteAccount(); await signOut(); router.replace("/login"); } catch (e) { toast(errText(e, lang), "error"); } setDelOpen(false); }} />
       </Sheet>
     </View>
+  );
+}
+
+/** Rider confirms pickup / delivery: photo of the items and, at delivery, the customer's 4-digit code. */
+function HandoverSheet({ c, busy, onClose, onSubmit }: { c: { j: any; action: string } | null; busy: boolean; onClose: () => void; onSubmit: (extra: { photo?: string; pin?: string }) => void }) {
+  const { t, settings } = useI18n();
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [pin, setPin] = useState("");
+  const delivery = c?.action === "delivered";
+  const needPin = delivery && settings.handover_pin && c?.j?.has_pin;
+  const needPhoto = !!settings.proof_photos;
+  const ready = (!needPhoto || photos.length > 0) && (!needPin || pin.length === 4);
+  const close = () => { setPhotos([]); setPin(""); onClose(); };
+  return (
+    <Sheet open={!!c} onClose={close} title={delivery ? t("proof_title_delivery") : t("proof_title_pickup")}>
+      {c ? (
+        <View style={{ gap: 16 }}>
+          <View style={{ backgroundColor: C.ink50, borderRadius: 12, padding: 12 }}><Txt w="semibold">{c.j.code} • {c.j.customer_name}</Txt></View>
+          {needPhoto ? (
+            <View>
+              <Txt w="bold" style={{ marginBottom: 8 }}>{t("proof_photo_label")}</Txt>
+              <PhotosPicker value={photos} onChange={setPhotos} max={1} kind="proof" />
+            </View>
+          ) : null}
+          {needPin ? (
+            <View>
+              <Txt w="bold">{t("enter_pin")}</Txt>
+              <Txt size={12} color={C.ink500} style={{ marginBottom: 8 }}>{t("enter_pin_hint")}</Txt>
+              <TextInput value={pin} onChangeText={(v) => setPin(v.replace(/\D/g, "").slice(0, 4))} keyboardType="number-pad" maxLength={4} placeholder="• • • •" textContentType="oneTimeCode"
+                style={{ height: 64, borderRadius: 18, borderWidth: 2, borderColor: C.ink200, textAlign: "center", fontSize: 30, fontWeight: "800", letterSpacing: 18, color: C.ink900, writingDirection: "ltr" }} />
+            </View>
+          ) : null}
+          <Btn title={delivery ? t("confirm_delivered") : t("confirm_pickup")} disabled={!ready} loading={busy} onPress={() => onSubmit({ photo: photos[0], pin: needPin ? pin : undefined })} />
+        </View>
+      ) : null}
+    </Sheet>
   );
 }

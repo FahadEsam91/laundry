@@ -159,6 +159,12 @@ function OrderDrawer({ id, onClose, onChanged }: { id: number | null; onClose: (
                 <PhotoGallery photos={o.photos} size={84} />
               </div>
             )}
+            {(o.proofs?.pickup?.length > 0 || o.proofs?.delivery?.length > 0) && (
+              <div className="grid grid-cols-2 gap-3">
+                {o.proofs.pickup.length > 0 && <div><div className="mb-2 text-xs font-bold text-ink-600">{t("proof_pickup")}</div><PhotoGallery photos={o.proofs.pickup} size={84} /></div>}
+                {o.proofs.delivery.length > 0 && <div><div className="mb-2 text-xs font-bold text-ink-600">{t("proof_delivery")}</div><PhotoGallery photos={o.proofs.delivery} size={84} /></div>}
+              </div>
+            )}
             <div className="rounded-2xl border border-ink-100">
               {o.items.map((i: any) => (
                 <div key={i.id} className="flex items-center gap-3 border-b border-ink-100 px-4 py-2.5 text-sm last:border-0">

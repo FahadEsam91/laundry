@@ -1,4 +1,5 @@
 import "server-only";
+import { randomInt } from "node:crypto";
 import { all, get, run, tx, now, insert } from "./db";
 import { getSettings } from "./settings";
 import { computeTotals, type Promo } from "./pricing";
@@ -6,7 +7,7 @@ import { HttpError, type SessionUser } from "./auth";
 import { CANCELLABLE, NEXT_STATUS, ORDER_FLOW, PAY_ON_DELIVERY, STATUS_META, type OrderStatus } from "./constants";
 import { driverUser, onlineDriverUsers, partnerStaff, queuePush } from "./push";
 import { activeSubscription, refundFreeDelivery, renewSweep } from "./subscriptions";
-import { attachOrderPhotos, orderPhotos } from "./media";
+import { attachOrderPhotos, orderPhotos, proofPhotos } from "./media";
 import { assertDeliverable } from "./zones";
 
 // ---------------------------------------------------------------- helpers
@@ -103,7 +104,10 @@ export async function orderDTO(id: number) {
     };
   }
   const photos = (await orderPhotos([o.id]))[o.id] || [];
-  return { ...o, partner, customer, driver, items, events, tracking, photos };
+  const proofs = await proofPhotos(o.id);
+  // the handover code is only ever shown to the customer (the order API adds it for them)
+  const { delivery_pin: pin, pin_attempts: _attempts, ...rest } = o;
+  return { ...rest, has_pin: !!pin, partner, customer, driver, items, events, tracking, photos, proofs };
 }
 
 // ---------------------------------------------------------------- transitions
@@ -173,7 +177,9 @@ export async function transition(orderId: number, to: OrderStatus, actor: string
       });
     }
     const m = STATUS_META[to];
-    await notify(o.customer_id, `${m.ar} • ${o.code}`, `${m.en} • ${o.code}`, m.descAr, m.descEn, orderId);
+    const pinAr = to === "out_for_delivery" && o.delivery_pin ? ` • رمز التسليم: ${o.delivery_pin}` : "";
+    const pinEn = to === "out_for_delivery" && o.delivery_pin ? ` • Handover code: ${o.delivery_pin}` : "";
+    await notify(o.customer_id, `${m.ar} • ${o.code}`, `${m.en} • ${o.code}`, m.descAr + pinAr, m.descEn + pinEn, orderId);
     return await get<any>("SELECT * FROM orders WHERE id=?", orderId);
   });
 }
@@ -276,7 +282,8 @@ export async function createOrder(user: SessionUser, input: CreateOrderInput) {
     );
     // human-friendly, collision-free order number derived from the primary key
     const code = `NQ-${10420 + id}`;
-    await run("UPDATE orders SET code=? WHERE id=?", code, id);
+    // 4-digit handover code the customer gives the rider at delivery
+    await run("UPDATE orders SET code=?, delivery_pin=? WHERE id=?", code, String(randomInt(1000, 10000)), id);
     for (const { p, qty } of lines) {
       await run("INSERT INTO order_items(order_id,product_id,service_id,name_ar,name_en,service_ar,service_en,icon,qty,unit_price) VALUES(?,?,?,?,?,?,?,?,?,?)", id, p.id, p.service_id, p.name_ar, p.name_en, p.s_ar, p.s_en, p.icon, qty, p.price);
     }

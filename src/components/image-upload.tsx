@@ -88,7 +88,7 @@ export function ImageUpload({ value, onChange, kind, label }: { value?: string |
 }
 
 /** Customer photos of their items (stains, damage, special care). Uploaded privately; returns the list of paths. */
-export function PhotosPicker({ value, onChange, max = 6 }: { value: string[]; onChange: (v: string[]) => void; max?: number }) {
+export function PhotosPicker({ value, onChange, max = 6, kind = "order", capture }: { value: string[]; onChange: (v: string[]) => void; max?: number; kind?: "order" | "proof"; capture?: boolean }) {
   const { t, lang } = useApp();
   const toast = useToast();
   const input = useRef<HTMLInputElement>(null);
@@ -104,7 +104,7 @@ export function PhotosPicker({ value, onChange, max = 6 }: { value: string[]; on
     for (const f of list) {
       try {
         const data = await prepare(f, "photo");
-        added.push((await api<{ url: string }>("/api/media", { body: { kind: "order", data } })).url);
+        added.push((await api<{ url: string }>("/api/media", { body: { kind, data } })).url);
       } catch (e) {
         toast(errText(e, lang), "error");
       }
@@ -134,7 +134,7 @@ export function PhotosPicker({ value, onChange, max = 6 }: { value: string[]; on
           </button>
         )}
       </div>
-      <input ref={input} type="file" accept="image/*" multiple className="hidden" onChange={(e) => pick(e.target.files)} />
+      <input ref={input} type="file" accept="image/*" multiple={max > 1} {...(capture ? { capture: "environment" } : {})} className="hidden" onChange={(e) => pick(e.target.files)} />
       {view !== null && <Lightbox photos={value} start={view} onClose={() => setView(null)} />}
     </div>
   );

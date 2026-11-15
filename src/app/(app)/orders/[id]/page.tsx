@@ -191,6 +191,21 @@ function Inner({ id }: { id: string }) {
           </div>
         </div>
 
+        {!closed && o.delivery_pin && settings.handover_pin && (
+          <div className={cx("rounded-3xl p-4 shadow-soft", o.status === "out_for_delivery" ? "bg-gradient-to-br from-brand-600 to-brand-800 text-white" : "border border-ink-100 bg-white")}>
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className={cx("text-xs font-bold", o.status === "out_for_delivery" ? "text-white/80" : "text-ink-500")}>🔐 {t("handover_code")}</div>
+                <p className={cx("mt-1 text-xs leading-5", o.status === "out_for_delivery" ? "text-white/80" : "text-ink-500")}>{t("handover_code_hint")}</p>
+              </div>
+              <div className="flex shrink-0 gap-1.5" dir="ltr">
+                {o.delivery_pin.split("").map((d: string, i: number) => (
+                  <span key={i} className={cx("flex h-12 w-10 items-center justify-center rounded-xl text-2xl font-extrabold tabular", o.status === "out_for_delivery" ? "bg-white text-brand-700" : "bg-ink-100 text-ink-900")}>{d}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
         {!closed && <PushPrompt />}
 
         {/* rider */}
@@ -268,6 +283,12 @@ function Inner({ id }: { id: string }) {
             <div className="mt-3">
               <div className="mb-2 text-xs font-bold text-ink-600">📷 {t("your_photos")}</div>
               <PhotoGallery photos={o.photos} size={64} />
+            </div>
+          )}
+          {(o.proofs?.pickup?.length > 0 || o.proofs?.delivery?.length > 0) && (
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              {o.proofs.pickup.length > 0 && <div><div className="mb-2 text-xs font-bold text-ink-600">{t("proof_pickup")}</div><PhotoGallery photos={o.proofs.pickup} size={64} /></div>}
+              {o.proofs.delivery.length > 0 && <div><div className="mb-2 text-xs font-bold text-ink-600">{t("proof_delivery")}</div><PhotoGallery photos={o.proofs.delivery} size={64} /></div>}
             </div>
           )}
         </div>

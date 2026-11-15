@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import useSWR from "swr";
-import { Bot, Coins, Globe2, CreditCard, Crown, Camera } from "lucide-react";
+import { Bot, Coins, Globe2, CreditCard, Crown, Camera, KeyRound, ScanEye } from "lucide-react";
 import { useApp, useToast } from "@/components/providers";
 import { PageHead, Panel } from "@/components/admin";
 import { Button, Input, Skeleton, Toggle } from "@/components/ui";
@@ -46,6 +46,12 @@ export default function SettingsPage() {
         </Panel>
         <Panel title={<span className="flex items-center gap-2"><Camera className="h-5 w-5 text-brand-600" /> {t("photos_required_setting")}</span>} sub={t("photos_required_setting_d")}>
           <label className="flex items-center gap-3 text-sm font-semibold"><Toggle checked={!!s.photos_required} onChange={(v) => setS({ ...s, photos_required: v })} /> {s.photos_required ? t("active") : t("inactive")}</label>
+        </Panel>
+        <Panel title={<span className="flex items-center gap-2"><KeyRound className="h-5 w-5 text-brand-600" /> {t("handover_pin_setting")}</span>} sub={t("handover_pin_setting_d")}>
+          <label className="flex items-center gap-3 text-sm font-semibold"><Toggle checked={!!s.handover_pin} onChange={(v) => setS({ ...s, handover_pin: v })} /> {s.handover_pin ? t("active") : t("inactive")}</label>
+        </Panel>
+        <Panel title={<span className="flex items-center gap-2"><ScanEye className="h-5 w-5 text-brand-600" /> {t("proof_photos_setting")}</span>} sub={t("proof_photos_setting_d")}>
+          <label className="flex items-center gap-3 text-sm font-semibold"><Toggle checked={!!s.proof_photos} onChange={(v) => setS({ ...s, proof_photos: v })} /> {s.proof_photos ? t("active") : t("inactive")}</label>
         </Panel>
         <Panel title={<span className="flex items-center gap-2"><Coins className="h-5 w-5 text-emerald-600" /> {t("fees_taxes")}</span>}>
           <div className="grid gap-4 md:grid-cols-2">

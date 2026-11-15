@@ -73,8 +73,25 @@ export async function orderPhotos(orderIds: number[]): Promise<Record<number, st
   const out: Record<number, string[]> = {};
   if (!orderIds.length) return out;
   const rows = await all<{ id: number; order_id: number }>(
-    `SELECT id,order_id FROM media WHERE private=1 AND order_id IN (${orderIds.map(() => "?").join(",")}) ORDER BY id`, ...orderIds,
+    `SELECT id,order_id FROM media WHERE private=1 AND kind='item' AND order_id IN (${orderIds.map(() => "?").join(",")}) ORDER BY id`, ...orderIds,
   );
   for (const r of rows) (out[r.order_id] ||= []).push(url(r.id));
   return out;
+}
+
+/** Rider's proof photos (taken at pickup and at delivery) for one order. */
+export async function proofPhotos(orderId: number) {
+  const rows = await all<{ id: number; kind: string }>("SELECT id,kind FROM media WHERE order_id=? AND kind IN ('pickup_proof','delivery_proof') ORDER BY id", orderId);
+  return {
+    pickup: rows.filter((r) => r.kind === "pickup_proof").map((r) => url(r.id)),
+    delivery: rows.filter((r) => r.kind === "delivery_proof").map((r) => url(r.id)),
+  };
+}
+
+/** Attach a rider's freshly uploaded photo to an order as pickup or delivery proof. */
+export async function attachProof(userId: number, orderId: number, photo: unknown, kind: "pickup_proof" | "delivery_proof") {
+  const id = idOf(photo);
+  if (!id) throw new HttpError(400, "proof_photo_required");
+  const { changes } = await run("UPDATE media SET order_id=?, kind=? WHERE id=? AND user_id=? AND private=1 AND order_id IS NULL", orderId, kind, id, userId);
+  if (!changes) throw new HttpError(400, "invalid_image");
 }

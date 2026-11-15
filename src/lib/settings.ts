@@ -17,6 +17,10 @@ export type Settings = {
   memberships: boolean;
   /** customers must attach at least one photo of their items to place an order */
   photos_required: boolean;
+  /** the rider needs the customer code (4 digits) to complete a delivery */
+  handover_pin: boolean;
+  /** the rider must photograph the items at pickup and at delivery */
+  proof_photos: boolean;
   autopilot_seconds: number;
   support_phone: string;
   city_ar: string;
@@ -37,13 +41,15 @@ export async function getSettings(): Promise<Settings> {
   for (const r of rows) {
     if (r.key.startsWith("vapid_")) continue; // server-only secrets
     if (NUM.includes(r.key)) o[r.key] = Number(r.value);
-    else if (r.key === "autopilot" || r.key === "online_payments" || r.key === "memberships" || r.key === "photos_required") o[r.key] = r.value === "1";
+    else if (r.key === "autopilot" || r.key === "online_payments" || r.key === "memberships" || r.key === "photos_required" || r.key === "handover_pin" || r.key === "proof_photos") o[r.key] = r.value === "1";
     else o[r.key] = r.value;
   }
   o.online_payments = !!o.online_payments; // off until a payment gateway is connected
   // Not set yet: on in the demo, off in production until customers have a way to pay for a membership.
   o.memberships = o.memberships === undefined ? DEMO : !!o.memberships;
   o.photos_required = o.photos_required === undefined ? true : !!o.photos_required;
+  o.handover_pin = o.handover_pin === undefined ? true : !!o.handover_pin;
+  o.proof_photos = o.proof_photos === undefined ? true : !!o.proof_photos;
   cache = { at: Date.now(), v: o as Settings };
   return o as Settings;
 }

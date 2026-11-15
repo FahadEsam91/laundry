@@ -18,7 +18,7 @@ function useSource() {
 }
 
 /** Customer photos of their items, uploaded privately before the order is placed. */
-export function PhotosPicker({ value, onChange, max = 6 }: { value: string[]; onChange: (v: string[]) => void; max?: number }) {
+export function PhotosPicker({ value, onChange, max = 6, kind = "order" }: { value: string[]; onChange: (v: string[]) => void; max?: number; kind?: "order" | "proof" }) {
   const { t, lang, money } = useI18n();
   const toast = useToast();
   const src = useSource();
@@ -39,7 +39,7 @@ export function PhotosPicker({ value, onChange, max = 6 }: { value: string[]; on
         const big = Math.max(a.width || 0, a.height || 0) > 1600;
         const resize = big ? [{ resize: (a.width || 0) >= (a.height || 0) ? { width: 1600 } : { height: 1600 } }] : [];
         const img = await manipulateAsync(a.uri, resize, { compress: 0.8, format: SaveFormat.JPEG, base64: true });
-        const res = await api<{ url: string }>("/api/media", { body: { kind: "order", data: `data:image/jpeg;base64,${img.base64}` } });
+        const res = await api<{ url: string }>("/api/media", { body: { kind, data: `data:image/jpeg;base64,${img.base64}` } });
         added.push(res.url);
       } catch (e) {
         toast(errText(e, lang, money), "error");

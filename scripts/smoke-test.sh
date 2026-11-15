@@ -26,10 +26,22 @@ ID=$(echo "$r" | jqv "['id']"); CODE=$(echo "$r" | jqv "['code']")
 st(){ call customer GET /api/orders/$ID | jqv "['order']['status']"; }
 call driver POST /api/driver/status '{"status":"online"}' >/dev/null
 call partner POST /api/partner/orders/$ID '{"action":"accept"}' >/dev/null
-for a in take picked_up at_laundry; do call driver POST /api/driver/jobs/$ID "{\"action\":\"$a\"}" >/dev/null; done
+dphoto(){ call driver POST /api/media "{\"kind\":\"proof\",\"data\":\"$JPEG\"}" | jqv "['url']"; }  # rider's proof photo
+call driver POST /api/driver/jobs/$ID '{"action":"take"}' >/dev/null
+[ "$(call driver POST /api/driver/jobs/$ID '{"action":"picked_up"}' | jqv "['error']")" = "proof_photo_required" ] && pass "pickup needs a proof photo" || fail "pickup proof" "-"
+call driver POST /api/driver/jobs/$ID "{\"action\":\"picked_up\",\"photo\":\"$(dphoto)\"}" >/dev/null
+call driver POST /api/driver/jobs/$ID '{"action":"at_laundry"}' >/dev/null
 for a in start ready; do call partner POST /api/partner/orders/$ID "{\"action\":\"$a\"}" >/dev/null; done
-for a in take out_for_delivery delivered; do call driver POST /api/driver/jobs/$ID "{\"action\":\"$a\"}" >/dev/null; done
+for a in take out_for_delivery; do call driver POST /api/driver/jobs/$ID "{\"action\":\"$a\"}" >/dev/null; done
+PIN=$(call customer GET /api/orders/$ID | jqv "['order']['delivery_pin']")
+[ "${#PIN}" = 4 ] && pass "customer sees the handover code" || fail "customer pin" "$PIN"
+[ "$(call driver GET /api/orders/$ID | jqv "['order'].get('delivery_pin','hidden')")" = "hidden" ] && pass "rider can't see the handover code" || fail "pin hidden" "-"
+[ "$(call driver POST /api/driver/jobs/$ID "{\"action\":\"delivered\",\"photo\":\"$(dphoto)\"}" | jqv "['error']")" = "pin_required" ] && pass "delivery needs the code" || fail "pin required" "-"
+[ "$(call driver POST /api/driver/jobs/$ID "{\"action\":\"delivered\",\"pin\":\"0000\",\"photo\":\"$(dphoto)\"}" | jqv "['error']")" = "pin_wrong:4" ] && pass "wrong code refused (4 tries left)" || fail "pin wrong" "-"
+call driver POST /api/driver/jobs/$ID "{\"action\":\"delivered\",\"pin\":\"$PIN\",\"photo\":\"$(dphoto)\"}" >/dev/null
 [ "$(st)" = "delivered" ] && pass "full lifecycle → delivered" || fail lifecycle "$(st)"
+PROOFS=$(call customer GET /api/orders/$ID | python3 -c "import sys,json;p=json.load(sys.stdin)['order']['proofs'];print(len(p['pickup']),len(p['delivery']))")
+[ "$PROOFS" = "1 1" ] && pass "pickup and delivery proof photos on the order" || fail "proofs" "$PROOFS"
 [ "$(call customer GET /api/orders/$ID | jqv "['order']['payment_status']")" = "paid" ] && pass "card on delivery marked paid at delivery" || fail "card_pos paid" "-"
 [ "$(call customer POST /api/orders/$ID/rate '{"rating":5,"review":"ok"}' | jqv "['ok']")" = "True" ] && pass rating || fail rating "-"
 w1=$(call customer GET /api/me | jqv "['user']['wallet']")
