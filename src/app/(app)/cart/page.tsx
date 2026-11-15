@@ -4,13 +4,14 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import useSWR from "swr";
-import { ShoppingBasket, Zap, Clock, MapPin, Banknote, CreditCard, Wallet, TicketPercent, Check, Plus, Trash2, Truck, ChevronDown, Lock, Crown } from "lucide-react";
+import { ShoppingBasket, Zap, Clock, MapPin, Banknote, CreditCard, Wallet, TicketPercent, Check, Plus, Trash2, Truck, ChevronDown, Lock, Crown, Repeat } from "lucide-react";
 import { useApp, useCart, useToast } from "@/components/providers";
 import { AddressIcon, AddressSheet, TopBar, ZoneBadge } from "@/components/customer";
-import { Button, Empty, Input, PartnerLogo, QtyStepper, Textarea, cx } from "@/components/ui";
+import { Button, Empty, Input, PartnerLogo, QtyStepper, Textarea, Toggle, cx } from "@/components/ui";
 import { computeTotals, type Promo } from "@/lib/pricing";
 import { api, errText } from "@/lib/client";
 import { PhotosPicker } from "@/components/image-upload";
+import { SchedulePicker } from "@/components/schedule-picker";
 
 function buildSlots(lang: "ar" | "en") {
   const out: { value: string; day: string; label: string }[] = [];
@@ -39,6 +40,7 @@ export default function CartPage() {
   const [slot, setSlot] = useState("asap");
   const [notes, setNotes] = useState("");
   const [photos, setPhotos] = useState<string[]>([]);
+  const [repeat, setRepeat] = useState<{ on: boolean; days: number[]; time: string }>({ on: false, days: [], time: "10:00" });
   const [promoInput, setPromoInput] = useState("");
   const [promo, setPromo] = useState<Promo | null>(null);
   const [promoBusy, setPromoBusy] = useState(false);
@@ -110,6 +112,16 @@ export default function CartPage() {
           promo_code: promo?.code || null,
         },
       });
+      if (repeat.on && repeat.days.length) {
+        try {
+          await api("/api/schedules", {
+            body: { partner_id: p.id, address_id: addr.id, items: lines.map((l) => ({ product_id: l.product_id, qty: l.qty })), days: repeat.days, time: repeat.time, express, notes, payment_method: pay === "card_pos" ? "card_pos" : "cash" },
+          });
+          toast(t("schedule_saved"));
+        } catch (e) {
+          toast(errText(e, lang), "error");
+        }
+      }
       cart.clear();
       refreshMe();
       router.replace(`/orders/${r.id}?placed=1`);
@@ -267,6 +279,19 @@ export default function CartPage() {
             </div>
             <p className="mb-2 mt-0.5 text-xs text-ink-500">{settings.photos_required ? t("item_photos_req_hint") : t("item_photos_hint")}</p>
             <PhotosPicker value={photos} onChange={setPhotos} />
+          </div>
+        )}
+        {me?.user && (
+          <div className="mt-4 rounded-2xl border border-ink-100 bg-ink-50/60 p-3">
+            <label className="flex cursor-pointer items-start gap-3">
+              <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-100 text-brand-700"><Repeat className="h-5 w-5" /></span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-bold">{t("repeat_order")}</span>
+                <span className="block text-xs text-ink-500">{t("repeat_order_d")}</span>
+              </span>
+              <Toggle checked={repeat.on} onChange={(v) => setRepeat({ ...repeat, on: v })} />
+            </label>
+            {repeat.on && <div className="mt-3"><SchedulePicker days={repeat.days} time={repeat.time} onChange={(v) => setRepeat({ ...repeat, ...v })} /></div>}
           </div>
         )}
       </section>

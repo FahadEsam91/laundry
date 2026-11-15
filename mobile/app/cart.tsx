@@ -8,6 +8,7 @@ import { api } from "@/api";
 import { useAuth } from "@/auth";
 import { PhotosPicker } from "@/photos";
 import { ZoneBadge } from "@/zone";
+import { SchedulePicker } from "@/schedule";
 import { useCart } from "@/cart";
 import { useI18n, errText } from "@/i18n";
 import { useToast } from "@/toast";
@@ -41,6 +42,7 @@ export default function Cart() {
   const [slot, setSlot] = useState("asap");
   const [notes, setNotes] = useState("");
   const [photos, setPhotos] = useState<string[]>([]);
+  const [repeat, setRepeat] = useState<{ on: boolean; days: number[]; time: string }>({ on: false, days: [], time: "10:00" });
   const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
   const photosY = useRef(0);
   const [promoText, setPromoText] = useState("");
@@ -93,6 +95,14 @@ export default function Cart() {
     setBusy("place");
     try {
       const r = await api("/api/orders", { body: { partner_id: p.id, items: lines.map((l) => ({ product_id: l.product_id, qty: l.qty })), express, address_id: addr.id, pickup_slot: slot, notes, photos, payment_method: pay, promo_code: promo?.code || null } });
+      if (repeat.on && repeat.days.length) {
+        try {
+          await api("/api/schedules", { body: { partner_id: p.id, address_id: addr.id, items: lines.map((l) => ({ product_id: l.product_id, qty: l.qty })), days: repeat.days, time: repeat.time, express, notes, payment_method: pay === "card_pos" ? "card_pos" : "cash" } });
+          toast(t("schedule_saved"));
+        } catch (e) {
+          toast(errText(e, lang, money), "error");
+        }
+      }
       cart.clear();
       refreshMe();
       router.replace({ pathname: "/order/[id]", params: { id: String(r.id), placed: "1" } });
@@ -201,6 +211,18 @@ export default function Cart() {
               <PhotosPicker value={photos} onChange={setPhotos} />
             </Section>
           </View>
+        ) : null}
+        {token ? (
+          <Section title={t("repeat_order")}>
+            <Pressable onPress={() => setRepeat({ ...repeat, on: !repeat.on })} style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: C.brandSoft, alignItems: "center", justifyContent: "center" }}><Icon name="repeat" size={20} color={C.brand} /></View>
+              <Txt size={12} color={C.ink500} style={{ flex: 1 }}>{t("repeat_order_d")}</Txt>
+              <View style={{ width: 46, height: 28, borderRadius: 14, padding: 3, backgroundColor: repeat.on ? C.brand : C.ink200, alignItems: repeat.on ? "flex-end" : "flex-start" }}>
+                <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: "#fff" }} />
+              </View>
+            </Pressable>
+            {repeat.on ? <View style={{ marginTop: 14 }}><SchedulePicker days={repeat.days} time={repeat.time} onChange={(v) => setRepeat({ ...repeat, ...v })} /></View> : null}
+          </Section>
         ) : null}
 
         <Section title={t("promo_code")}>

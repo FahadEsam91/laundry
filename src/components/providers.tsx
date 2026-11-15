@@ -68,7 +68,8 @@ export function Providers({ children, lang: initialLang, settings, services }: {
       L: (o, f) => pickLang(lang, o, f),
       money: (n, o) => `${o?.sign && n > 0 ? "+" : ""}${nf.format(Math.round(n || 0))} ${cur}`,
       num: (n, d = 0) => new Intl.NumberFormat("en-US", { maximumFractionDigits: d, minimumFractionDigits: d }).format(n || 0),
-      fmtDate: (iso, o) => new Intl.DateTimeFormat(locale, o || { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: settings.timezone || undefined }).format(new Date(iso)),
+      // always in the platform's time zone (Baghdad), whatever the visitor's device is set to
+      fmtDate: (iso, o) => new Intl.DateTimeFormat(locale, { ...(o || { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }), timeZone: settings.timezone || undefined }).format(new Date(iso)),
       statusLabel: (s) => (STATUS_META as any)[s]?.[lang] ?? s,
       settings,
       services,

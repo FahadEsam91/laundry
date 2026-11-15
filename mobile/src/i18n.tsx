@@ -69,7 +69,8 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
       num: (n, d = 0) => new Intl.NumberFormat("en-US", { maximumFractionDigits: d, minimumFractionDigits: d }).format(n || 0),
       fmtDate: (iso, o) => {
         try {
-          return new Intl.DateTimeFormat(locale, o || { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: settings.timezone }).format(new Date(iso));
+          // always in the platform's time zone (Baghdad), whatever the phone is set to
+          return new Intl.DateTimeFormat(locale, { ...(o || { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }), timeZone: settings.timezone }).format(new Date(iso));
         } catch {
           return new Date(iso).toLocaleString();
         }
@@ -99,6 +100,9 @@ const ERR: Record<string, [string, string]> = {
   too_many_attempts: ["محاولات كثيرة، اطلب رمزاً جديداً", "Too many attempts, request a new code"],
   invalid_phone: ["رقم الهاتف غير صحيح", "Invalid phone number"],
   wallet_insufficient: ["رصيد المحفظة غير كافٍ", "Insufficient wallet balance"],
+  schedule_days_required: ["اختر يوماً واحداً على الأقل", "Choose at least one day"],
+  schedule_time_invalid: ["اختر وقتاً بين ٧ صباحاً و١٠ مساءً", "Choose a time between 7am and 10pm"],
+  too_many_schedules: ["يمكنك تفعيل ٥ جداول كحد أقصى", "You can have up to 5 active schedules"],
   pin_required: ["اكتب رمز التسليم من الزبون", "Enter the customer's handover code"],
   pin_wrong: ["رمز التسليم غير صحيح. المحاولات المتبقية: {x}", "Wrong handover code. Tries left: {x}"],
   pin_locked: ["تم قفل التسليم بعد محاولات خاطئة. تواصل مع الإدارة", "Delivery locked after wrong tries. Contact operations"],

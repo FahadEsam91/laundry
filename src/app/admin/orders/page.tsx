@@ -81,6 +81,7 @@ function OrdersInner() {
               <tr key={o.id} onClick={() => setOpenId(o.id)} className="cursor-pointer hover:bg-brand-50/40">
                 <Td>
                   <span className="font-bold text-brand-700">{o.code}</span>
+                  {o.schedule_id && <span className="ms-1.5 rounded-full bg-brand-50 px-1.5 py-0.5 text-[10px] font-bold text-brand-700" title={t("scheduled_badge")}>🔁</span>}
                   {Number(o.photos_count) > 0 && <span className="ms-1.5 rounded-full bg-ink-100 px-1.5 py-0.5 text-[10px] font-bold text-ink-600" title={t("customer_photos")}>📷 {o.photos_count}</span>}
                   {o.express ? <Zap className="ms-1 inline h-3.5 w-3.5 fill-amber-400 text-amber-500" /> : null}
                 </Td>

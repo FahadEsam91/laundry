@@ -287,6 +287,26 @@ const BASE = [
   PRIMARY KEY(partner_id, zone_id)
 )`,
   `CREATE INDEX IF NOT EXISTS idx_partner_zones_zone ON partner_zones(zone_id)`,
+  // recurring pickups: the basket is re-ordered automatically on the chosen weekdays and time
+  `CREATE TABLE IF NOT EXISTS schedules(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  partner_id INTEGER NOT NULL REFERENCES partners(id),
+  address_id INTEGER NOT NULL,
+  days TEXT NOT NULL,
+  time TEXT NOT NULL,
+  items TEXT NOT NULL,
+  express INTEGER NOT NULL DEFAULT 0,
+  payment_method TEXT NOT NULL DEFAULT 'cash',
+  notes TEXT,
+  active INTEGER NOT NULL DEFAULT 1,
+  next_run_at TEXT,
+  last_run_at TEXT,
+  last_order_id INTEGER,
+  last_error TEXT,
+  created_at TEXT NOT NULL
+)`,
+  `CREATE INDEX IF NOT EXISTS idx_schedules_next ON schedules(active, next_run_at)`,
   // uploaded images (laundry logos and cover photos), stored in the database so backups include them
   `CREATE TABLE IF NOT EXISTS media(
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -324,6 +344,7 @@ const COLUMNS: [table: string, column: string, def: string][] = [
   ["media", "kind", "TEXT NOT NULL DEFAULT 'item'"],
   ["orders", "delivery_pin", "TEXT"],
   ["orders", "pin_attempts", "INTEGER NOT NULL DEFAULT 0"],
+  ["orders", "schedule_id", "INTEGER"],
 ];
 
 export function MIGRATIONS(kind: "postgres" | "sqlite") {

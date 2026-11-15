@@ -48,7 +48,7 @@ SELECT o.id,o.code,o.status,o.express,o.total,o.subtotal,o.payment_method,o.paym
   o.rating,o.address_text,o.pickup_slot,o.delivery_slot,o.partner_id,o.customer_id,o.driver_id,
   p.name_ar AS partner_ar, p.name_en AS partner_en, p.color AS partner_color, p.color2 AS partner_color2, p.initials AS partner_initials, p.logo_url AS partner_logo, p.commission,
   u.name AS customer_name, u.phone AS customer_phone,
-  du.name AS driver_name,
+  du.name AS driver_name, o.schedule_id,
   (SELECT COUNT(*) FROM media m WHERE m.order_id=o.id AND m.private=1) AS photos_count
 FROM orders o
 JOIN partners p ON p.id=o.partner_id
@@ -222,6 +222,8 @@ export type CreateOrderInput = {
   notes?: string;
   /** private photos of the items, uploaded with kind "order" before placing the order */
   photos?: string[];
+  /** set when the order was created automatically from a recurring schedule */
+  schedule_id?: number;
   payment_method: "cash" | "card_pos" | "card" | "wallet";
   promo_code?: string | null;
 };
@@ -253,7 +255,8 @@ export async function createOrder(user: SessionUser, input: CreateOrderInput) {
   const member = await activeSubscription(user.id);
   const totals = computeTotals(subtotal, partner.delivery_fee, !!input.express, s, promo, member?.benefits);
   await assertDeliverable(addr.lat, addr.lng, partner.id);
-  if (s.photos_required && (!Array.isArray(input.photos) || !input.photos.length)) throw new HttpError(400, "photos_required");
+  // scheduled orders are created without the customer present: the rider photographs the items at pickup instead
+  if (s.photos_required && !input.schedule_id && (!Array.isArray(input.photos) || !input.photos.length)) throw new HttpError(400, "photos_required");
 
   return await tx(async () => {
     const ts = now();
@@ -283,7 +286,7 @@ export async function createOrder(user: SessionUser, input: CreateOrderInput) {
     // human-friendly, collision-free order number derived from the primary key
     const code = `NQ-${10420 + id}`;
     // 4-digit handover code the customer gives the rider at delivery
-    await run("UPDATE orders SET code=?, delivery_pin=? WHERE id=?", code, String(randomInt(1000, 10000)), id);
+    await run("UPDATE orders SET code=?, delivery_pin=?, schedule_id=? WHERE id=?", code, String(randomInt(1000, 10000)), input.schedule_id ?? null, id);
     for (const { p, qty } of lines) {
       await run("INSERT INTO order_items(order_id,product_id,service_id,name_ar,name_en,service_ar,service_en,icon,qty,unit_price) VALUES(?,?,?,?,?,?,?,?,?,?)", id, p.id, p.service_id, p.name_ar, p.name_en, p.s_ar, p.s_en, p.icon, qty, p.price);
     }

@@ -26,7 +26,8 @@ type Driver = {
   rollback(ctx: any): Promise<void>;
 };
 
-const g = globalThis as unknown as { __nuqaDb?: Promise<Driver> };
+// shared by every copy of this module in the process (route handlers and background jobs are bundled separately)
+const g = globalThis as unknown as { __nuqaDb?: Promise<Driver>; __nuqaBooted?: Promise<void> | null };
 const txStore = new AsyncLocalStorage<{ ctx: any }>();
 
 export const dialect = () => (process.env.DATABASE_URL ? "postgres" : "sqlite");
@@ -141,19 +142,18 @@ async function init(): Promise<Driver> {
   return d;
 }
 
-let booted: Promise<void> | null = null;
-
 async function driver(): Promise<Driver> {
   if (!g.__nuqaDb) g.__nuqaDb = init();
   const d = await g.__nuqaDb;
-  if (!booted) {
-    booted = bootstrapping.run(true, () => bootstrap()).catch((e) => {
-      booted = null;
+  // seeding runs once per process, whichever module copy gets here first
+  if (!g.__nuqaBooted) {
+    g.__nuqaBooted = bootstrapping.run(true, () => bootstrap()).catch((e) => {
+      g.__nuqaBooted = null;
       throw e;
     });
   }
   // the bootstrap itself runs queries; don't wait on our own promise from inside it
-  if (!bootstrapping.getStore()) await booted;
+  if (!bootstrapping.getStore()) await g.__nuqaBooted;
   return d;
 }
 
