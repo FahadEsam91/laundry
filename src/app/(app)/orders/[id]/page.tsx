@@ -12,6 +12,7 @@ import { STATUS_META, ORDER_FLOW } from "@/lib/constants";
 import { api, errText } from "@/lib/client";
 import { PushPrompt } from "@/components/push";
 import { PhotoGallery } from "@/components/image-upload";
+import { GarmentList } from "@/components/tag-scanner";
 
 const MACRO = [
   { key: "placed", icon: ReceiptText, ar: "تم الطلب", en: "Placed", upto: "accepted" },
@@ -283,6 +284,12 @@ function Inner({ id }: { id: string }) {
             <div className="mt-3">
               <div className="mb-2 text-xs font-bold text-ink-600">📷 {t("your_photos")}</div>
               <PhotoGallery photos={o.photos} size={64} />
+            </div>
+          )}
+          {o.garments?.length > 0 && (
+            <div className="mt-3">
+              <div className="mb-2 text-xs font-bold text-ink-600">🏷️ {t("your_items")} ({o.garments.length})</div>
+              <GarmentList garments={o.garments} />
             </div>
           )}
           {(o.proofs?.pickup?.length > 0 || o.proofs?.delivery?.length > 0) && (

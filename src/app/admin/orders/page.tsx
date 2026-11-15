@@ -8,6 +8,7 @@ import { useApp, useCan, useToast } from "@/components/providers";
 import { PageHead, Pager, Panel, Table, Td } from "@/components/admin";
 import { Button, Input, PartnerLogo, Select, Sheet, Skeleton, StatusBadge, cx } from "@/components/ui";
 import { PhotoGallery } from "@/components/image-upload";
+import { GarmentList } from "@/components/tag-scanner";
 import { MapView } from "@/components/map-view";
 import { NEXT_STATUS, ORDER_FLOW, STATUS_META } from "@/lib/constants";
 import { api, errText } from "@/lib/client";
@@ -158,6 +159,12 @@ function OrderDrawer({ id, onClose, onChanged }: { id: number | null; onClose: (
               <div>
                 <div className="mb-2 text-xs font-bold text-ink-600">📷 {t("customer_photos")} ({o.photos.length})</div>
                 <PhotoGallery photos={o.photos} size={84} />
+              </div>
+            )}
+            {o.garments?.length > 0 && (
+              <div>
+                <div className="mb-2 text-xs font-bold text-ink-600">🏷️ {t("your_items")} ({o.garments.length})</div>
+                <GarmentList garments={o.garments} />
               </div>
             )}
             {(o.proofs?.pickup?.length > 0 || o.proofs?.delivery?.length > 0) && (

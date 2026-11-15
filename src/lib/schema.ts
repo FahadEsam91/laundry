@@ -307,6 +307,36 @@ const BASE = [
   created_at TEXT NOT NULL
 )`,
   `CREATE INDEX IF NOT EXISTS idx_schedules_next ON schedules(active, next_run_at)`,
+  // QR labels printed in batches; a label becomes a customer's garment the first time it is scanned on an order
+  `CREATE TABLE IF NOT EXISTS tags(
+  code TEXT PRIMARY KEY,
+  batch TEXT NOT NULL,
+  garment_id INTEGER,
+  created_at TEXT NOT NULL
+)`,
+  `CREATE TABLE IF NOT EXISTS garments(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  customer_id INTEGER NOT NULL REFERENCES users(id),
+  tag TEXT NOT NULL UNIQUE,
+  product_id INTEGER,
+  name TEXT,
+  icon TEXT,
+  notes TEXT,
+  wash_count INTEGER NOT NULL DEFAULT 0,
+  last_order_id INTEGER,
+  last_cleaned_at TEXT,
+  created_at TEXT NOT NULL
+)`,
+  `CREATE INDEX IF NOT EXISTS idx_garments_customer ON garments(customer_id)`,
+  `CREATE TABLE IF NOT EXISTS order_garments(
+  order_id INTEGER NOT NULL REFERENCES orders(id),
+  garment_id INTEGER NOT NULL REFERENCES garments(id),
+  collected_at TEXT,
+  received_at TEXT,
+  ready_at TEXT,
+  delivered_at TEXT,
+  PRIMARY KEY(order_id, garment_id)
+)`,
   // uploaded images (laundry logos and cover photos), stored in the database so backups include them
   `CREATE TABLE IF NOT EXISTS media(
   id INTEGER PRIMARY KEY AUTOINCREMENT,

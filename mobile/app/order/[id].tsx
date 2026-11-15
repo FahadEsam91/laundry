@@ -12,6 +12,7 @@ import { useToast } from "@/toast";
 import { LiveMap, type Pin } from "@/map";
 import { PhotoGallery } from "@/photos";
 import { Celebration } from "@/motion";
+import { GarmentList } from "@/garments";
 import { C, shadow } from "@/theme";
 import { Btn, Header, Icon, Input, Loading, PartnerLogo, Sheet, StatusBadge, Txt } from "@/ui";
 
@@ -195,6 +196,12 @@ export default function OrderScreen() {
           </View>
           <View style={{ flexDirection: "row", gap: 6, marginTop: 10 }}><Icon name="location-outline" size={16} color={C.ink400} /><Txt size={12} color={C.ink700} style={{ flex: 1 }}>{o.address_text}</Txt></View>
           {o.notes ? <View style={{ marginTop: 10, backgroundColor: "#FFFBEB", borderRadius: 12, padding: 10 }}><Txt size={12} color="#78350F">📝 {o.notes}</Txt></View> : null}
+          {o.garments?.length ? (
+            <View style={{ marginTop: 12 }}>
+              <Txt w="bold" size={12} color={C.ink700} style={{ marginBottom: 8 }}>🏷️ {t("your_items")} ({o.garments.length})</Txt>
+              <GarmentList garments={o.garments} />
+            </View>
+          ) : null}
           {o.proofs?.pickup?.length || o.proofs?.delivery?.length ? (
             <View style={{ marginTop: 12, flexDirection: "row", gap: 16 }}>
               {o.proofs.pickup.length ? <View><Txt w="bold" size={12} color={C.ink700} style={{ marginBottom: 8 }}>{t("proof_pickup")}</Txt><PhotoGallery photos={o.proofs.pickup} size={60} /></View> : null}

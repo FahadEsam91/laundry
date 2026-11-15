@@ -65,6 +65,7 @@ export const PAGE_PERMISSION: Record<string, Permission> = {
   "/admin/orders": "orders.view",
   "/admin/partners": "partners.view",
   "/admin/zones": "zones.manage",
+  "/admin/labels": "orders.manage",
   "/admin/drivers": "drivers.view",
   "/admin/customers": "customers.view",
   "/admin/catalog": "catalog.manage",

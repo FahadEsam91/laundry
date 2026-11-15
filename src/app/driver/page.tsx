@@ -3,10 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import useSWR from "swr";
-import { Power, Banknote, PackageCheck, MapPin, Phone, Navigation, Store, Home, ArrowDown, Zap, LogOut, Languages, Inbox } from "lucide-react";
+import { Power, Banknote, PackageCheck, MapPin, Phone, Navigation, Store, Home, ArrowDown, Zap, LogOut, Languages, Inbox, QrCode } from "lucide-react";
 import { useApp, useToast } from "@/components/providers";
 import { Button, Empty, PartnerLogo, Sheet, Skeleton, StatusBadge, cx } from "@/components/ui";
 import { PhotosPicker } from "@/components/image-upload";
+import { ScanSheet } from "@/components/tag-scanner";
 import { MapView, type MapMarker } from "@/components/map-view";
 import { api, errText } from "@/lib/client";
 import { PushHeaderButton } from "@/components/push";
@@ -133,6 +134,7 @@ export default function DriverApp() {
 }
 
 function JobCard({ j, action, onAct, busy, mapsUrl }: { j: any; action?: { action: string; key: any }; onAct: (a: string) => void; busy: boolean; mapsUrl?: string }) {
+  const [scan, setScan] = useState(false);
   const { t, L, money, num } = useApp();
   const isPickupLeg = ["accepted", "driver_assigned", "picked_up"].includes(j.status);
   const stops = isPickupLeg
@@ -172,10 +174,14 @@ function JobCard({ j, action, onAct, busy, mapsUrl }: { j: any; action?: { actio
       </div>
       {j.notes && <div className="mt-3 rounded-lg bg-amber-50 p-2 text-xs text-amber-900">📝 {j.notes}</div>}
       {collectCash && <div className="mt-3 flex items-center justify-between rounded-xl bg-emerald-50 p-3 text-sm font-bold text-emerald-800"><span>{j.payment_method === "card_pos" ? `💳 ${t("collect_card")}` : `💵 ${t("collect_cash")}`}</span><span>{money(j.total)}</span></div>}
+      {["driver_assigned", "picked_up"].includes(j.status) && (
+        <Button variant="secondary" block className="mt-3" onClick={() => setScan(true)}><QrCode className="h-4 w-4" /> {t("scan_items")}</Button>
+      )}
       <div className="mt-4 flex gap-2">
         {mapsUrl && <a href={mapsUrl} target="_blank" rel="noreferrer" className="flex-1"><Button variant="outline" block><MapPin className="h-4 w-4" /> {t("navigate")}</Button></a>}
         {action && <Button className="flex-[2]" variant={action.action === "take" ? "primary" : "success"} loading={busy} onClick={() => onAct(action.action)}>{t(action.key)}</Button>}
       </div>
+      <ScanSheet open={scan} onClose={() => setScan(false)} orderId={j.id} stage="collect" title={`${t("scan_items")} • ${j.code}`} />
     </div>
   );
 }

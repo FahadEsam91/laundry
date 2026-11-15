@@ -14,6 +14,7 @@ import { registerForPush } from "@/push";
 import { useToast } from "@/toast";
 import { LiveMap, type Pin } from "@/map";
 import { PhotosPicker } from "@/photos";
+import { ScanSheet } from "@/garments";
 import { API_URL } from "@/config";
 import { C, shadow } from "@/theme";
 import { Btn, Empty, Icon, Loading, PartnerLogo, Row, Sheet, StatusBadge, Txt } from "@/ui";
@@ -47,6 +48,7 @@ function useLiveLocation(online: boolean) {
 export default function Rider() {
   const { t, L, money, num, lang, setLang, settings } = useI18n();
   const [confirm, setConfirm] = useState<{ j: any; action: string } | null>(null);
+  const [scanJob, setScanJob] = useState<any>(null);
   const { token, ready, signOut } = useAuth();
   const toast = useToast();
   const router = useRouter();
@@ -132,6 +134,7 @@ export default function Rider() {
         ))}
         {j.notes ? <View style={{ backgroundColor: C.amberSoft, borderRadius: 10, padding: 8, marginTop: 10 }}><Txt size={12} color={C.amber}>📝 {j.notes}</Txt></View> : null}
         {cash ? <View style={{ flexDirection: "row", justifyContent: "space-between", backgroundColor: C.greenSoft, borderRadius: 12, padding: 12, marginTop: 10 }}><Txt w="bold" color="#065F46">{j.payment_method === "card_pos" ? `💳 ${t("collect_card")}` : `💵 ${t("collect_cash")}`}</Txt><Txt w="bold" color="#065F46">{money(j.total)}</Txt></View> : null}
+        {["driver_assigned", "picked_up"].includes(j.status) ? <Btn title={t("scan_items")} variant="secondary" icon="qr-code-outline" style={{ marginTop: 12 }} onPress={() => setScanJob(j)} /> : null}
         <View style={{ flexDirection: "row", gap: 8, marginTop: 14 }}>
           {action?.action !== "take" && <Btn title={t("navigate")} variant="outline" icon="navigate-outline" style={{ flex: 1 }} onPress={() => navigate(target.lat, target.lng)} />}
           {action && <Btn title={t(action.key)} variant={action.action === "take" ? "primary" : "success"} style={{ flex: 2 }} loading={busy === String(j.id)} onPress={() => act(j.id, action.action)} />}
@@ -189,6 +192,7 @@ export default function Rider() {
         <Row icon="log-out-outline" label={t("logout")} onPress={async () => { setMenu(false); await signOut(); router.replace("/login"); }} />
         <Row icon="trash-outline" label={t("delete_account")} danger onPress={() => { setMenu(false); setDelOpen(true); }} />
       </Sheet>
+      {scanJob ? <ScanSheet open onClose={() => setScanJob(null)} orderId={scanJob.id} stage="collect" title={`${t("scan_items")} • ${scanJob.code}`} /> : null}
       <HandoverSheet c={confirm} busy={!!busy} onClose={() => setConfirm(null)} onSubmit={(extra) => confirm && act(confirm.j.id, confirm.action, { ...extra, confirmed: true })} />
       <Sheet open={delOpen} onClose={() => setDelOpen(false)} title={t("delete_account")}>
         <Txt color={C.ink700}>{t("delete_account_d")}</Txt>

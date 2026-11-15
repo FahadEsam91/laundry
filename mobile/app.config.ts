@@ -58,6 +58,10 @@ const config: ExpoConfig = {
       photosPermission: "Nuqa lets you attach photos of your items (stains, damage) to an order for the laundry.",
       cameraPermission: "Nuqa lets you photograph your items (stains, damage) and attach them to an order for the laundry.",
     }],
+    ["expo-camera", {
+      cameraPermission: isRider ? "Nuqa Rider scans the QR labels on customers' items at pickup." : "Nuqa uses the camera to photograph your items and scan Nuqa labels.",
+      recordAudioAndroid: false,
+    }],
     ["expo-location", { locationWhenInUsePermission: isRider ? "Nuqa Rider uses your location for navigation and live tracking." : "Nuqa uses your location to set your address." }],
     ["expo-splash-screen", { image: "./assets/splash-icon.png", imageWidth: 160, backgroundColor: isRider ? "#059669" : "#1A62EC" }],
   ],

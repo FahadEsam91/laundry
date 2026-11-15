@@ -84,6 +84,7 @@ export default function Account() {
           <Row icon="location-outline" label={t("addresses")} onPress={() => router.push("/addresses")} right={<Txt size={12} color={C.ink400}>{me.addresses.length}</Txt>} />
           <Row icon="wallet-outline" label={t("wallet")} onPress={() => router.push("/wallet")} />
           <Row icon="repeat-outline" label={t("schedules")} onPress={() => router.push("/schedules")} />
+          <Row icon="shirt-outline" label={t("wardrobe")} onPress={() => router.push("/wardrobe")} />
           <Row icon="notifications-outline" label={t("notifications")} onPress={() => router.push("/notifications")} right={me.unread ? <View style={{ backgroundColor: C.red, borderRadius: 999, paddingHorizontal: 7 }}><Txt w="bold" size={11} color="#fff">{me.unread}</Txt></View> : null} />
           <Row icon="phone-portrait-outline" label={t("push_title")} onPress={enablePush} />
         </View>

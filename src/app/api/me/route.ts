@@ -44,6 +44,10 @@ export const DELETE = handler(async () => {
     for (const t of ["addresses", "favorites", "notifications", "push_subscriptions", "mobile_push_tokens"]) await run(`DELETE FROM ${t} WHERE user_id=?`, u.id);
     await run("DELETE FROM media WHERE user_id=? AND private=1", u.id); // photos of their items
     await run("DELETE FROM schedules WHERE user_id=?", u.id);
+    // wardrobe: forget the garments; their labels can be reused
+    await run("UPDATE tags SET garment_id=NULL WHERE garment_id IN (SELECT id FROM garments WHERE customer_id=?)", u.id);
+    await run("DELETE FROM order_garments WHERE garment_id IN (SELECT id FROM garments WHERE customer_id=?)", u.id);
+    await run("DELETE FROM garments WHERE customer_id=?", u.id);
     await run("DELETE FROM otp_codes WHERE phone=?", u.phone);
     if (u.driver_id) await run("UPDATE drivers SET status='offline', plate=NULL, lat=NULL, lng=NULL WHERE id=?", u.driver_id);
   });

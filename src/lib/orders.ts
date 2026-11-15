@@ -9,6 +9,7 @@ import { driverUser, onlineDriverUsers, partnerStaff, queuePush } from "./push";
 import { activeSubscription, refundFreeDelivery, renewSweep } from "./subscriptions";
 import { attachOrderPhotos, orderPhotos, proofPhotos } from "./media";
 import { assertDeliverable } from "./zones";
+import { deliverGarments, orderGarments } from "./garments";
 
 // ---------------------------------------------------------------- helpers
 
@@ -105,9 +106,10 @@ export async function orderDTO(id: number) {
   }
   const photos = (await orderPhotos([o.id]))[o.id] || [];
   const proofs = await proofPhotos(o.id);
+  const garments = await orderGarments(o.id);
   // the handover code is only ever shown to the customer (the order API adds it for them)
   const { delivery_pin: pin, pin_attempts: _attempts, ...rest } = o;
-  return { ...rest, has_pin: !!pin, partner, customer, driver, items, events, tracking, photos, proofs };
+  return { ...rest, has_pin: !!pin, partner, customer, driver, items, events, tracking, photos, proofs, garments };
 }
 
 // ---------------------------------------------------------------- transitions
@@ -165,6 +167,7 @@ export async function transition(orderId: number, to: OrderStatus, actor: string
       if (to === "at_laundry" || to === "out_for_delivery") await run("UPDATE drivers SET lat=?,lng=? WHERE id=?", p.lat, p.lng, prevDriver);
     }
     if (to === "delivered") {
+      await deliverGarments(orderId);
       const pts = Math.floor(o.total / 1000);
       await run("UPDATE users SET points=points+? WHERE id=?", pts, o.customer_id);
     }

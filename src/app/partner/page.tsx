@@ -2,11 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import useSWR from "swr";
-import { ImagePlus, Check, X, Sparkles, PackageCheck, Truck, Zap, Clock, Bike, Inbox, Banknote, Star, ReceiptText, PackageOpen } from "lucide-react";
+import { ImagePlus, QrCode, Check, X, Sparkles, PackageCheck, Truck, Zap, Clock, Bike, Inbox, Banknote, Star, ReceiptText, PackageOpen } from "lucide-react";
 import { useApp, useToast } from "@/components/providers";
 import { Kpi, PageHead } from "@/components/admin";
 import { Button, PartnerLogo, Sheet, Skeleton, StatusBadge, Toggle, cx } from "@/components/ui";
 import { ImageUpload, PhotoGallery } from "@/components/image-upload";
+import { ScanSheet } from "@/components/tag-scanner";
 import { api, errText, timeAgo } from "@/lib/client";
 
 export default function PartnerBoard() {
@@ -113,7 +114,10 @@ export default function PartnerBoard() {
 
 function OrderCard({ o, actions, onAct, busy, fresh }: { o: any; actions: any[]; onAct: (a: string) => void; busy: boolean; fresh: boolean }) {
   const { t, L, money, lang } = useApp();
-  const { data } = useSWR(`/api/orders/${o.id}`, { refreshInterval: 0 });
+  const { data, mutate: mutateOrder } = useSWR(`/api/orders/${o.id}`, { refreshInterval: 0 });
+  const [scan, setScan] = useState<"receive" | "ready" | null>(null);
+  const g: any[] = data?.order?.garments || [];
+  const tags = g.length ? { total: g.length, received: g.filter((x) => x.received_at).length, ready: g.filter((x) => x.ready_at).length } : null;
   const items = data?.order?.items || [];
   return (
     <div className={cx("animate-fade-up rounded-2xl bg-white p-4 shadow-soft", fresh && "ring-2 ring-amber-400")}>
@@ -148,6 +152,12 @@ function OrderCard({ o, actions, onAct, busy, fresh }: { o: any; actions: any[];
         {o.driver_name && <span className="flex items-center gap-1 text-xs text-ink-500"><Bike className="h-3.5 w-3.5" />{o.driver_name}</span>}
         {["accepted", "ready"].includes(o.status) && !o.driver_name && <span className="text-xs font-semibold text-ink-400">{t("awaiting_rider")}</span>}
       </div>
+      {["picked_up", "at_laundry", "processing", "ready"].includes(o.status) && (
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <Button size="sm" variant="secondary" onClick={() => setScan("receive")}><QrCode className="h-4 w-4" /> {t("scan_receive")}{tags ? ` ${tags.received}/${tags.total}` : ""}</Button>
+          <Button size="sm" variant="secondary" onClick={() => setScan("ready")}><QrCode className="h-4 w-4" /> {t("scan_ready")}{tags ? ` ${tags.ready}/${tags.total}` : ""}</Button>
+        </div>
+      )}
       {!!actions.length && (
         <div className={cx("mt-3 grid gap-2", actions.length > 1 ? "grid-cols-2" : "grid-cols-1")}>
           {actions.map((a) => (
@@ -157,6 +167,7 @@ function OrderCard({ o, actions, onAct, busy, fresh }: { o: any; actions: any[];
           ))}
         </div>
       )}
+      {scan && <ScanSheet open onClose={() => setScan(null)} orderId={o.id} stage={scan} title={`${scan === "receive" ? t("scan_receive") : t("scan_ready")} • ${o.code}`} onChange={() => mutateOrder()} />}
     </div>
   );
 }

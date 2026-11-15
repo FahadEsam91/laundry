@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Wallet, MapPin, Bell, Languages, Headphones, LogOut, ChevronLeft, ChevronRight, Award, Crown, LayoutDashboard, Store, Truck, Heart, ReceiptText, Info, UserRound, Shield, FileText, Download, Trash2, Repeat } from "lucide-react";
+import { Wallet, MapPin, Bell, Languages, Headphones, LogOut, ChevronLeft, ChevronRight, Award, Crown, LayoutDashboard, Store, Truck, Heart, ReceiptText, Info, UserRound, Shield, FileText, Download, Trash2, Repeat, Shirt } from "lucide-react";
 import { useApp, useCart } from "@/components/providers";
 import { BottomNav } from "@/components/customer";
 import { Button, Empty, LogoMark, Sheet } from "@/components/ui";
@@ -93,6 +93,7 @@ export default function AccountPage() {
             <Row icon={MapPin} label={t("addresses")} href="/account/addresses" right={<span className="text-xs text-ink-400">{me.addresses.length}</span>} />
             <Row icon={Wallet} label={t("wallet")} href="/account/wallet" />
             <Row icon={Repeat} label={t("schedules")} href="/account/schedules" />
+            <Row icon={Shirt} label={t("wardrobe")} href="/account/wardrobe" />
             <Row icon={Bell} label={t("notifications")} href="/notifications" right={me.unread ? <span className="rounded-full bg-red-500 px-2 text-[11px] font-bold text-white">{me.unread}</span> : null} />
             <Row icon={Heart} label={t("favorites")} href="/search" right={<span className="text-xs text-ink-400">{me.favorites.length}</span>} />
           </div>
