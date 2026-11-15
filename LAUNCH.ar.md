@@ -56,6 +56,24 @@ npx eas-cli@latest build --profile customer-production --platform android
 ```
 حمّل ملف `.aab` من الرابط، وارفعه في Play Console ← Testing ← Closed testing. الصور في `mobile/store-assets/android/`.
 
+## تفعيل الذكاء الاصطناعي وواتساب (اختياري — تشتغل فوراً بعد إضافة المفاتيح)
+الميزتان مبنيتان وجاهزتان في الموقع والتطبيق، ومخفيتان تلقائياً حتى تضيف المفاتيح:
+
+**الذكاء الاصطناعي** (تحليل صور القطع + «اطلب بالكتابة»):
+1. أنشئ مفتاحاً من console.anthropic.com ← API Keys، وأضف رصيداً (Billing).
+2. على السيرفر: `sudo nano /opt/nuqa/.env` وأضف السطر: `ANTHROPIC_API_KEY=المفتاح`
+3. `sudo bash /opt/nuqa/deploy/update.sh`
+4. في لوحة التحكم ← الإعدادات تظهر «السيرفر جاهز ✓». التكلفة تقريباً سنتات قليلة لكل صورة أو رسالة، وكل زبون له حد يومي (٤٠ صورة و٣٠ رسالة).
+
+**واتساب** (تحديثات الطلب للزبون الذي يفعّلها من حسابه):
+1. في Twilio فعّل WhatsApp Sender لرقمك (أو جرّب بالـ Sandbox أولاً).
+2. أنشئ قالب رسالة (Content Template) فيه `{{1}}` العنوان، `{{2}}` الرسالة، `{{3}}` الرابط، وانتظر موافقة واتساب.
+3. أضف في `/opt/nuqa/.env`:
+   `TWILIO_WHATSAPP_FROM=+9647XXXXXXXXX` و `TWILIO_WHATSAPP_TEMPLATE_SID=HX…`
+4. `sudo bash /opt/nuqa/deploy/update.sh`
+
+يمكنك إيقاف أي ميزة منهما في أي وقت من لوحة التحكم ← الإعدادات.
+
 ## بعد النشر: كيف تصل التعديلات للجميع
 | نوع التعديل | يصل إلى | كيف |
 |---|---|---|

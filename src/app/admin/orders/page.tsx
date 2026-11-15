@@ -8,6 +8,7 @@ import { useApp, useCan, useToast } from "@/components/providers";
 import { PageHead, Pager, Panel, Table, Td } from "@/components/admin";
 import { Button, Input, PartnerLogo, Select, Sheet, Skeleton, StatusBadge, cx } from "@/components/ui";
 import { PhotoGallery } from "@/components/image-upload";
+import { OrderInsights } from "@/components/ai";
 import { GarmentList } from "@/components/tag-scanner";
 import { MapView } from "@/components/map-view";
 import { NEXT_STATUS, ORDER_FLOW, STATUS_META } from "@/lib/constants";
@@ -159,6 +160,7 @@ function OrderDrawer({ id, onClose, onChanged }: { id: number | null; onClose: (
               <div>
                 <div className="mb-2 text-xs font-bold text-ink-600">📷 {t("customer_photos")} ({o.photos.length})</div>
                 <PhotoGallery photos={o.photos} size={84} />
+                <OrderInsights photos={o.photos} insights={o.photo_ai} />
               </div>
             )}
             {o.garments?.length > 0 && (

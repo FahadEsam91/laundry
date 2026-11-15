@@ -21,6 +21,12 @@ export async function api<T = any>(path: string, opts: { method?: string; body?:
 export const fetcher = (url: string) => api(url);
 
 const ERR: Record<string, [string, string]> = {
+  ai_disabled: ["ميزة الذكاء الاصطناعي غير مفعّلة حالياً", "AI features are not enabled"],
+  ai_limit: ["وصلت للحد اليومي لاستخدام المساعد، جرّب باچر", "You've reached today's AI limit, try again tomorrow"],
+  ai_busy: ["المساعد مشغول حالياً، جرّب بعد دقيقة", "The assistant is busy, try again in a minute"],
+  ai_unavailable: ["المساعد غير متاح حالياً، جرّب بعد شوية", "The assistant is unavailable right now, try again shortly"],
+  ai_refused: ["ما گدرنا نحلل هذا الطلب", "We couldn't process this request"],
+  ai_text_required: ["اكتب طلبك أولاً", "Type your order first"],
   promo_invalid: ["كود الخصم غير صالح", "Invalid promo code"],
   promo_expired: ["انتهت صلاحية الكود", "This code has expired"],
   promo_exhausted: ["تم استنفاد الكود", "This code is fully used"],

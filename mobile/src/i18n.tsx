@@ -93,6 +93,12 @@ async function reload() {
 }
 
 const ERR: Record<string, [string, string]> = {
+  ai_disabled: ["ميزة الذكاء الاصطناعي غير مفعّلة حالياً", "AI features are not enabled"],
+  ai_limit: ["وصلت للحد اليومي لاستخدام المساعد، جرّب باچر", "You've reached today's AI limit, try again tomorrow"],
+  ai_busy: ["المساعد مشغول حالياً، جرّب بعد دقيقة", "The assistant is busy, try again in a minute"],
+  ai_unavailable: ["المساعد غير متاح حالياً، جرّب بعد شوية", "The assistant is unavailable right now, try again shortly"],
+  ai_refused: ["ما گدرنا نحلل هذا الطلب", "We couldn't process this request"],
+  ai_text_required: ["اكتب طلبك أولاً", "Type your order first"],
   network_error: ["تعذر الاتصال بالخادم. تحقق من الإنترنت", "Can't reach the server. Check your connection"],
   invalid_code: ["رمز التحقق غير صحيح", "Incorrect verification code"],
   code_expired: ["انتهت صلاحية الرمز، اطلب رمزاً جديداً", "Code expired, request a new one"],

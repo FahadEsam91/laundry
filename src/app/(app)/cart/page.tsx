@@ -12,6 +12,7 @@ import { computeTotals, type Promo } from "@/lib/pricing";
 import { api, errText } from "@/lib/client";
 import { PhotosPicker } from "@/components/image-upload";
 import { SchedulePicker } from "@/components/schedule-picker";
+import { AI_HINT_KEY, AiBadge, AnalyzingChip, InsightCard, useCheckoutInsights } from "@/components/ai";
 
 function buildSlots(lang: "ar" | "en") {
   const out: { value: string; day: string; label: string }[] = [];
@@ -49,6 +50,37 @@ export default function CartPage() {
   const [placing, setPlacing] = useState(false);
   const [card, setCard] = useState("4242 4242 4242 4242");
   const slots = useMemo(() => buildSlots(lang), [lang]);
+  const ai = useCheckoutInsights(cart.partner?.id);
+  // the laundry's price list, to add what the photo analysis suggests
+  const { data: menu } = useSWR(settings.ai && cart.partner ? `/api/partners/${cart.partner.id}` : null);
+  useEffect(() => {
+    if (settings.ai && photos.length) ai.analyze(photos);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [photos.join(","), settings.ai]);
+  // hand-off from "order by text": pickup time, express and notes
+  useEffect(() => {
+    let h: any = null;
+    try {
+      h = JSON.parse(sessionStorage.getItem(AI_HINT_KEY) || "null");
+      // the basket loads from storage after the first render: wait for it before using the hint
+      if (!h || h.partner_id !== cart.partner?.id) return;
+      sessionStorage.removeItem(AI_HINT_KEY);
+    } catch {
+      return;
+    }
+    if (h.express) setExpress(true);
+    if (h.notes) setNotes((n) => n || h.notes);
+    const d = { today: "0", tomorrow: "1", after_tomorrow: "2" }[h.pickup_day as string];
+    if (d) {
+      const ofDay = slots.filter((x) => x.day === d);
+      const pick = (h.pickup_hour != null && ofDay.find((x) => new Date(x.value).getHours() + 2 > h.pickup_hour)) || ofDay[0];
+      if (pick) {
+        setDay(d);
+        setSlot(pick.value);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cart.partner?.id]);
 
   const p = cart.partner;
   const lines = Object.values(cart.lines);
@@ -285,6 +317,38 @@ export default function CartPage() {
             </div>
             <p className="mb-2 mt-0.5 text-xs text-ink-500">{settings.photos_required ? t("item_photos_req_hint") : t("item_photos_hint")}</p>
             <PhotosPicker value={photos} onChange={setPhotos} />
+            {settings.ai && photos.length > 0 && (
+              <div className="mt-3 space-y-2">
+                <div className="flex items-center gap-2 text-xs font-bold text-violet-700"><AiBadge /> {t("ai_insights")}</div>
+                {photos.map((ph) => {
+                  const x = ai.map[ph];
+                  if (x === "busy") return <div key={ph} className="flex items-center gap-3 rounded-2xl border border-violet-100 p-3">{/* eslint-disable-next-line @next/next/no-img-element */}<img src={ph} alt="" className="h-12 w-12 rounded-xl object-cover" /><AnalyzingChip /></div>;
+                  if (!x || x === "err") return null;
+                  const prod = x.product_id ? (menu?.products || []).find((m: any) => m.id === x.product_id) : null;
+                  const svc = prod ? (menu?.services || []).find((m: any) => m.id === prod.service_id) : null;
+                  const inCart = prod ? cart.lines[prod.id]?.qty || 0 : 0;
+                  return (
+                    <InsightCard
+                      key={ph}
+                      insight={x}
+                      photo={ph}
+                      action={prod && (
+                        <div className="flex items-center gap-2 pt-0.5 text-xs">
+                          <span className="text-ink-500">{t("ai_suggest")}: <b className="text-ink-800">{prod.icon} {L(prod, "name")}</b> · {money(prod.price)}</span>
+                          {inCart ? <span className="ms-auto inline-flex items-center gap-1 font-bold text-emerald-600"><Check className="h-3.5 w-3.5" /> {inCart}</span> : (
+                            <button
+                              onClick={() => cart.setQty(p, { product_id: prod.id, name_ar: prod.name_ar, name_en: prod.name_en, icon: prod.icon, price: prod.price, unit: prod.unit, service_ar: svc?.name_ar || "", service_en: svc?.name_en || "" }, Math.max(1, x.quantity))}
+                              className="ms-auto inline-flex items-center gap-1 rounded-full bg-violet-600 px-2.5 py-1 font-bold text-white"
+                            ><Plus className="h-3.5 w-3.5" /> {t("ai_add_item")}</button>
+                          )}
+                        </div>
+                      )}
+                    />
+                  );
+                })}
+                <p className="text-[11px] text-ink-400">{t("ai_disclaimer")}</p>
+              </div>
+            )}
           </div>
         )}
         {me?.user && (

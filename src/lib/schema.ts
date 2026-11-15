@@ -352,6 +352,13 @@ const BASE = [
   created_at TEXT NOT NULL
 )`,
   // uploaded images (laundry logos and cover photos), stored in the database so backups include them
+  `CREATE TABLE IF NOT EXISTS ai_usage(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  kind TEXT NOT NULL,
+  created_at TEXT NOT NULL
+)`,
+  `CREATE INDEX IF NOT EXISTS idx_ai_usage_user ON ai_usage(user_id, created_at)`,
   `CREATE TABLE IF NOT EXISTS media(
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   mime TEXT NOT NULL,
@@ -392,6 +399,8 @@ const COLUMNS: [table: string, column: string, def: string][] = [
   ["users", "company_id", "INTEGER"],
   ["orders", "company_id", "INTEGER"],
   ["orders", "company_discount", "REAL NOT NULL DEFAULT 0"],
+  ["media", "ai", "TEXT"],
+  ["users", "whatsapp_opt_in", "INTEGER NOT NULL DEFAULT 0"],
 ];
 
 export function MIGRATIONS(kind: "postgres" | "sqlite") {

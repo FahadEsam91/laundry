@@ -12,7 +12,7 @@ import { C } from "./theme";
 import { Txt } from "./ui";
 
 /** Private photos need the user's token to load. */
-function useSource() {
+export function useSource() {
   const { token } = useAuth();
   return (u: string) => ({ uri: mediaUrl(u)!, headers: token ? { Authorization: `Bearer ${token}` } : undefined });
 }

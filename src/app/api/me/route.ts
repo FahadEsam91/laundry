@@ -19,7 +19,8 @@ export const GET = handler(async () => {
 
 export const PATCH = handler(async (req: Request) => {
   const u = await requireUser();
-  const { name, email } = await body(req);
+  const { name, email, whatsapp_opt_in } = await body(req);
+  if (whatsapp_opt_in !== undefined) await run("UPDATE users SET whatsapp_opt_in=? WHERE id=?", whatsapp_opt_in ? 1 : 0, u.id);
   if (name) await run("UPDATE users SET name=? WHERE id=?", String(name).slice(0, 80), u.id);
   if (email !== undefined) await run("UPDATE users SET email=? WHERE id=?", String(email).slice(0, 120), u.id);
   return ok({ ok: true });

@@ -11,6 +11,7 @@ import { useAuth } from "@/auth";
 import { useToast } from "@/toast";
 import { LiveMap, type Pin } from "@/map";
 import { PhotoGallery } from "@/photos";
+import { OrderInsights } from "@/ai";
 import { Celebration } from "@/motion";
 import { GarmentList } from "@/garments";
 import { C, shadow } from "@/theme";
@@ -212,6 +213,7 @@ export default function OrderScreen() {
             <View style={{ marginTop: 12 }}>
               <Txt w="bold" size={12} color={C.ink700} style={{ marginBottom: 8 }}>📷 {t("your_photos")}</Txt>
               <PhotoGallery photos={o.photos} size={60} />
+              <OrderInsights photos={o.photos} insights={o.photo_ai} compact />
             </View>
           ) : null}
         </View>

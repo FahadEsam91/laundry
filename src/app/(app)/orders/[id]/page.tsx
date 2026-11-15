@@ -12,6 +12,7 @@ import { STATUS_META, ORDER_FLOW } from "@/lib/constants";
 import { api, errText } from "@/lib/client";
 import { PushPrompt } from "@/components/push";
 import { PhotoGallery } from "@/components/image-upload";
+import { OrderInsights } from "@/components/ai";
 import { GarmentList } from "@/components/tag-scanner";
 
 const MACRO = [
@@ -284,6 +285,7 @@ function Inner({ id }: { id: string }) {
             <div className="mt-3">
               <div className="mb-2 text-xs font-bold text-ink-600">📷 {t("your_photos")}</div>
               <PhotoGallery photos={o.photos} size={64} />
+              <OrderInsights photos={o.photos} insights={o.photo_ai} compact />
             </div>
           )}
           {o.garments?.length > 0 && (

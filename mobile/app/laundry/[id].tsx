@@ -11,10 +11,14 @@ import { useI18n } from "@/i18n";
 import { useCart } from "@/cart";
 import { C, shadow } from "@/theme";
 import { Btn, Header, Icon, Loading, PartnerLogo, Sheet, Stepper, Txt } from "@/ui";
+import { AiOrderButton } from "@/ai";
+import { useAuth } from "@/auth";
 
 export default function Laundry() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { t, L, money, num, lang } = useI18n();
+  const { t, L, money, num, lang, settings } = useI18n();
+  const { token } = useAuth();
+  const showAi = !!settings?.ai && !!token;
   const cart = useCart();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -38,7 +42,7 @@ export default function Laundry() {
 
   return (
     <View style={{ flex: 1, backgroundColor: C.white }}>
-      <ScrollView stickyHeaderIndices={[2]} contentContainerStyle={{ paddingBottom: 120 }}>
+      <ScrollView stickyHeaderIndices={[showAi ? 3 : 2]} contentContainerStyle={{ paddingBottom: 120 }}>
         <LinearGradient colors={[p.color, p.color2]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ height: 190 }}>
           <View style={{ position: "absolute", width: 200, height: 200, borderRadius: 100, backgroundColor: "rgba(255,255,255,.12)", top: -60, end: -40 }} />
           {p.cover_url ? <Image source={{ uri: mediaUrl(p.cover_url)! }} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} resizeMode="cover" /> : null}
@@ -71,6 +75,7 @@ export default function Laundry() {
           </View>
           {!p.is_open && <View style={{ marginTop: 10, backgroundColor: C.amberSoft, borderRadius: 12, padding: 10 }}><Txt w="semibold" size={12} color={C.amber}>{t("closed_now")}</Txt></View>}
         </View>
+        {showAi ? <AiOrderButton partner={p} products={products} services={services} /> : null}
 
         <View style={{ backgroundColor: C.white, borderBottomWidth: 1, borderBottomColor: C.ink100 }}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 10, gap: 6 }}>

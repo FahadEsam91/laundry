@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Linking, ScrollView, View } from "react-native";
+import { Linking, ScrollView, Switch, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as WebBrowser from "expo-web-browser";
@@ -87,6 +87,13 @@ export default function Account() {
           <Row icon="shirt-outline" label={t("wardrobe")} onPress={() => router.push("/wardrobe")} />
           <Row icon="notifications-outline" label={t("notifications")} onPress={() => router.push("/notifications")} right={me.unread ? <View style={{ backgroundColor: C.red, borderRadius: 999, paddingHorizontal: 7 }}><Txt w="bold" size={11} color="#fff">{me.unread}</Txt></View> : null} />
           <Row icon="phone-portrait-outline" label={t("push_title")} onPress={enablePush} />
+          {settings.whatsapp ? (
+            <Row
+              icon="logo-whatsapp"
+              label={t("whatsapp_updates")}
+              right={<Switch value={!!me.user.whatsapp_opt_in} onValueChange={async (v) => { await api("/api/me", { method: "PATCH", body: { whatsapp_opt_in: v } }); refreshMe(); toast(t("saved")); }} trackColor={{ true: C.green }} />}
+            />
+          ) : null}
         </View>
       )}
 

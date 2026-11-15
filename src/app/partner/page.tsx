@@ -7,6 +7,7 @@ import { useApp, useToast } from "@/components/providers";
 import { Kpi, PageHead } from "@/components/admin";
 import { Button, PartnerLogo, Sheet, Skeleton, StatusBadge, Toggle, cx } from "@/components/ui";
 import { ImageUpload, PhotoGallery } from "@/components/image-upload";
+import { OrderInsights } from "@/components/ai";
 import { ScanSheet } from "@/components/tag-scanner";
 import { api, errText, timeAgo } from "@/lib/client";
 
@@ -145,6 +146,7 @@ function OrderCard({ o, actions, onAct, busy, fresh }: { o: any; actions: any[];
         <div className="mt-2">
           <div className="mb-1 text-[11px] font-bold text-ink-500">📷 {t("customer_photos")}</div>
           <PhotoGallery photos={o.photos} size={52} />
+          <OrderInsights photos={data?.order?.photos || []} insights={data?.order?.photo_ai} compact />
         </div>
       )}
       <div className="mt-3 flex items-center justify-between">

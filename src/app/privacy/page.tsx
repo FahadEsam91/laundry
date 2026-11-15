@@ -27,7 +27,8 @@ const sections: Section[] = [
     h: ["مع من نشارك البيانات", "Who we share data with"],
     p: [
       ["المغسلة التي تختارها والمندوب المكلف بطلبك: الاسم والهاتف والعنوان وتفاصيل الطلب فقط.", "The laundry you choose and the rider assigned to your order: only your name, phone, address and order details."],
-      ["مزودو الخدمة: الاستضافة، الرسائل النصية، الإشعارات، ومعالجة الدفع — وفق عقود تلزمهم بحماية البيانات.", "Service providers: hosting, SMS, push notifications and payment processing — under contracts that require them to protect your data."],
+      ["مزودو الخدمة: الاستضافة، الرسائل النصية وواتساب، الإشعارات، ومعالجة الدفع — وفق عقود تلزمهم بحماية البيانات.", "Service providers: hosting, SMS and WhatsApp, push notifications and payment processing — under contracts that require them to protect your data."],
+      ["مزود الذكاء الاصطناعي (Anthropic): صور القطع ونص الطلب الذي تكتبه يُرسلان لتحليلها فقط (نوع القطعة والبقع واقتراح الخدمة)، بدون اسمك أو رقمك.", "Our AI provider (Anthropic): photos of your items and the order text you type are sent only to analyse them (item type, stains, suggested service) — without your name or number."],
       ["الجهات الرسمية عند وجود التزام قانوني فقط. لا نبيع بياناتك أبداً.", "Authorities only where legally required. We never sell your data."],
     ],
   },

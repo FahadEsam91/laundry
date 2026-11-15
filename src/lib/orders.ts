@@ -10,6 +10,8 @@ import { activeSubscription, refundFreeDelivery, renewSweep } from "./subscripti
 import { attachOrderPhotos, orderPhotos, proofPhotos } from "./media";
 import { assertDeliverable } from "./zones";
 import { deliverGarments, orderGarments } from "./garments";
+import { orderInsights, queueOrderAnalysis } from "./ai";
+import { queueWhatsApp } from "./whatsapp";
 
 // ---------------------------------------------------------------- helpers
 
@@ -25,6 +27,8 @@ export function haversineKm(aLat: number, aLng: number, bLat: number, bLng: numb
 export async function notify(userId: number, titleAr: string, titleEn: string, bodyAr: string, bodyEn: string, orderId?: number, url?: string) {
   await run("INSERT INTO notifications(user_id,title_ar,title_en,body_ar,body_en,order_id,read,created_at) VALUES(?,?,?,?,?,?,0,?)", userId, titleAr, titleEn, bodyAr, bodyEn, orderId ?? null, now());
   queuePush([userId], { title_ar: titleAr, title_en: titleEn, body_ar: bodyAr, body_en: bodyEn, url: url || (orderId ? `/orders/${orderId}` : "/notifications"), tag: orderId ? `order-${orderId}` : undefined });
+  // order updates also go to WhatsApp for customers who asked for it
+  if (orderId) queueWhatsApp(userId, titleAr, bodyAr, url || `/orders/${orderId}`);
 }
 
 // ---------------------------------------------------------------- promos
@@ -107,9 +111,10 @@ export async function orderDTO(id: number) {
   const photos = (await orderPhotos([o.id]))[o.id] || [];
   const proofs = await proofPhotos(o.id);
   const garments = await orderGarments(o.id);
+  const photo_ai = photos.length ? await orderInsights(o.id) : [];
   // the handover code is only ever shown to the customer (the order API adds it for them)
   const { delivery_pin: pin, pin_attempts: _attempts, ...rest } = o;
-  return { ...rest, has_pin: !!pin, partner, customer, driver, items, events, tracking, photos, proofs, garments };
+  return { ...rest, has_pin: !!pin, partner, customer, driver, items, events, tracking, photos, photo_ai, proofs, garments };
 }
 
 // ---------------------------------------------------------------- transitions
@@ -270,7 +275,7 @@ export async function createOrder(user: SessionUser, input: CreateOrderInput) {
   // scheduled orders are created without the customer present: the rider photographs the items at pickup instead
   if (s.photos_required && !input.schedule_id && (!Array.isArray(input.photos) || !input.photos.length)) throw new HttpError(400, "photos_required");
 
-  return await tx(async () => {
+  const placed = await tx(async () => {
     const ts = now();
     let payStatus = "unpaid";
     if (input.payment_method === "wallet") {
@@ -317,6 +322,8 @@ export async function createOrder(user: SessionUser, input: CreateOrderInput) {
     await notify(user.id, `تم استلام طلبك • ${code}`, `Order received • ${code}`, `أرسلنا طلبك إلى ${partner.name_ar}`, `We sent your order to ${partner.name_en}`, id);
     return { id, code };
   });
+  if (input.photos?.length) queueOrderAnalysis(placed.id);
+  return placed;
 }
 
 export async function rateOrder(user: SessionUser, id: number, rating: number, review?: string) {

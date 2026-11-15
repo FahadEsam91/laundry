@@ -4,16 +4,18 @@ import { Reveal } from "@/components/reveal";
 import { use, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import useSWR from "swr";
-import { Heart, Star, Clock, Zap, Bike, Info, Search, ShoppingBasket, MapPin, Phone, CalendarClock, ShieldCheck, Share2 } from "lucide-react";
+import { Wand2, Heart, Star, Clock, Zap, Bike, Info, Search, ShoppingBasket, MapPin, Phone, CalendarClock, ShieldCheck, Share2 } from "lucide-react";
 import { useApp, useCart, useToast, type CartPartner } from "@/components/providers";
 import { TopBar, PartnerTags } from "@/components/customer";
 import { Button, PartnerCover, PartnerLogo, QtyStepper, Sheet, Skeleton, Stars, cx } from "@/components/ui";
 import { api } from "@/lib/client";
 import { UNIT_LABEL } from "@/lib/constants";
+import { AiOrderSheet } from "@/components/ai";
 
 export default function LaundryPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { t, L, money, num, me, refreshMe, lang, fmtDate } = useApp();
+  const { t, L, money, num, me, refreshMe, lang, fmtDate, settings } = useApp();
+  const [aiOpen, setAiOpen] = useState(false);
   const toast = useToast();
   const cart = useCart();
   const { data } = useSWR(`/api/partners/${id}`);
@@ -141,10 +143,17 @@ export default function LaundryPage({ params }: { params: Promise<{ id: string }
       {/* sticky tabs */}
       <div className="sticky top-0 z-20 mt-4 border-b border-ink-100 bg-white/95 backdrop-blur lg:top-16 lg:mt-0">
         <div className="px-4 pt-3 lg:px-0">
-          <label className="flex h-10 items-center gap-2 rounded-xl bg-ink-100 px-3">
-            <Search className="h-4 w-4 text-ink-400" />
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("search_items")} className="h-full flex-1 bg-transparent text-sm outline-none" />
-          </label>
+          <div className="flex gap-2">
+            <label className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-xl bg-ink-100 px-3">
+              <Search className="h-4 w-4 text-ink-400" />
+              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("search_items")} className="h-full min-w-0 flex-1 bg-transparent text-sm outline-none" />
+            </label>
+            {settings.ai && (
+              <button onClick={() => (me?.user ? setAiOpen(true) : toast(t("login_sub"), "info"))} className="flex h-10 shrink-0 items-center gap-1.5 rounded-xl bg-gradient-to-r from-violet-600 to-brand-600 px-3 text-xs font-extrabold text-white shadow-sm transition active:scale-95">
+                <Wand2 className="h-4 w-4" /> {t("ai_order")}
+              </button>
+            )}
+          </div>
         </div>
         <div className="no-scrollbar flex gap-1 overflow-x-auto px-3 py-2 lg:px-0">
           {services.map((s) => (
@@ -321,6 +330,7 @@ export default function LaundryPage({ params }: { params: Promise<{ id: string }
           <div className="flex items-start gap-3"><Star className="mt-0.5 h-5 w-5 text-amber-400" /><div><div className="font-bold">{num(p.rating, 1)} / 5</div><div className="text-ink-500">{num(p.rating_count)} {t("reviews")}</div></div></div>
         </div>
       </Sheet>
+      {settings.ai && <AiOrderSheet open={aiOpen} onClose={() => setAiOpen(false)} partner={cp} products={products} services={services} />}
     </div>
   );
 }

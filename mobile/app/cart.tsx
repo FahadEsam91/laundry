@@ -7,6 +7,7 @@ import { computeTotals, type Promo } from "@shared/pricing";
 import { api } from "@/api";
 import { useAuth } from "@/auth";
 import { PhotosPicker } from "@/photos";
+import { AiBadge, Analyzing, InsightCard, takeAiHint, useCheckoutInsights } from "@/ai";
 import { ZoneBadge } from "@/zone";
 import { SchedulePicker } from "@/schedule";
 import { useCart } from "@/cart";
@@ -56,6 +57,29 @@ export default function Cart() {
   }, [company?.id]);
   const [busy, setBusy] = useState<string | null>(null);
   const allSlots = useMemo(() => slots(lang), [lang]);
+  const ai = useCheckoutInsights(cart.partner?.id);
+  const { data: menu } = useSWR(settings.ai && cart.partner ? `/api/partners/${cart.partner.id}` : null);
+  useEffect(() => {
+    if (settings.ai && photos.length) ai.analyze(photos);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [photos.join(","), settings.ai]);
+  // hand-off from "order by text": pickup time, express and notes
+  useEffect(() => {
+    const h = cart.partner ? takeAiHint(cart.partner.id) : null;
+    if (!h) return;
+    if (h.express) setExpress(true);
+    if (h.notes) setNotes((n) => n || h.notes);
+    const d = ({ today: 0, tomorrow: 1, after_tomorrow: 2 } as Record<string, number>)[h.pickup_day];
+    if (d !== undefined) {
+      const ofDay = allSlots.filter((x) => x.day === d);
+      const pick = (h.pickup_hour != null && ofDay.find((x) => new Date(x.value).getHours() + 2 > h.pickup_hour!)) || ofDay[0];
+      if (pick) {
+        setDay(d);
+        setSlot(pick.value);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cart.partner?.id]);
   const { data: plans } = useSWR(me?.member ? null : "/api/plans");
 
   const p = cart.partner;
@@ -215,6 +239,32 @@ export default function Cart() {
             <Section title={settings.photos_required ? `${t("item_photos_req")} • ${t("required")}` : t("item_photos")}>
               <Txt size={12} color={C.ink500} style={{ marginBottom: 10 }}>{settings.photos_required ? t("item_photos_req_hint") : t("item_photos_hint")}</Txt>
               <PhotosPicker value={photos} onChange={setPhotos} />
+              {settings.ai && photos.length ? (
+                <View style={{ gap: 8, marginTop: 12 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}><AiBadge /><Txt w="bold" size={12} color="#7C3AED">{t("ai_insights")}</Txt></View>
+                  {photos.map((ph) => {
+                    const x = ai.map[ph];
+                    if (x === "busy") return <Analyzing key={ph} photo={ph} />;
+                    if (!x || x === "err") return null;
+                    const prod = x.product_id ? (menu?.products || []).find((m: any) => m.id === x.product_id) : null;
+                    const svc = prod ? (menu?.services || []).find((m: any) => m.id === prod.service_id) : null;
+                    const inCart = prod ? cart.lines[prod.id]?.qty || 0 : 0;
+                    return (
+                      <InsightCard key={ph} insight={x} photo={ph} action={prod ? (
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                          <Txt size={12} color={C.ink500} style={{ flex: 1 }} numberOfLines={1}>{t("ai_suggest")}: <Txt w="bold" size={12}>{prod.icon} {L(prod, "name")}</Txt> · {money(prod.price)}</Txt>
+                          {inCart ? <Txt w="bold" size={12} color={C.green}>✓ {inCart}</Txt> : (
+                            <Pressable onPress={() => cart.setQty(p, { product_id: prod.id, name_ar: prod.name_ar, name_en: prod.name_en, icon: prod.icon, price: prod.price, service_ar: svc?.name_ar || "", service_en: svc?.name_en || "" }, Math.max(1, x.quantity))} style={{ backgroundColor: "#7C3AED", borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 }}>
+                              <Txt w="bold" size={12} color="#fff">+ {t("ai_add_item")}</Txt>
+                            </Pressable>
+                          )}
+                        </View>
+                      ) : null} />
+                    );
+                  })}
+                  <Txt size={11} color={C.ink400}>{t("ai_disclaimer")}</Txt>
+                </View>
+              ) : null}
             </Section>
           </View>
         ) : null}

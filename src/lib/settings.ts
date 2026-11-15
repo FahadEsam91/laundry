@@ -1,6 +1,6 @@
 import "server-only";
 import { all, run } from "./db";
-import { DEMO } from "./env";
+import { DEMO, aiConfigured, whatsappConfigured } from "./env";
 
 export type Settings = {
   app_name: string;
@@ -21,6 +21,14 @@ export type Settings = {
   handover_pin: boolean;
   /** the rider must photograph the items at pickup and at delivery */
   proof_photos: boolean;
+  /** AI photo analysis + order-by-text assistant (also needs ANTHROPIC_API_KEY on the server) */
+  ai_features: boolean;
+  /** order updates by WhatsApp to customers who opted in (also needs Twilio WhatsApp on the server) */
+  whatsapp_notifications: boolean;
+  /** computed, read-only: the AI features are switched on and the server has a key */
+  ai: boolean;
+  /** computed, read-only: WhatsApp updates are switched on and Twilio WhatsApp is configured */
+  whatsapp: boolean;
   autopilot_seconds: number;
   support_phone: string;
   city_ar: string;
@@ -41,7 +49,7 @@ export async function getSettings(): Promise<Settings> {
   for (const r of rows) {
     if (r.key.startsWith("vapid_")) continue; // server-only secrets
     if (NUM.includes(r.key)) o[r.key] = Number(r.value);
-    else if (r.key === "autopilot" || r.key === "online_payments" || r.key === "memberships" || r.key === "photos_required" || r.key === "handover_pin" || r.key === "proof_photos") o[r.key] = r.value === "1";
+    else if (r.key === "autopilot" || r.key === "online_payments" || r.key === "memberships" || r.key === "photos_required" || r.key === "handover_pin" || r.key === "proof_photos" || r.key === "ai_features" || r.key === "whatsapp_notifications") o[r.key] = r.value === "1";
     else o[r.key] = r.value;
   }
   o.online_payments = !!o.online_payments; // off until a payment gateway is connected
@@ -50,6 +58,10 @@ export async function getSettings(): Promise<Settings> {
   o.photos_required = o.photos_required === undefined ? true : !!o.photos_required;
   o.handover_pin = o.handover_pin === undefined ? true : !!o.handover_pin;
   o.proof_photos = o.proof_photos === undefined ? true : !!o.proof_photos;
+  o.ai_features = o.ai_features === undefined ? true : !!o.ai_features;
+  o.whatsapp_notifications = o.whatsapp_notifications === undefined ? true : !!o.whatsapp_notifications;
+  o.ai = aiConfigured() && o.ai_features;
+  o.whatsapp = whatsappConfigured() && o.whatsapp_notifications;
   cache = { at: Date.now(), v: o as Settings };
   return o as Settings;
 }

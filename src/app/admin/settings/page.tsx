@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import useSWR from "swr";
-import { Bot, Coins, Globe2, CreditCard, Crown, Camera, KeyRound, ScanEye } from "lucide-react";
+import { Bot, Coins, Globe2, CreditCard, Crown, Camera, KeyRound, ScanEye, Sparkles, MessageCircle } from "lucide-react";
 import { useApp, useToast } from "@/components/providers";
 import { PageHead, Panel } from "@/components/admin";
 import { Button, Input, Skeleton, Toggle } from "@/components/ui";
@@ -53,6 +53,14 @@ export default function SettingsPage() {
         <Panel title={<span className="flex items-center gap-2"><ScanEye className="h-5 w-5 text-brand-600" /> {t("proof_photos_setting")}</span>} sub={t("proof_photos_setting_d")}>
           <label className="flex items-center gap-3 text-sm font-semibold"><Toggle checked={!!s.proof_photos} onChange={(v) => setS({ ...s, proof_photos: v })} /> {s.proof_photos ? t("active") : t("inactive")}</label>
         </Panel>
+        <Panel title={<span className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-violet-600" /> {t("ai_setting")}</span>} sub={t("ai_setting_d")}>
+          <label className="flex items-center gap-3 text-sm font-semibold"><Toggle checked={!!s.ai_features} onChange={(v) => setS({ ...s, ai_features: v })} /> {s.ai_features ? t("active") : t("inactive")}</label>
+          <ServerStatus ready={!!data?.integrations?.ai} need={t("ai_needs_key")} />
+        </Panel>
+        <Panel title={<span className="flex items-center gap-2"><MessageCircle className="h-5 w-5 text-emerald-600" /> {t("wa_setting")}</span>} sub={t("wa_setting_d")}>
+          <label className="flex items-center gap-3 text-sm font-semibold"><Toggle checked={!!s.whatsapp_notifications} onChange={(v) => setS({ ...s, whatsapp_notifications: v })} /> {s.whatsapp_notifications ? t("active") : t("inactive")}</label>
+          <ServerStatus ready={!!data?.integrations?.whatsapp} need={t("wa_needs_key")} />
+        </Panel>
         <Panel title={<span className="flex items-center gap-2"><Coins className="h-5 w-5 text-emerald-600" /> {t("fees_taxes")}</span>}>
           <div className="grid gap-4 md:grid-cols-2">
             {F("service_fee", t("service_fee"), "number")}
@@ -77,5 +85,14 @@ export default function SettingsPage() {
         </Panel>
       </div>
     </div>
+  );
+}
+
+function ServerStatus({ ready, need }: { ready: boolean; need: string }) {
+  const { t } = useApp();
+  return ready ? (
+    <p className="mt-3 text-xs font-bold text-emerald-600">{t("server_ready")}</p>
+  ) : (
+    <p className="mt-3 rounded-xl bg-amber-50 p-2.5 text-xs text-amber-900" dir="auto">{need}</p>
   );
 }

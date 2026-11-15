@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Wallet, MapPin, Bell, Languages, Headphones, LogOut, ChevronLeft, ChevronRight, Award, Crown, LayoutDashboard, Store, Truck, Heart, ReceiptText, Info, UserRound, Shield, FileText, Download, Trash2, Repeat, Shirt, Building2 } from "lucide-react";
+import { Wallet, MapPin, Bell, Languages, Headphones, LogOut, ChevronLeft, ChevronRight, Award, Crown, LayoutDashboard, Store, Truck, Heart, ReceiptText, Info, UserRound, Shield, FileText, Download, Trash2, Repeat, Shirt, Building2, MessageCircle } from "lucide-react";
 import { useApp, useCart } from "@/components/providers";
 import { BottomNav } from "@/components/customer";
-import { Button, Empty, LogoMark, Sheet } from "@/components/ui";
+import { Button, Empty, LogoMark, Sheet, Toggle } from "@/components/ui";
 import { useState } from "react";
 import { errText } from "@/lib/client";
 import { useToast } from "@/components/providers";
@@ -110,6 +110,7 @@ export default function AccountPage() {
           <PushCard />
         </div>
       )}
+      {u && settings.whatsapp && <WhatsAppRow on={!!u.whatsapp_opt_in} onChange={async (v) => { await api("/api/me", { method: "PATCH", body: { whatsapp_opt_in: v } }); refreshMe(); toast(t("saved")); }} />}
 
       <div className="mt-2 divide-y divide-ink-100 bg-white">
         <Row icon={Languages} label={t("language")} onClick={() => setLang(lang === "ar" ? "en" : "ar")} right={<span className="text-xs font-bold text-brand-600">{lang === "ar" ? "العربية" : "English"}</span>} />
@@ -155,6 +156,20 @@ export default function AccountPage() {
         <LogoMark className="h-5 w-5" /> Nuqa © {new Date().getFullYear()}
       </div>
       <BottomNav />
+    </div>
+  );
+}
+
+function WhatsAppRow({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
+  const { t } = useApp();
+  return (
+    <div className="mt-2 flex items-center gap-3 bg-white px-4 py-3.5">
+      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600"><MessageCircle className="h-[18px] w-[18px]" /></span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-semibold">{t("whatsapp_updates")}</span>
+        <span className="block text-xs text-ink-500">{t("whatsapp_updates_d")}</span>
+      </span>
+      <Toggle checked={on} onChange={onChange} />
     </div>
   );
 }
