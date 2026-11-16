@@ -11,7 +11,32 @@ import Zavudev, { APIError } from "@zavudev/sdk";
 export const zavuConfigured = () => !!(process.env.ZAVUDEV_API_KEY && process.env.ZAVU_WEBHOOK_SECRET);
 
 let client: Zavudev | null = null;
-const zavu = () => (client ||= new Zavudev({ apiKey: process.env.ZAVUDEV_API_KEY }));
+export const zavuClient = () => (client ||= new Zavudev({ apiKey: process.env.ZAVUDEV_API_KEY }));
+const zavu = zavuClient;
+
+/** Name of the WhatsApp template for order updates (created by scripts/zavu-whatsapp-template.mjs). */
+export const ORDER_TEMPLATE = "nuqa_order_update";
+let tpl: { at: number; id: string | null } | null = null;
+
+/** The approved order-update template, if Meta has approved it yet (looked up every 10 minutes). */
+export async function zavuOrderTemplateId(): Promise<string | null> {
+  if (process.env.ZAVU_WHATSAPP_TEMPLATE_ID) return process.env.ZAVU_WHATSAPP_TEMPLATE_ID;
+  if (tpl && Date.now() - tpl.at < 600_000) return tpl.id;
+  let id: string | null = null;
+  try {
+    for await (const t of zavu().templates.list()) {
+      if (t.name === ORDER_TEMPLATE && t.status === "approved") {
+        id = t.id;
+        break;
+      }
+    }
+  } catch (e) {
+    console.error("[zavu] template lookup failed", (e as Error)?.message);
+    return tpl?.id ?? null; // keep using what we knew
+  }
+  tpl = { at: Date.now(), id };
+  return id;
+}
 
 /**
  * X-Zavu-Signature: t=<unix seconds>[,v1=<hex>][,v2=<hex>]

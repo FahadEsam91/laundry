@@ -15,10 +15,10 @@ export function sessionSecret() {
 export const aiConfigured = () => process.env.AI_MOCK === "1" || !!process.env.ANTHROPIC_API_KEY;
 
 /**
- * WhatsApp order updates go through Twilio: TWILIO_ACCOUNT_SID + TWILIO_AUTH_TOKEN and a WhatsApp-enabled sender in
+ * WhatsApp order updates go through Zavu when ZAVUDEV_API_KEY is set, otherwise Twilio: TWILIO_ACCOUNT_SID + TWILIO_AUTH_TOKEN and a WhatsApp-enabled sender in
  * TWILIO_WHATSAPP_FROM (or TWILIO_FROM when OTP_CHANNEL=whatsapp). WHATSAPP_MOCK=1 logs instead (tests only).
  */
 export const whatsappSender = () =>
   process.env.TWILIO_WHATSAPP_FROM || (process.env.OTP_CHANNEL === "whatsapp" ? process.env.TWILIO_FROM : "") || "";
 export const whatsappConfigured = () =>
-  process.env.WHATSAPP_MOCK === "1" || !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && whatsappSender());
+  process.env.WHATSAPP_MOCK === "1" || !!process.env.ZAVUDEV_API_KEY || !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && whatsappSender());

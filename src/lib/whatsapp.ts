@@ -1,11 +1,21 @@
 import "server-only";
+import { randomUUID } from "node:crypto";
 import { get } from "./db";
 import { getSettings } from "./settings";
 import { whatsappSender } from "./env";
+import { zavuClient, zavuOrderTemplateId } from "./zavu";
 
 /**
- * Order updates by WhatsApp (Twilio), only to customers who switched it on in their account.
+ * Order updates by WhatsApp, only to customers who switched it on in their account.
  *
+ * Zavu (used when ZAVUDEV_API_KEY is set):
+ *   ZAVUDEV_API_KEY=zv_live_…                  — the project's API key
+ *   ZAVU_SENDER_ID=snd_…                       — optional: the sender with WhatsApp (default: the project's default sender)
+ *   Template "nuqa_order_update" ({{1}} title, {{2}} message, {{3}} link), created and submitted with
+ *   scripts/zavu-whatsapp-template.mjs, is used automatically once Meta approves it (or ZAVU_WHATSAPP_TEMPLATE_ID=tpl_…).
+ *   Until then messages go as free text, which WhatsApp only delivers within 24 hours of the customer's last message.
+ *
+ * Twilio (fallback when there is no Zavu key):
  *   TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN      — same as for SMS
  *   TWILIO_WHATSAPP_FROM=+9647…                — a WhatsApp-enabled sender (or TWILIO_FROM with OTP_CHANNEL=whatsapp)
  *   TWILIO_WHATSAPP_TEMPLATE_SID=HX…           — optional, recommended: an approved template with {{1}} = title,
@@ -23,6 +33,7 @@ export async function sendWhatsApp(to: string, title: string, text: string, link
     console.log(`[whatsapp] → ${to.replace(/\d(?=\d{4})/g, "•")}: ${title}`);
     return;
   }
+  if (process.env.ZAVUDEV_API_KEY) return sendViaZavu(to, title, text, link);
   const sid = process.env.TWILIO_ACCOUNT_SID!;
   const from = whatsappSender();
   const form = new URLSearchParams({ To: `whatsapp:${to}` });
@@ -42,6 +53,28 @@ export async function sendWhatsApp(to: string, title: string, text: string, link
     body: form,
   });
   if (!res.ok) console.error("[whatsapp] twilio error", res.status, (await res.text().catch(() => "")).slice(0, 300));
+}
+
+// WhatsApp refuses template variables with line breaks, tabs or 5+ spaces in a row
+const flat = (v: string) => v.replace(/[\r\n\t]+/g, " · ").replace(/ {2,}/g, " ").trim() || "—";
+
+async function sendViaZavu(to: string, title: string, text: string, link: string) {
+  const sender = process.env.ZAVU_SENDER_ID ? { "Zavu-Sender": process.env.ZAVU_SENDER_ID } : {};
+  const templateId = await zavuOrderTemplateId();
+  try {
+    await zavuClient().messages.send({
+      to,
+      channel: "whatsapp",
+      fallbackEnabled: false, // never turn a WhatsApp update into a paid SMS
+      idempotencyKey: randomUUID(), // the SDK's own retries never send twice
+      ...(templateId
+        ? { messageType: "template" as const, content: { templateId, templateVariables: { "1": flat(title), "2": flat(text), "3": flat(link) } } }
+        : { text: `*${title}*\n${text}${link ? `\n${link}` : ""}` }),
+      ...sender,
+    });
+  } catch (e: any) {
+    console.error("[whatsapp] zavu error", e?.status ?? "", String(e?.message || e).slice(0, 300));
+  }
 }
 
 /** Called for every in-app notification about an order; sends it by WhatsApp when the customer opted in. Never throws. */
