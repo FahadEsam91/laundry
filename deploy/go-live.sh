@@ -43,19 +43,25 @@ ADMIN_PHONE=$(phone "$ADMIN_PHONE") || die "Invalid admin phone number"
 ok "Admin: $ADMIN_PHONE"
 
 echo
-echo "SMS login codes are sent with Twilio (twilio.com → Console → Account SID / Auth Token / a sender)."
-echo "Press Enter to skip: codes are then only printed in the server log (customers can't sign in)."
-ask TWILIO_ACCOUNT_SID "Twilio Account SID (AC…)" "${TWILIO_ACCOUNT_SID:-}"
-TWILIO_ACCOUNT_SID=$(printf '%s' "$TWILIO_ACCOUNT_SID" | grep -oE 'AC[0-9a-fA-F]{32}' || true)
-if [ -n "$TWILIO_ACCOUNT_SID" ]; then
-  ask TWILIO_AUTH_TOKEN "Twilio Auth Token" "${TWILIO_AUTH_TOKEN:-}"
-  ask TWILIO_FROM "Twilio sender (+1… number or MG… messaging service SID)" "${TWILIO_FROM:-}"
-  TWILIO_AUTH_TOKEN=$(printf '%s' "$TWILIO_AUTH_TOKEN" | tr -cd 'A-Za-z0-9')
-  TWILIO_FROM=$(printf '%s' "$TWILIO_FROM" | tr -cd 'A-Za-z0-9+')
-  [ -n "$TWILIO_AUTH_TOKEN" ] && [ -n "$TWILIO_FROM" ] || die "Twilio needs the Auth Token and a sender"
-  ok "SMS: Twilio"
+if [ -n "${ZAVUDEV_API_KEY:-}" ]; then
+  # login codes and WhatsApp updates go through Zavu (WhatsApp first, SMS fallback)
+  SMS=zavu; TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID:-}
+  ok "Login codes: Zavu (WhatsApp, SMS fallback)"
 else
-  warn "SMS skipped — real customers can't receive login codes until you add Twilio (run this again)."
+  echo "Login codes are sent with Twilio (twilio.com → Console → Account SID / Auth Token / a sender)."
+  echo "Using Zavu instead? Press Enter, add ZAVUDEV_API_KEY to .env, then run this again."
+  ask TWILIO_ACCOUNT_SID "Twilio Account SID (AC…)" "${TWILIO_ACCOUNT_SID:-}"
+  TWILIO_ACCOUNT_SID=$(printf '%s' "$TWILIO_ACCOUNT_SID" | grep -oE 'AC[0-9a-fA-F]{32}' || true)
+  if [ -n "$TWILIO_ACCOUNT_SID" ]; then
+    ask TWILIO_AUTH_TOKEN "Twilio Auth Token" "${TWILIO_AUTH_TOKEN:-}"
+    ask TWILIO_FROM "Twilio sender (+1… number or MG… messaging service SID)" "${TWILIO_FROM:-}"
+    TWILIO_AUTH_TOKEN=$(printf '%s' "$TWILIO_AUTH_TOKEN" | tr -cd 'A-Za-z0-9')
+    TWILIO_FROM=$(printf '%s' "$TWILIO_FROM" | tr -cd 'A-Za-z0-9+')
+    [ -n "$TWILIO_AUTH_TOKEN" ] && [ -n "$TWILIO_FROM" ] || die "Twilio needs the Auth Token and a sender"
+    SMS=twilio; ok "SMS: Twilio"
+  else
+    SMS=console; warn "SMS skipped — real customers can't receive login codes until you add Zavu or Twilio (run this again)."
+  fi
 fi
 
 # Reviewer login: a dedicated number with a fixed code (no SMS) for Apple / Google app review.
@@ -76,7 +82,7 @@ fi
 cp .env ".env.before-go-live.$(date +%s)"; chmod 600 .env.before-go-live.*
 setenv NUQA_DEMO 0
 setenv ADMIN_PHONE "$ADMIN_PHONE"
-setenv SMS_PROVIDER "$([ -n "$TWILIO_ACCOUNT_SID" ] && echo twilio || echo console)"
+setenv SMS_PROVIDER "$SMS"
 setenv TWILIO_ACCOUNT_SID "$TWILIO_ACCOUNT_SID"
 setenv TWILIO_AUTH_TOKEN "${TWILIO_AUTH_TOKEN:-}"
 setenv TWILIO_FROM "${TWILIO_FROM:-}"
