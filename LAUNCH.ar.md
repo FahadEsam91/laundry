@@ -68,11 +68,11 @@ npx eas-cli@latest build --profile customer-production --platform android
 **واتساب عبر Zavu** (تحديثات الطلب للزبون الذي يفعّلها من حسابه):
 1. في dashboard.zavu.dev ← Channels اربط رقم واتساب الأعمال، وفعّله.
 2. من Developers ← API Keys أنشئ مفتاحاً.
-3. على الماك، داخل مجلد المشروع، أنشئ قالب الرسالة وأرسله لموافقة واتساب (مرة واحدة):
+3. على الماك، داخل مجلد المشروع، أنشئ قالبي الرسائل (تحديثات الطلب + رمز الدخول) وأرسلهما لموافقة واتساب (مرة واحدة):
    `git pull && npm install`
    `read -s ZAVUDEV_API_KEY && export ZAVUDEV_API_KEY` (الصق المفتاح واضغط Enter)
    `node scripts/zavu-whatsapp-template.mjs`
-4. على السيرفر أضف في `/opt/nuqa/.env`: `ZAVUDEV_API_KEY=المفتاح` ثم `sudo bash /opt/nuqa/deploy/update.sh`
+4. على السيرفر في `/opt/nuqa/.env`: أضف `ZAVUDEV_API_KEY=المفتاح`، وغيّر سطر `SMS_PROVIDER` إلى `SMS_PROVIDER=zavu` (رموز الدخول عبر Zavu)، ثم `sudo bash /opt/nuqa/deploy/update.sh`
 5. حتى يوافق واتساب على القالب (عادة دقائق إلى ساعات) تصل الرسائل فقط للزبائن الذين راسلوك خلال آخر ٢٤ ساعة. بعد الموافقة يستخدمه التطبيق تلقائياً ويصل للجميع.
 
 يمكنك إيقاف أي ميزة منهما في أي وقت من لوحة التحكم ← الإعدادات.

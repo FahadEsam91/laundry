@@ -14,29 +14,32 @@ let client: Zavudev | null = null;
 export const zavuClient = () => (client ||= new Zavudev({ apiKey: process.env.ZAVUDEV_API_KEY }));
 const zavu = zavuClient;
 
-/** Name of the WhatsApp template for order updates (created by scripts/zavu-whatsapp-template.mjs). */
+/** WhatsApp templates the app uses (created by scripts/zavu-whatsapp-template.mjs). */
 export const ORDER_TEMPLATE = "nuqa_order_update";
-let tpl: { at: number; id: string | null } | null = null;
+export const OTP_TEMPLATE = "nuqa_login_code";
+const tplCache: Record<string, { at: number; id: string | null }> = {};
 
-/** The approved order-update template, if Meta has approved it yet (looked up every 10 minutes). */
-export async function zavuOrderTemplateId(): Promise<string | null> {
-  if (process.env.ZAVU_WHATSAPP_TEMPLATE_ID) return process.env.ZAVU_WHATSAPP_TEMPLATE_ID;
-  if (tpl && Date.now() - tpl.at < 600_000) return tpl.id;
+/** An approved template's ID, if Meta has approved it yet (looked up at most every 10 minutes). */
+export async function zavuTemplateId(name: string, override?: string): Promise<string | null> {
+  if (override) return override;
+  const c = tplCache[name];
+  if (c && Date.now() - c.at < 600_000) return c.id;
   let id: string | null = null;
   try {
     for await (const t of zavu().templates.list()) {
-      if (t.name === ORDER_TEMPLATE && t.status === "approved") {
+      if (t.name === name && t.status === "approved") {
         id = t.id;
         break;
       }
     }
   } catch (e) {
     console.error("[zavu] template lookup failed", (e as Error)?.message);
-    return tpl?.id ?? null; // keep using what we knew
+    return c?.id ?? null; // keep using what we knew
   }
-  tpl = { at: Date.now(), id };
+  tplCache[name] = { at: Date.now(), id };
   return id;
 }
+export const zavuOrderTemplateId = () => zavuTemplateId(ORDER_TEMPLATE, process.env.ZAVU_WHATSAPP_TEMPLATE_ID);
 
 /**
  * X-Zavu-Signature: t=<unix seconds>[,v1=<hex>][,v2=<hex>]

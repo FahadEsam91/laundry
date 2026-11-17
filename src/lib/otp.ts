@@ -3,7 +3,7 @@ import crypto from "node:crypto";
 import { get, insert, run, now } from "./db";
 import { DEMO, sessionSecret } from "./env";
 import { HttpError } from "./auth";
-import { sendSms } from "./sms";
+import { sendOtp } from "./sms";
 
 const TTL_MS = 5 * 60 * 1000;
 const MAX_ATTEMPTS = 5;
@@ -37,7 +37,7 @@ export async function requestOtp(phone: string, ip: string, lang: "ar" | "en") {
   if (!review && (!DEMO || process.env.SMS_PROVIDER)) {
     const msg = lang === "ar" ? `رمز التحقق الخاص بك في نقاء: ${code}\nلا تشاركه مع أحد.` : `Your Nuqa verification code is ${code}. Do not share it.`;
     try {
-      await sendSms(phone, msg);
+      await sendOtp(phone, code, msg);
     } catch (e: any) {
       throw new HttpError(503, e?.message === "sms_not_configured" ? "sms_not_configured" : "sms_failed");
     }
