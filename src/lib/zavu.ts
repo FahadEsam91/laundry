@@ -26,7 +26,8 @@ export async function zavuTemplateId(name: string, override?: string): Promise<s
   if (c && Date.now() - c.at < 600_000) return c.id;
   let id: string | null = null;
   try {
-    for await (const t of zavu().templates.list()) {
+    // short timeout: this is checked while pages load
+    for await (const t of zavu().templates.list(undefined, { timeout: 4000, maxRetries: 0 })) {
       if (t.name === name && t.status === "approved") {
         id = t.id;
         break;
@@ -40,6 +41,18 @@ export async function zavuTemplateId(name: string, override?: string): Promise<s
   return id;
 }
 export const zavuOrderTemplateId = () => zavuTemplateId(ORDER_TEMPLATE, process.env.ZAVU_WHATSAPP_TEMPLATE_ID);
+
+/**
+ * WhatsApp through Zavu needs a WhatsApp Business account (connected via Meta) and the approved order template.
+ * Until both exist the WhatsApp option stays hidden from customers. Other providers (Twilio, test mock) are not affected.
+ */
+export async function zavuWhatsappReady() {
+  if (!process.env.ZAVUDEV_API_KEY || process.env.WHATSAPP_MOCK === "1") return true;
+  return !!(await zavuOrderTemplateId());
+}
+
+/** Channel for plain-text codes and messages: one-way SMS by default (no Meta, no phone number needed). */
+export const zavuSmsChannel = () => (process.env.ZAVU_SMS_CHANNEL || "sms_oneway") as "sms_oneway" | "sms" | "auto";
 
 /**
  * X-Zavu-Signature: t=<unix seconds>[,v1=<hex>][,v2=<hex>]

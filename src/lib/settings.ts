@@ -1,6 +1,7 @@
 import "server-only";
 import { all, run } from "./db";
 import { DEMO, aiConfigured, whatsappConfigured } from "./env";
+import { zavuWhatsappReady } from "./zavu";
 
 export type Settings = {
   app_name: string;
@@ -61,7 +62,7 @@ export async function getSettings(): Promise<Settings> {
   o.ai_features = o.ai_features === undefined ? true : !!o.ai_features;
   o.whatsapp_notifications = o.whatsapp_notifications === undefined ? true : !!o.whatsapp_notifications;
   o.ai = aiConfigured() && o.ai_features;
-  o.whatsapp = whatsappConfigured() && o.whatsapp_notifications;
+  o.whatsapp = whatsappConfigured() && o.whatsapp_notifications && (await zavuWhatsappReady());
   cache = { at: Date.now(), v: o as Settings };
   return o as Settings;
 }

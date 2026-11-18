@@ -1,12 +1,13 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
 import { DEMO } from "./env";
-import { OTP_TEMPLATE, zavuClient, zavuTemplateId } from "./zavu";
+import { OTP_TEMPLATE, zavuClient, zavuSmsChannel, zavuTemplateId } from "./zavu";
 
 /**
  * Outbound SMS / WhatsApp (login codes).
- *   SMS_PROVIDER=zavu    → ZAVUDEV_API_KEY (optional ZAVU_SENDER_ID). Codes go by WhatsApp with the approved
- *                          "nuqa_login_code" template, falling back to SMS when WhatsApp can't deliver.
+ *   SMS_PROVIDER=zavu    → ZAVUDEV_API_KEY (optional ZAVU_SENDER_ID). Codes go by one-way SMS (ZAVU_SMS_CHANNEL,
+ *                          default sms_oneway: no Meta account or phone number needed). If WhatsApp is connected and
+ *                          the "nuqa_login_code" template is approved, codes go by WhatsApp first, SMS as fallback.
  *                          Also chosen when ZAVUDEV_API_KEY is set and SMS_PROVIDER is empty or an unfinished Twilio setup.
  *   SMS_PROVIDER=twilio  → TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM (e.g. +1555… or a Messaging Service SID "MG…")
  *                          OTP_CHANNEL=whatsapp sends via WhatsApp (TWILIO_FROM must be a WhatsApp-enabled sender)
@@ -43,8 +44,8 @@ export async function sendOtp(to: string, code: string, text: string) {
             messageType: "template" as const,
             content: { templateId, templateVariables: { "1": code }, templateButtonVariables: { "0": code } },
           }
-        : // template not approved yet: let Zavu pick the channel; a failed WhatsApp text falls back to SMS
-          { channel: "auto" as const, text }),
+        : // no WhatsApp: a plain SMS (one-way by default: no Meta account or phone number needed)
+          { channel: zavuSmsChannel(), text }),
       ...sender,
     });
   } catch (e: any) {
@@ -57,7 +58,7 @@ export async function sendSms(to: string, body: string) {
   const p = provider();
   if (p === "zavu") {
     try {
-      await zavuClient().messages.send({ to, channel: "auto", text: body, idempotencyKey: randomUUID(), ...(process.env.ZAVU_SENDER_ID ? { "Zavu-Sender": process.env.ZAVU_SENDER_ID } : {}) });
+      await zavuClient().messages.send({ to, channel: zavuSmsChannel(), text: body, idempotencyKey: randomUUID(), ...(process.env.ZAVU_SENDER_ID ? { "Zavu-Sender": process.env.ZAVU_SENDER_ID } : {}) });
       return;
     } catch (e: any) {
       console.error("[sms] zavu error", e?.status ?? "", String(e?.message || e).slice(0, 300));

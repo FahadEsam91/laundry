@@ -363,7 +363,7 @@ const D = {
   ai_needs_key: ["يحتاج مفتاح ANTHROPIC_API_KEY في ملف ‎.env على السيرفر حتى يشتغل.", "Needs ANTHROPIC_API_KEY in the server's .env file to work."],
   wa_setting: ["إشعارات واتساب", "WhatsApp notifications"],
   wa_setting_d: ["يوصل للزبون تحديث طلبه على واتساب إذا فعّلها من حسابه.", "Customers who turn it on in their account get order updates on WhatsApp."],
-  wa_needs_key: ["يحتاج مفتاح Zavu ‏(ZAVUDEV_API_KEY) في ملف ‎.env على السيرفر.", "Needs the Zavu key (ZAVUDEV_API_KEY) in the server's .env file."],
+  wa_needs_key: ["غير متاح: يحتاج ربط رقم واتساب أعمال في Zavu (عن طريق Meta) وموافقة واتساب على قالب الرسائل. الإشعارات داخل التطبيق تعمل بدونه.", "Not available: needs a WhatsApp Business number connected in Zavu (through Meta) and an approved message template. In-app notifications work without it."],
   server_ready: ["السيرفر جاهز ✓", "Server ready ✓"],
   ai_badge: ["ذكاء اصطناعي", "AI"],
   ai_order: ["اطلب بالكتابة", "Order by text"],

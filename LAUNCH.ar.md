@@ -65,15 +65,16 @@ npx eas-cli@latest build --profile customer-production --platform android
 3. `sudo bash /opt/nuqa/deploy/update.sh`
 4. في لوحة التحكم ← الإعدادات تظهر «السيرفر جاهز ✓». التكلفة تقريباً سنتات قليلة لكل صورة أو رسالة، وكل زبون له حد يومي (٤٠ صورة و٣٠ رسالة).
 
-**واتساب عبر Zavu** (تحديثات الطلب للزبون الذي يفعّلها من حسابه):
-1. في dashboard.zavu.dev ← Channels اربط رقم واتساب الأعمال، وفعّله.
-2. من Developers ← API Keys أنشئ مفتاحاً.
-3. على الماك، داخل مجلد المشروع، أنشئ قالبي الرسائل (تحديثات الطلب + رمز الدخول) وأرسلهما لموافقة واتساب (مرة واحدة):
+**رموز الدخول عبر Zavu (SMS بدون ربط Meta)**:
+1. في dashboard.zavu.dev ← Developers ← API Keys أنشئ مفتاحاً.
+2. على الماك داخل مجلد المشروع (مرة واحدة) — يفعّل SMS ويرسل لك رسالة تجربة:
    `git pull && npm install`
    `read -s ZAVUDEV_API_KEY && export ZAVUDEV_API_KEY` (الصق المفتاح واضغط Enter)
-   `node scripts/zavu-whatsapp-template.mjs`
-4. على السيرفر في `/opt/nuqa/.env`: أضف `ZAVUDEV_API_KEY=المفتاح`، وغيّر سطر `SMS_PROVIDER` إلى `SMS_PROVIDER=zavu` (رموز الدخول عبر Zavu)، ثم `sudo bash /opt/nuqa/deploy/update.sh`
-5. حتى يوافق واتساب على القالب (عادة دقائق إلى ساعات) تصل الرسائل فقط للزبائن الذين راسلوك خلال آخر ٢٤ ساعة. بعد الموافقة يستخدمه التطبيق تلقائياً ويصل للجميع.
+   `node scripts/zavu-sms-setup.mjs 07XXXXXXXXX` (رقمك)
+3. على السيرفر في `/opt/nuqa/.env`: أضف `ZAVUDEV_API_KEY=المفتاح` وغيّر سطر `SMS_PROVIDER` إلى `SMS_PROVIDER=zavu`، ثم `sudo bash /opt/nuqa/deploy/update.sh`
+4. قبل الإطلاق: Raise limits في لوحة Zavu (توثيق الهوية يرفع حد الرسائل اليومي) واشحن الرصيد.
+
+**واتساب (اختياري لاحقاً)**: يحتاج ربط رقم واتساب أعمال عن طريق Meta. بدونه يبقى خيار واتساب مخفياً عن الزبائن تلقائياً، وتعمل الإشعارات داخل التطبيق كالمعتاد. إذا ربطته يوماً: `node scripts/zavu-whatsapp-template.mjs` ثم ينتقل كل شيء لواتساب تلقائياً بعد موافقة واتساب.
 
 يمكنك إيقاف أي ميزة منهما في أي وقت من لوحة التحكم ← الإعدادات.
 
